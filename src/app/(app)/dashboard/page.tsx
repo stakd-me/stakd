@@ -25,6 +25,7 @@ import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
 import { usePortfolio } from "@/hooks/use-portfolio";
+import { usePrices } from "@/hooks/use-prices";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useVaultStore } from "@/lib/store";
 import {
@@ -32,6 +33,11 @@ import {
   parseConcentrationAlertThresholdPercent,
 } from "@/lib/constants/risk";
 import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
+import {
+  buildStrategyContext,
+  dispatchStrategy,
+} from "@/lib/services/rebalance-strategies";
+import type { RebalanceStrategy } from "@/components/rebalance/types";
 
 type TimeRange = "24h" | "7d" | "30d" | "90d" | "1y" | "all";
 type DashboardAlertSeverity = "low" | "medium" | "high";
@@ -74,8 +80,12 @@ export default function DashboardPage() {
 
   // ── Client-side data from vault store + hooks ──────────────────────
   const { breakdown, totals, history, lastPriceUpdate, isLoading, refreshPrices } = usePortfolio();
+  const { priceMap } = usePrices();
   const analytics = useAnalytics();
   const vault = useVaultStore((s) => s.vault);
+  const rebalanceStrategy = (vault.settings.rebalanceStrategy || "percent-of-portfolio") as RebalanceStrategy;
+  const parsedHoldZonePercent = parseFloat(vault.settings.holdZonePercent || "5");
+  const holdZonePercent = Number.isFinite(parsedHoldZonePercent) ? parsedHoldZonePercent : 5;
   const concentrationThresholdPercent = parseConcentrationAlertThresholdPercent(
     vault.settings.concentrationThresholdPercent
   );
@@ -92,43 +102,51 @@ export default function DashboardPage() {
     [vault.tokenCategories]
   );
 
-  // ── Client-side rebalance alerts from vault.rebalanceTargets ───────
-  const alerts = useMemo(() => {
-    const targets = vault.rebalanceTargets;
-    if (targets.length === 0 || totals.totalValue === 0) return [];
-
-    const result: DashboardAlert[] = [];
-
-    // Build a map of symbol -> current percent from breakdown
-    const currentPercentMap: Record<string, number> = {};
-    for (const item of breakdown) {
-      const sym = item.symbol.toUpperCase();
-      currentPercentMap[sym] = (currentPercentMap[sym] || 0) + item.percent;
+  const strategyContext = useMemo(() => {
+    if (vault.rebalanceTargets.length === 0 || Object.keys(priceMap).length === 0) {
+      return null;
     }
+    try {
+      return buildStrategyContext(vault, priceMap);
+    } catch {
+      return null;
+    }
+  }, [vault, priceMap]);
 
-    // Deviation alerts: compare each target to current allocation
-    for (const target of targets) {
-      const sym = target.tokenSymbol.toUpperCase();
-      const currentPercent = currentPercentMap[sym] ?? 0;
-      const deviation = currentPercent - target.targetPercent;
+  const strategyOutput = useMemo(() => {
+    if (!strategyContext) return null;
+    try {
+      return dispatchStrategy(rebalanceStrategy, strategyContext, vault.settings);
+    } catch {
+      return null;
+    }
+  }, [rebalanceStrategy, strategyContext, vault.settings]);
 
-      if (Math.abs(deviation) > 2) {
+  // Keep "need rebalancing" consistent with the Rebalance page execution logic.
+  const deviationAlerts = useMemo(() => {
+    const suggestions = strategyOutput?.suggestions ?? [];
+    return suggestions
+      .filter((suggestion) => suggestion.action !== "hold")
+      .map((suggestion) => {
+        const absDeviation = Math.abs(suggestion.deviation);
         const severity: DashboardAlertSeverity =
-          Math.abs(deviation) > 10
+          absDeviation > holdZonePercent * 3
             ? "high"
-            : Math.abs(deviation) > 5
+            : absDeviation > holdZonePercent * 2
               ? "medium"
               : "low";
-        result.push({
-          tokenSymbol: target.tokenSymbol,
-          deviation,
-          severity,
-          type: "deviation",
-        });
-      }
-    }
 
-    // Concentration alerts: any single token above configured threshold
+        return {
+          tokenSymbol: suggestion.tokenSymbol,
+          deviation: suggestion.deviation,
+          severity,
+          type: "deviation" as const,
+        };
+      });
+  }, [strategyOutput, holdZonePercent]);
+
+  const concentrationAlerts = useMemo(() => {
+    const result: DashboardAlert[] = [];
     for (const item of breakdown) {
       const normalizedSymbol = item.symbol.toUpperCase();
       if (
@@ -149,17 +167,19 @@ export default function DashboardPage() {
         });
       }
     }
-
     return result;
   }, [
-    vault.rebalanceTargets,
     breakdown,
-    totals.totalValue,
     concentrationThresholdPercent,
     highConcentrationThresholdPercent,
     excludeStablecoinsFromConcentration,
     stablecoinSymbols,
   ]);
+
+  const alerts = useMemo(
+    () => [...deviationAlerts, ...concentrationAlerts],
+    [deviationAlerts, concentrationAlerts]
+  );
 
   // ── Client-side category breakdown from vault.tokenCategories ──────
   const categoryBreakdown = useMemo(() => {
@@ -210,10 +230,6 @@ export default function DashboardPage() {
     if (!lastPriceUpdate) return true;
     return Date.now() - new Date(lastPriceUpdate).getTime() > 30 * 60 * 1000;
   }, [lastPriceUpdate]);
-  const deviationAlerts = alerts.filter((a) => a.type === "deviation");
-  const concentrationAlerts = alerts.filter(
-    (a) => a.type === "concentration_token"
-  );
   const deviationAlertTokenCount = useMemo(
     () => new Set(deviationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size,
     [deviationAlerts]
