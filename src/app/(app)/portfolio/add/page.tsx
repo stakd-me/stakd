@@ -14,6 +14,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { apiFetch } from "@/lib/api-client";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
+import { rankTokenSearchResults } from "@/lib/search/token-search";
 
 interface CoinListItem {
   id: string;
@@ -75,26 +76,10 @@ export default function AddTransactionPage() {
     staleTime: Infinity,
   });
 
-  // Client-side search — Binance-available coins sorted first
+  // Client-side search — relevance ranking with canonical asset preference.
   const filteredCoins = useMemo(() => {
-    if (!coinList || searchQuery.length < 1) return [];
-    const q = searchQuery.toLowerCase();
-    const results: CoinListItem[] = [];
-    for (const coin of coinList) {
-      if (
-        coin.name.toLowerCase().includes(q) ||
-        coin.symbol.toLowerCase().includes(q) ||
-        coin.id.toLowerCase().includes(q)
-      ) {
-        results.push(coin);
-        if (results.length >= 50) break;
-      }
-    }
-    results.sort((a, b) => {
-      if (a.binance !== b.binance) return a.binance ? -1 : 1;
-      return 0;
-    });
-    return results.slice(0, 15);
+    if (!coinList || searchQuery.trim().length < 1) return [];
+    return rankTokenSearchResults(coinList, searchQuery, 15);
   }, [coinList, searchQuery]);
 
   const handleClickOutside = useCallback((e: MouseEvent) => {

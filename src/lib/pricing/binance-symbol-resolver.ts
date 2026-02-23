@@ -46,6 +46,15 @@ const COINGECKO_TO_BINANCE_SYMBOL: Record<string, string> = {
   "theta-token": "THETA",
 };
 
+const BINANCE_SYMBOL_TO_COINGECKO_ID: Record<string, string> = Object.entries(
+  COINGECKO_TO_BINANCE_SYMBOL
+).reduce<Record<string, string>>((acc, [coingeckoId, symbol]) => {
+  if (!acc[symbol]) {
+    acc[symbol] = coingeckoId;
+  }
+  return acc;
+}, {});
+
 function normalizeCoinId(id: string): string {
   return id.trim().toLowerCase();
 }
@@ -74,4 +83,16 @@ export function resolveBinanceSymbol(
   if (mapped) return mapped;
 
   return normalizeSymbol(fallbackSymbol);
+}
+
+/**
+ * Returns the canonical CoinGecko ID for a known ticker symbol (BTC, SOL, ...).
+ * Used by search ranking to keep primary assets above bridged/pegged lookalikes.
+ */
+export function resolveCanonicalCoinGeckoIdBySymbol(
+  symbol: string | null | undefined
+): string | null {
+  const normalized = normalizeSymbol(symbol);
+  if (!normalized) return null;
+  return BINANCE_SYMBOL_TO_COINGECKO_ID[normalized] ?? null;
 }
