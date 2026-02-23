@@ -147,12 +147,12 @@ export function usePortfolio() {
         ? Math.abs((roundedTotal - latestTotal) / latestTotal) * 100
         : 100;
 
-    const minSnapshotIntervalMinutes = 30;
-    const minPercentChange = 0.5;
+    const minSnapshotIntervalMinutes = 12 * 60;
+    const minPercentChange = 1;
     const shouldCreateSnapshot =
       !latest ||
       minutesSinceLatest >= minSnapshotIntervalMinutes ||
-      percentChangeFromLatest >= minPercentChange;
+      percentChangeFromLatest > minPercentChange;
     if (!shouldCreateSnapshot) return;
 
     const signature = `${roundedTotal}|${breakdown.length}|${vault.transactions.length}|${vault.manualEntries.length}`;
@@ -183,7 +183,7 @@ export function usePortfolio() {
             : 100;
         if (
           prevMinutesSinceLatest < minSnapshotIntervalMinutes &&
-          prevPercentChange < minPercentChange
+          prevPercentChange <= minPercentChange
         ) {
           return prev;
         }
