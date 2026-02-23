@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+data
+backups
+*.md
+.env*
+.claude
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+vitest.config.ts
+coverage
+.vscode
+.idea

@@ -1,0 +1,155 @@
+@import "tailwindcss";
+
+:root {
+  /* Light theme (default) */
+  --font-geist-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Courier New", monospace;
+  --bg-page: #f3f7fc;
+  --bg-sidebar: #eaf0f8;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #dde7f4;
+  --bg-muted: #d5e1f0;
+  --border: #bfccde;
+  --border-subtle: #d6e0ed;
+  --text-primary: #0e1728;
+  --text-secondary: #1f2c41;
+  --text-tertiary: #33445f;
+  --text-muted: #445978;
+  --text-subtle: #5f7393;
+  --text-dim: #7f91ab;
+  --accent: #2563eb;
+  --focus-ring: rgb(37 99 235 / 0.35);
+  --chart-grid: #c7d3e5;
+  --chart-tooltip-bg: #0f172a;
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-border: #334155;
+  --chart-tick: #445978;
+  --status-positive: #166534;
+  --status-negative: #b91c1c;
+  --status-warning: #a16207;
+  --status-info: #1d4ed8;
+  --status-caution: #c2410c;
+  --status-positive-soft: #dcfce7;
+  --status-negative-soft: #fee2e2;
+  --status-warning-soft: #fef3c7;
+  --status-info-soft: #dbeafe;
+  --status-caution-soft: #ffedd5;
+  --status-positive-border: #86efac;
+  --status-negative-border: #fca5a5;
+  --status-warning-border: #fcd34d;
+  --status-info-border: #93c5fd;
+  --status-caution-border: #fdba74;
+}
+
+.dark {
+  --bg-page: #0b1220;
+  --bg-sidebar: #121d31;
+  --bg-card: #172339;
+  --bg-input: #18253b;
+  --bg-hover: #22314b;
+  --bg-muted: #2b3f5e;
+  --border: #334766;
+  --border-subtle: #253550;
+  --text-primary: #f3f7ff;
+  --text-secondary: #dee7f5;
+  --text-tertiary: #c4d2e8;
+  --text-muted: #9eb1cd;
+  --text-subtle: #8196b7;
+  --text-dim: #677d9f;
+  --accent: #60a5fa;
+  --focus-ring: rgb(96 165 250 / 0.45);
+  --chart-grid: #314563;
+  --chart-tooltip-bg: #0b1220;
+  --chart-tooltip-text: #f8fafc;
+  --chart-tooltip-border: #4b6388;
+  --chart-tick: #9cb0cd;
+  --status-positive: #4ade80;
+  --status-negative: #f87171;
+  --status-warning: #facc15;
+  --status-info: #60a5fa;
+  --status-caution: #fb923c;
+  --status-positive-soft: rgb(34 197 94 / 0.2);
+  --status-negative-soft: rgb(239 68 68 / 0.2);
+  --status-warning-soft: rgb(234 179 8 / 0.2);
+  --status-info-soft: rgb(59 130 246 / 0.2);
+  --status-caution-soft: rgb(249 115 22 / 0.2);
+  --status-positive-border: rgb(74 222 128 / 0.45);
+  --status-negative-border: rgb(248 113 113 / 0.45);
+  --status-warning-border: rgb(250 204 21 / 0.45);
+  --status-info-border: rgb(96 165 250 / 0.45);
+  --status-caution-border: rgb(251 146 60 / 0.45);
+}
+
+@theme inline {
+  --color-bg-page: var(--bg-page);
+  --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-card: var(--bg-card);
+  --color-bg-input: var(--bg-input);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-muted: var(--bg-muted);
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent: var(--accent);
+  --color-focus-ring: var(--focus-ring);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-dim: var(--text-dim);
+  --color-status-positive: var(--status-positive);
+  --color-status-negative: var(--status-negative);
+  --color-status-warning: var(--status-warning);
+  --color-status-info: var(--status-info);
+  --color-status-caution: var(--status-caution);
+  --color-status-positive-soft: var(--status-positive-soft);
+  --color-status-negative-soft: var(--status-negative-soft);
+  --color-status-warning-soft: var(--status-warning-soft);
+  --color-status-info-soft: var(--status-info-soft);
+  --color-status-caution-soft: var(--status-caution-soft);
+  --color-status-positive-border: var(--status-positive-border);
+  --color-status-negative-border: var(--status-negative-border);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-info-border: var(--status-info-border);
+  --color-status-caution-border: var(--status-caution-border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+/* Toast slide-in animation */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Dialog fade-in animation */
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-scale {
+  animation: fade-in-scale 0.2s ease-out;
+}
