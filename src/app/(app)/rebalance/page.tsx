@@ -55,6 +55,7 @@ import {
 } from "@/lib/services/rebalance-strategies";
 import type { StrategyOutput } from "@/lib/services/rebalance-strategies";
 import { getSymbolValues } from "@/lib/services/portfolio-calculator";
+import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
 
 import type {
@@ -577,38 +578,43 @@ export default function RebalancePage() {
     const executionSteps = computeExecutionSteps(allSuggestions);
 
     // Price freshness should reflect only tokens used in the current rebalance context.
-    const relevantCoingeckoIds = new Set<string>();
+    const relevantPriceTokens: { coingeckoId: string | null; symbol: string }[] = [];
 
     for (const suggestion of allSuggestions) {
       if (suggestion.coingeckoId) {
-        relevantCoingeckoIds.add(suggestion.coingeckoId);
+        relevantPriceTokens.push({
+          coingeckoId: suggestion.coingeckoId,
+          symbol: suggestion.tokenSymbol,
+        });
         continue;
       }
       const mappedId = strategyContext?.symbolCoingeckoMap[
         suggestion.tokenSymbol.toUpperCase()
       ];
       if (mappedId) {
-        relevantCoingeckoIds.add(mappedId);
+        relevantPriceTokens.push({
+          coingeckoId: mappedId,
+          symbol: suggestion.tokenSymbol,
+        });
       }
     }
 
     for (const target of strategyContext?.targets ?? []) {
       if (target.coingeckoId) {
-        relevantCoingeckoIds.add(target.coingeckoId);
+        relevantPriceTokens.push({
+          coingeckoId: target.coingeckoId,
+          symbol: target.tokenSymbol,
+        });
       }
     }
 
-    const relevantUpdatedAts = Array.from(relevantCoingeckoIds)
-      .map((coingeckoId) => {
-        const normalized = coingeckoId.trim().toLowerCase();
-        if (!normalized) return null;
-        return priceMap[normalized]?.updatedAt ?? null;
-      })
-      .filter((value): value is string => typeof value === "string" && value.length > 0);
-    const hasRelevantTokens = relevantCoingeckoIds.size > 0;
-    const oldestPriceUpdate = relevantUpdatedAts.length > 0
-      ? relevantUpdatedAts.reduce((oldest, value) => value < oldest ? value : oldest)
-      : hasRelevantTokens
+    const oldestFromRelevantTokens = getOldestPriceUpdateForTokens(
+      priceMap,
+      relevantPriceTokens
+    );
+    const oldestPriceUpdate = oldestFromRelevantTokens
+      ? oldestFromRelevantTokens
+      : relevantPriceTokens.length > 0
         ? null
         : pricesUpdatedAt ?? null;
 

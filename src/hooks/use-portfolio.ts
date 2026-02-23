@@ -7,6 +7,7 @@ import {
   getHoldings,
   getPortfolioSummary,
 } from "@/lib/services/portfolio-calculator";
+import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
 
 const COLORS = [
   "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
@@ -111,22 +112,21 @@ export function usePortfolio() {
 
   const lastPriceUpdate = useMemo(() => {
     const hasActiveHoldings = holdings.some((holding) => holding.currentQty > 0);
-    const relevantUpdatedAts = holdings
-      .filter((holding) => holding.currentQty > 0 && !!holding.coingeckoId)
-      .map((holding) => {
-        const coingeckoId = holding.coingeckoId?.trim().toLowerCase();
-        if (!coingeckoId) return null;
-        return priceMap[coingeckoId]?.updatedAt ?? null;
-      })
-      .filter((value): value is string => typeof value === "string" && value.length > 0);
+    const oldestFromRelevantTokens = getOldestPriceUpdateForTokens(
+      priceMap,
+      holdings
+        .filter((holding) => holding.currentQty > 0)
+        .map((holding) => ({
+          coingeckoId: holding.coingeckoId,
+          symbol: holding.symbol,
+        }))
+    );
 
-    if (relevantUpdatedAts.length === 0) {
+    if (!oldestFromRelevantTokens) {
       return hasActiveHoldings ? null : updatedAt;
     }
 
-    return relevantUpdatedAts.reduce((oldest, value) =>
-      value < oldest ? value : oldest
-    );
+    return oldestFromRelevantTokens;
   }, [holdings, priceMap, updatedAt]);
 
   useEffect(() => {
