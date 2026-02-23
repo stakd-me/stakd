@@ -331,6 +331,8 @@ function computeCategoryBreakdown(
   }));
 }
 
+const TARGET_EXPANDED_STORAGE_KEY = "rebalance:target-allocation-expanded";
+
 // ── Page Component ──────────────────────────────────────────────
 
 export default function RebalancePage() {
@@ -349,6 +351,7 @@ export default function RebalancePage() {
 
   // Collapsible sections
   const [targetExpanded, setTargetExpanded] = useState(false);
+  const [targetExpandedPref, setTargetExpandedPref] = useState<boolean | null>(null);
 
   // Post-execution recording flow
   const [recordingSessionId, setRecordingSessionId] = useState<string | number | null>(null);
@@ -403,6 +406,42 @@ export default function RebalancePage() {
       setIsSeeded(true);
     }
   }, [savedTargets, isSeeded]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.localStorage.getItem(TARGET_EXPANDED_STORAGE_KEY);
+    const pref = raw === "1" ? true : raw === "0" ? false : null;
+    setTargetExpandedPref(pref);
+    if (pref !== null) {
+      setTargetExpanded(pref);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (targets.length === 0) {
+      setTargetExpanded(true);
+      return;
+    }
+    if (targetExpandedPref !== null) {
+      setTargetExpanded(targetExpandedPref);
+    }
+  }, [targets.length, targetExpandedPref]);
+
+  const handleToggleTargetExpanded = useCallback(() => {
+    setTargetExpanded((prev) => {
+      const next = !prev;
+
+      if (targets.length > 0 && typeof window !== "undefined") {
+        window.localStorage.setItem(
+          TARGET_EXPANDED_STORAGE_KEY,
+          next ? "1" : "0"
+        );
+        setTargetExpandedPref(next);
+      }
+
+      return next;
+    });
+  }, [targets.length]);
 
   // ── Computed: strategy context + suggestions ─────────────────
 
@@ -537,8 +576,41 @@ export default function RebalancePage() {
     const summary = computeSummary(allSuggestions, holdZonePercent);
     const executionSteps = computeExecutionSteps(allSuggestions);
 
-    // Oldest price update
-    const oldestPriceUpdate = pricesUpdatedAt ?? null;
+    // Price freshness should reflect only tokens used in the current rebalance context.
+    const relevantCoingeckoIds = new Set<string>();
+
+    for (const suggestion of allSuggestions) {
+      if (suggestion.coingeckoId) {
+        relevantCoingeckoIds.add(suggestion.coingeckoId);
+        continue;
+      }
+      const mappedId = strategyContext?.symbolCoingeckoMap[
+        suggestion.tokenSymbol.toUpperCase()
+      ];
+      if (mappedId) {
+        relevantCoingeckoIds.add(mappedId);
+      }
+    }
+
+    for (const target of strategyContext?.targets ?? []) {
+      if (target.coingeckoId) {
+        relevantCoingeckoIds.add(target.coingeckoId);
+      }
+    }
+
+    const relevantUpdatedAts = Array.from(relevantCoingeckoIds)
+      .map((coingeckoId) => {
+        const normalized = coingeckoId.trim().toLowerCase();
+        if (!normalized) return null;
+        return priceMap[normalized]?.updatedAt ?? null;
+      })
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+    const hasRelevantTokens = relevantCoingeckoIds.size > 0;
+    const oldestPriceUpdate = relevantUpdatedAts.length > 0
+      ? relevantUpdatedAts.reduce((oldest, value) => value < oldest ? value : oldest)
+      : hasRelevantTokens
+        ? null
+        : pricesUpdatedAt ?? null;
 
     return {
       totalValue,
@@ -572,6 +644,7 @@ export default function RebalancePage() {
     slippagePercent, tradingFeePercent, autoRefreshMinutes,
     lastRebalanceDate, rebalanceStrategy, pricesUpdatedAt,
     stablecoinSymbols, treatStablecoinsAsCashReserve,
+    priceMap, strategyContext,
   ]);
 
   // ── Computed: alerts ──────────────────────────────────────────
@@ -1382,6 +1455,27 @@ export default function RebalancePage() {
         </div>
       )}
 
+      {/* ── 3. Target Allocation ─────────────────────────────── */}
+      <TargetAllocationSection
+        targets={targets}
+        setTargets={setTargets}
+        totalPercent={totalPercent}
+        expanded={targetExpanded}
+        onToggleExpanded={handleToggleTargetExpanded}
+        suggestionsData={suggestionsData}
+        groups={groups}
+        autocompleteData={autocompleteData}
+        activeAutocompleteIndex={activeAutocompleteIndex}
+        setActiveAutocompleteIndex={setActiveAutocompleteIndex}
+        autocompleteQuery={autocompleteQuery}
+        setAutocompleteQuery={setAutocompleteQuery}
+        onSave={handleSave}
+        savePending={savePending}
+        saveError={saveError !== null}
+        saveErrorMessage={saveError ?? undefined}
+        onAutoGenerate={handleAutoGenerate}
+      />
+
       {/* ── Calendar-Blocked Notice ─────────────────────────── */}
       {suggestionsData?.calendarBlocked && (
         <Card>
@@ -2118,27 +2212,6 @@ export default function RebalancePage() {
           setConfirmState({ type: "session", id, label })
         }
         deletePending={deleteSessionPending}
-      />
-
-      {/* ── 10. Target Allocation (collapsed) ────────────────── */}
-      <TargetAllocationSection
-        targets={targets}
-        setTargets={setTargets}
-        totalPercent={totalPercent}
-        expanded={targetExpanded}
-        onToggleExpanded={() => setTargetExpanded(!targetExpanded)}
-        suggestionsData={suggestionsData}
-        groups={groups}
-        autocompleteData={autocompleteData}
-        activeAutocompleteIndex={activeAutocompleteIndex}
-        setActiveAutocompleteIndex={setActiveAutocompleteIndex}
-        autocompleteQuery={autocompleteQuery}
-        setAutocompleteQuery={setAutocompleteQuery}
-        onSave={handleSave}
-        savePending={savePending}
-        saveError={saveError !== null}
-        saveErrorMessage={saveError ?? undefined}
-        onAutoGenerate={handleAutoGenerate}
       />
 
       {/* ── 11. Token Groups ─────────────────────────────────── */}

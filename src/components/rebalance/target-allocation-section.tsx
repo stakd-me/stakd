@@ -374,6 +374,22 @@ export function TargetAllocationSection({
           </Button>
         </div>
       </CardHeader>
+      {!expanded && (
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-card px-3 py-2">
+            <p className="text-sm text-text-subtle">
+              {targets.length} {t("rebalance.token")} • {t("rebalance.total", { percent: totalPercent.toFixed(1) })}
+              {totalPercent > 100 && ` • ${t("rebalance.exceeds100")}`}
+              {totalPercent > 0 &&
+                totalPercent < 100 &&
+                ` • ${t("rebalance.unallocated", { percent: (100 - totalPercent).toFixed(1) })}`}
+            </p>
+            <Button size="sm" onClick={onToggleExpanded}>
+              {t("common.edit")} {t("rebalance.targetAllocation")}
+            </Button>
+          </div>
+        </CardContent>
+      )}
       {expanded && (
         <CardContent>
           <div className="space-y-3" ref={autocompleteRef}>

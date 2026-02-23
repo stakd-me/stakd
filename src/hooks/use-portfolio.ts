@@ -110,13 +110,18 @@ export function usePortfolio() {
   }, [vault.portfolioSnapshots, summary.totalValueUsd]);
 
   const lastPriceUpdate = useMemo(() => {
+    const hasActiveHoldings = holdings.some((holding) => holding.currentQty > 0);
     const relevantUpdatedAts = holdings
       .filter((holding) => holding.currentQty > 0 && !!holding.coingeckoId)
-      .map((holding) => holding.coingeckoId ? priceMap[holding.coingeckoId]?.updatedAt ?? null : null)
+      .map((holding) => {
+        const coingeckoId = holding.coingeckoId?.trim().toLowerCase();
+        if (!coingeckoId) return null;
+        return priceMap[coingeckoId]?.updatedAt ?? null;
+      })
       .filter((value): value is string => typeof value === "string" && value.length > 0);
 
     if (relevantUpdatedAts.length === 0) {
-      return updatedAt;
+      return hasActiveHoldings ? null : updatedAt;
     }
 
     return relevantUpdatedAts.reduce((oldest, value) =>
