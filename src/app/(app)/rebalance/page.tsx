@@ -594,10 +594,19 @@ export default function RebalancePage() {
 
     const allSuggestions: Suggestion[] = [...strategyOutput.suggestions];
 
-    // Add untargeted tokens (tokens in portfolio but not in targets)
-    const targetSymbols = new Set(
-      vault.rebalanceTargets.map((t) => t.tokenSymbol.toUpperCase())
-    );
+    // Add untargeted tokens (tokens not covered by direct targets or targeted groups)
+    const coveredSymbols = new Set<string>();
+    for (const target of vault.rebalanceTargets) {
+      const targetSymbol = target.tokenSymbol.trim().toUpperCase();
+      if (!targetSymbol) continue;
+
+      coveredSymbols.add(targetSymbol);
+
+      const groupedMembers = strategyContext?.groupMembers[targetSymbol] ?? [];
+      for (const member of groupedMembers) {
+        coveredSymbols.add(member.toUpperCase());
+      }
+    }
     for (const [symbol, value] of Object.entries(symbolValues)) {
       if (
         treatStablecoinsAsCashReserve &&
@@ -605,7 +614,7 @@ export default function RebalancePage() {
       ) {
         continue;
       }
-      if (value > dustThresholdUsd && !targetSymbols.has(symbol)) {
+      if (value > dustThresholdUsd && !coveredSymbols.has(symbol.toUpperCase())) {
         const currentPercent = totalValue > 0 ? (value / totalValue) * 100 : 0;
         allSuggestions.push({
           tokenSymbol: symbol,
