@@ -56,6 +56,7 @@ import {
 import type { StrategyOutput } from "@/lib/services/rebalance-strategies";
 import { getSymbolValues } from "@/lib/services/portfolio-calculator";
 import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
+import { resolveCanonicalCoinGeckoIdBySymbol } from "@/lib/pricing/binance-symbol-resolver";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
 
 import type {
@@ -332,6 +333,13 @@ function computeCategoryBreakdown(
   }));
 }
 
+function normalizeCoinGeckoId(
+  value: string | null | undefined
+): string | null {
+  const normalized = (value ?? "").trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
 const TARGET_EXPANDED_STORAGE_KEY = "rebalance:target-allocation-expanded";
 
 // ── Page Component ──────────────────────────────────────────────
@@ -376,6 +384,7 @@ export default function RebalancePage() {
   const [groupCreatePending, setGroupCreatePending] = useState(false);
   const [groupUpdatePending, setGroupUpdatePending] = useState(false);
   const [groupDeletePending, setGroupDeletePending] = useState(false);
+  const [groupTrackPendingId, setGroupTrackPendingId] = useState<string | number | null>(null);
   const [categorySetPending, setCategorySetPending] = useState(false);
   const [categoryDeletePending, setCategoryDeletePending] = useState(false);
   const [startSessionPending, setStartSessionPending] = useState(false);
@@ -484,6 +493,48 @@ export default function RebalancePage() {
   const stablecoinSymbols = useMemo(
     () => buildStablecoinSymbolSet(vault.tokenCategories),
     [vault.tokenCategories]
+  );
+  const knownSymbolCoingeckoMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    const assign = (symbol: string, coingeckoId: string | null | undefined) => {
+      const normalizedSymbol = symbol.trim().toUpperCase();
+      const normalizedId = normalizeCoinGeckoId(coingeckoId);
+      if (!normalizedSymbol || !normalizedId || map[normalizedSymbol]) return;
+      map[normalizedSymbol] = normalizedId;
+    };
+
+    for (const tx of vault.transactions) {
+      assign(tx.tokenSymbol, tx.coingeckoId);
+    }
+    for (const entry of vault.manualEntries) {
+      assign(entry.tokenSymbol, entry.coingeckoId);
+    }
+    for (const target of vault.rebalanceTargets) {
+      assign(target.tokenSymbol, target.coingeckoId);
+    }
+
+    return map;
+  }, [vault.manualEntries, vault.rebalanceTargets, vault.transactions]);
+
+  const buildTrackableTokens = useCallback(
+    (symbols: string[]) => {
+      const byCoingeckoId = new Map<string, { coingeckoId: string; symbol: string }>();
+
+      for (const rawSymbol of symbols) {
+        const symbol = rawSymbol.trim().toUpperCase();
+        if (!symbol) continue;
+        const coingeckoId =
+          knownSymbolCoingeckoMap[symbol] ??
+          resolveCanonicalCoinGeckoIdBySymbol(symbol);
+        if (!coingeckoId) continue;
+        if (!byCoingeckoId.has(coingeckoId)) {
+          byCoingeckoId.set(coingeckoId, { coingeckoId, symbol });
+        }
+      }
+
+      return Array.from(byCoingeckoId.values());
+    },
+    [knownSymbolCoingeckoMap]
   );
 
   const strategyContext = useMemo(() => {
@@ -690,25 +741,68 @@ export default function RebalancePage() {
   const groups = useMemo((): TokenGroup[] => {
     return vault.tokenGroups.map((g) => {
       let groupTotal = 0;
+      let trackedCount = 0;
+      let requestedCount = 0;
+      let untrackedCount = 0;
       const members: TokenGroup["members"] = [];
-      for (const s of g.symbols) {
-        const val = symbolValues[s.toUpperCase()] || 0;
+
+      for (const rawSymbol of g.symbols) {
+        const symbol = rawSymbol.trim().toUpperCase();
+        if (!symbol) continue;
+        const val = symbolValues[symbol] || 0;
         groupTotal += val;
-        members.push({ symbol: s.toUpperCase(), valueUsd: val, percentInGroup: 0 });
+
+        const coingeckoId =
+          knownSymbolCoingeckoMap[symbol] ??
+          resolveCanonicalCoinGeckoIdBySymbol(symbol);
+        const trackingStatus =
+          !coingeckoId
+            ? "untracked"
+            : priceMap[coingeckoId]
+              ? "tracked"
+              : "requested";
+
+        if (trackingStatus === "tracked") trackedCount += 1;
+        else if (trackingStatus === "requested") requestedCount += 1;
+        else untrackedCount += 1;
+
+        members.push({
+          symbol,
+          valueUsd: val,
+          percentInGroup: 0,
+          coingeckoId,
+          trackingStatus,
+        });
       }
       // Fill in percentInGroup
       for (const m of members) {
         m.percentInGroup = groupTotal > 0 ? (m.valueUsd / groupTotal) * 100 : 0;
       }
+
+      const totalCount = members.length;
+      const status =
+        totalCount > 0 && trackedCount === totalCount
+          ? "tracked"
+          : trackedCount === 0 && requestedCount === 0
+            ? "untracked"
+            : "partial";
+
       return {
         id: g.id,
         name: g.name,
         symbols: g.symbols,
         totalValueUsd: groupTotal,
         members,
+        tracking: {
+          status,
+          trackedCount,
+          requestedCount,
+          untrackedCount,
+          totalCount,
+        },
       };
     });
-  }, [vault.tokenGroups, symbolValues]);
+  }, [vault.tokenGroups, symbolValues, knownSymbolCoingeckoMap, priceMap]);
 
   const autocompleteData = useMemo(() => {
     if (activeAutocompleteIndex === null || autocompleteQuery.length === 0) {
@@ -890,8 +984,18 @@ export default function RebalancePage() {
     }
   }, [refreshPrices, toast, t]);
 
+  const ensureGroupSymbolsTracked = useCallback(
+    async (symbols: string[]) => {
+      const tokensToEnsure = buildTrackableTokens(symbols);
+      if (tokensToEnsure.length === 0) return 0;
+      await ensurePrices(tokensToEnsure);
+      return tokensToEnsure.length;
+    },
+    [buildTrackableTokens, ensurePrices]
+  );
+
   const handleCreateGroup = useCallback(
-    (data: { name: string; symbols: string[] }) => {
+    async (data: { name: string; symbols: string[] }) => {
       setGroupCreatePending(true);
       try {
         useVaultStore.getState().updateVault((prev) => ({
@@ -906,15 +1010,20 @@ export default function RebalancePage() {
             },
           ],
         }));
+        try {
+          await ensureGroupSymbolsTracked(data.symbols);
+        } catch {
+          toast(t("rebalance.groupTrackFailed"), "info");
+        }
       } finally {
         setGroupCreatePending(false);
       }
     },
-    []
+    [ensureGroupSymbolsTracked, t, toast]
   );
 
   const handleUpdateGroup = useCallback(
-    (id: string | number, data: { name: string; symbols: string[] }) => {
+    async (id: string | number, data: { name: string; symbols: string[] }) => {
       setGroupUpdatePending(true);
       try {
         const normalizedName = data.name.trim();
@@ -937,11 +1046,40 @@ export default function RebalancePage() {
               : group
           ),
         }));
+        try {
+          await ensureGroupSymbolsTracked(normalizedSymbols);
+        } catch {
+          toast(t("rebalance.groupTrackFailed"), "info");
+        }
       } finally {
         setGroupUpdatePending(false);
       }
     },
-    []
+    [ensureGroupSymbolsTracked, t, toast]
+  );
+
+  const handleTrackGroup = useCallback(
+    async (id: string | number) => {
+      const group = vault.tokenGroups.find(
+        (item) => String(item.id) === String(id)
+      );
+      if (!group) return;
+
+      setGroupTrackPendingId(id);
+      try {
+        const ensuredCount = await ensureGroupSymbolsTracked(group.symbols);
+        if (ensuredCount > 0) {
+          toast(t("rebalance.groupTrackRequested", { count: ensuredCount }), "success");
+        } else {
+          toast(t("rebalance.groupTrackUnavailable"), "info");
+        }
+      } catch {
+        toast(t("rebalance.groupTrackFailed"), "error");
+      } finally {
+        setGroupTrackPendingId(null);
+      }
+    },
+    [ensureGroupSymbolsTracked, t, toast, vault.tokenGroups]
   );
 
   const handleDeleteGroup = useCallback(
@@ -1647,6 +1785,8 @@ export default function RebalancePage() {
           createPending={groupCreatePending}
           onUpdateGroup={handleUpdateGroup}
           updatePending={groupUpdatePending}
+          onTrackGroup={handleTrackGroup}
+          trackPendingGroupId={groupTrackPendingId}
           onConfirmDelete={(id, label) =>
             setConfirmState({ type: "group", id, label })
           }

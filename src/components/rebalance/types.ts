@@ -95,12 +95,27 @@ export interface AutocompleteSuggestion {
   isGroup?: boolean;
 }
 
+export type GroupMemberTrackingStatus = "tracked" | "requested" | "untracked";
+
 export interface TokenGroup {
   id: string | number;
   name: string;
   symbols: string[];
   totalValueUsd?: number;
-  members?: { symbol: string; valueUsd: number; percentInGroup: number }[];
+  members?: {
+    symbol: string;
+    valueUsd: number;
+    percentInGroup: number;
+    coingeckoId?: string | null;
+    trackingStatus?: GroupMemberTrackingStatus;
+  }[];
+  tracking?: {
+    status: "tracked" | "partial" | "untracked";
+    trackedCount: number;
+    requestedCount: number;
+    untrackedCount: number;
+    totalCount: number;
+  };
 }
 
 export interface RebalanceSession {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Layers, Pencil } from "lucide-react";
+import { Plus, Trash2, Layers, Pencil, RefreshCw } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TokenGroup } from "./types";
@@ -13,6 +13,8 @@ interface TokenGroupsSectionProps {
   groups: TokenGroup[];
   onCreateGroup: (data: { name: string; symbols: string[] }) => void;
   onUpdateGroup: (id: string | number, data: { name: string; symbols: string[] }) => void;
+  onTrackGroup: (id: string | number) => void;
+  trackPendingGroupId: string | number | null;
   createPending: boolean;
   updatePending: boolean;
   onConfirmDelete: (id: string | number, label: string) => void;
@@ -23,6 +25,8 @@ export function TokenGroupsSection({
   groups,
   onCreateGroup,
   onUpdateGroup,
+  onTrackGroup,
+  trackPendingGroupId,
   createPending,
   updatePending,
   onConfirmDelete,
@@ -35,6 +39,39 @@ export function TokenGroupsSection({
   const [groupSymbols, setGroupSymbols] = useState("");
   const isEditing = editingGroupId !== null;
   const isSubmitting = createPending || updatePending;
+  const trackingPending = trackPendingGroupId !== null;
+
+  const getGroupTrackingLabel = (status: NonNullable<TokenGroup["tracking"]>["status"]) => {
+    if (status === "tracked") return t("rebalance.trackingTracked");
+    if (status === "partial") return t("rebalance.trackingPartial");
+    return t("rebalance.trackingUntracked");
+  };
+
+  const getGroupTrackingClass = (status: NonNullable<TokenGroup["tracking"]>["status"]) => {
+    if (status === "tracked") {
+      return "border border-status-positive-border bg-status-positive-soft text-status-positive";
+    }
+    if (status === "partial") {
+      return "border border-status-warning-border bg-status-warning-soft text-status-warning";
+    }
+    return "border border-border bg-bg-muted text-text-subtle";
+  };
+
+  const getMemberTrackingLabel = (status: "tracked" | "requested" | "untracked") => {
+    if (status === "tracked") return t("rebalance.trackingTracked");
+    if (status === "requested") return t("rebalance.trackingRequested");
+    return t("rebalance.trackingUntracked");
+  };
+
+  const getMemberTrackingClass = (status: "tracked" | "requested" | "untracked") => {
+    if (status === "tracked") {
+      return "bg-status-positive-soft text-status-positive";
+    }
+    if (status === "requested") {
+      return "bg-status-info-soft text-status-info";
+    }
+    return "bg-bg-muted text-text-subtle";
+  };
 
   const resetForm = () => {
     setShowGroupForm(false);
@@ -166,8 +203,36 @@ export function TokenGroupsSection({
                         {formatUsd(group.totalValueUsd)}
                       </span>
                     )}
+                    {group.tracking && (
+                      <>
+                        <span
+                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getGroupTrackingClass(group.tracking.status)}`}
+                        >
+                          {getGroupTrackingLabel(group.tracking.status)}
+                        </span>
+                        <span className="ml-2 text-xs text-text-dim">
+                          {t("rebalance.groupTrackedCount", {
+                            tracked: group.tracking.trackedCount,
+                            total: group.tracking.totalCount,
+                          })}
+                        </span>
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-text-subtle hover:text-status-info"
+                      onClick={() => onTrackGroup(group.id)}
+                      disabled={trackingPending || isSubmitting}
+                      aria-label={`Track group ${group.name}`}
+                      title={t("rebalance.trackGroup")}
+                    >
+                      <RefreshCw
+                        className={`h-4 w-4 ${String(trackPendingGroupId) === String(group.id) ? "animate-spin" : ""}`}
+                      />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -196,7 +261,7 @@ export function TokenGroupsSection({
                   <div className="mt-2 flex flex-wrap gap-2">
                     {group.members.map((m) => (
                       <span
-                        key={m.symbol}
+                        key={`${m.symbol}-${m.coingeckoId ?? "none"}`}
                         className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2.5 py-1 text-xs font-medium text-text-tertiary"
                       >
                         {m.symbol}
@@ -206,6 +271,13 @@ export function TokenGroupsSection({
                         <span className="text-text-dim">
                           {formatUsd(m.valueUsd)}
                         </span>
+                        {m.trackingStatus && (
+                          <span
+                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${getMemberTrackingClass(m.trackingStatus)}`}
+                          >
+                            {getMemberTrackingLabel(m.trackingStatus)}
+                          </span>
+                        )}
                       </span>
                     ))}
                   </div>
