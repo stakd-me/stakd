@@ -257,6 +257,7 @@ const en = {
   "rebalance.symbolsLabel": "Symbols (comma-separated)",
   "rebalance.symbolsPlaceholder": "ETH, stETH, wstETH",
   "rebalance.createGroup": "Create Group",
+  "rebalance.updateGroup": "Update Group",
   "rebalance.noGroups": "No token groups configured. Groups let you combine related tokens (e.g., ETH + stETH) into a single allocation target.",
   "rebalance.assetCategories": "Asset Categories",
   "rebalance.tokenSymbolLabel": "Token Symbol",

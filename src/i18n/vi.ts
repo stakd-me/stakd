@@ -259,6 +259,7 @@ const vi: Record<TranslationKeys, string> = {
   "rebalance.symbolsLabel": "Các mã (phân cách bằng dấu phẩy)",
   "rebalance.symbolsPlaceholder": "ETH, stETH, wstETH",
   "rebalance.createGroup": "Tạo nhóm",
+  "rebalance.updateGroup": "Cập nhật nhóm",
   "rebalance.noGroups": "Chưa cấu hình nhóm token nào. Nhóm cho phép bạn gộp các token liên quan (VD: ETH + stETH) vào một mục tiêu phân bổ duy nhất.",
   "rebalance.assetCategories": "Danh mục tài sản",
   "rebalance.tokenSymbolLabel": "Mã token",

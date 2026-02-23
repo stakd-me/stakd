@@ -374,6 +374,7 @@ export default function RebalancePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [logPending, setLogPending] = useState(false);
   const [groupCreatePending, setGroupCreatePending] = useState(false);
+  const [groupUpdatePending, setGroupUpdatePending] = useState(false);
   const [groupDeletePending, setGroupDeletePending] = useState(false);
   const [categorySetPending, setCategorySetPending] = useState(false);
   const [categoryDeletePending, setCategoryDeletePending] = useState(false);
@@ -907,6 +908,37 @@ export default function RebalancePage() {
         }));
       } finally {
         setGroupCreatePending(false);
+      }
+    },
+    []
+  );
+
+  const handleUpdateGroup = useCallback(
+    (id: string | number, data: { name: string; symbols: string[] }) => {
+      setGroupUpdatePending(true);
+      try {
+        const normalizedName = data.name.trim();
+        const normalizedSymbols = Array.from(
+          new Set(data.symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean))
+        );
+        if (!normalizedName || normalizedSymbols.length === 0) {
+          return;
+        }
+
+        useVaultStore.getState().updateVault((prev) => ({
+          ...prev,
+          tokenGroups: prev.tokenGroups.map((group) =>
+            String(group.id) === String(id)
+              ? {
+                  ...group,
+                  name: normalizedName,
+                  symbols: normalizedSymbols,
+                }
+              : group
+          ),
+        }));
+      } finally {
+        setGroupUpdatePending(false);
       }
     },
     []
@@ -1543,6 +1575,96 @@ export default function RebalancePage() {
         saveErrorMessage={saveError ?? undefined}
         onAutoGenerate={handleAutoGenerate}
       />
+
+      {/* ── 4. Untargeted Tokens ────────────────────────────── */}
+      {untargetedSuggestions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-text-muted">
+              {t("rebalance.untargetedTokens")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-text-subtle">
+              {t("rebalance.untargetedDescription")}
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-text-subtle">
+                    <th className="pb-3 pr-4">{t("rebalance.token")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
+                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
+                    <th className="pb-3 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {untargetedSuggestions.map((s) => (
+                    <tr
+                      key={s.tokenSymbol}
+                      className="border-b border-border-subtle"
+                    >
+                      <td className="py-3 pr-4 font-medium text-text-muted">
+                        {s.tokenSymbol}
+                        <span className="ml-2 rounded bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
+                          {t("rebalance.untargeted")}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-right text-text-muted">
+                        {s.currentPercent.toFixed(1)}%
+                      </td>
+                      <td className="py-3 pr-4 text-right text-text-muted">
+                        {formatUsd(s.currentValue)}
+                      </td>
+                      <td className="py-3 text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => addTargetFromUntargeted(s)}
+                          disabled={targets.some(
+                            (t) => t.tokenSymbol.toUpperCase() === s.tokenSymbol.toUpperCase()
+                          )}
+                          className="text-xs"
+                        >
+                          <Plus className="mr-1 h-3 w-3" />
+                          {t("rebalance.addTarget")}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ── 5. Configuration Blocks ─────────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <TokenGroupsSection
+          groups={groups}
+          onCreateGroup={handleCreateGroup}
+          createPending={groupCreatePending}
+          onUpdateGroup={handleUpdateGroup}
+          updatePending={groupUpdatePending}
+          onConfirmDelete={(id, label) =>
+            setConfirmState({ type: "group", id, label })
+          }
+          deletePending={groupDeletePending}
+        />
+
+        <AssetCategoriesSection
+          categories={categories}
+          categoryBreakdown={categoryBreakdown}
+          symbolOptions={tokenSymbolOptions}
+          onSetCategory={handleSetCategory}
+          setCategoryPending={categorySetPending}
+          onConfirmDelete={(tokenSymbol, label) =>
+            setConfirmState({ type: "category", id: tokenSymbol, label })
+          }
+          deletePending={categoryDeletePending}
+        />
+      </div>
 
       {/* ── Calendar-Blocked Notice ─────────────────────────── */}
       {suggestionsData?.calendarBlocked && (
@@ -2280,93 +2402,6 @@ export default function RebalancePage() {
           setConfirmState({ type: "session", id, label })
         }
         deletePending={deleteSessionPending}
-      />
-
-      {/* ── 11. Token Groups ─────────────────────────────────── */}
-      <TokenGroupsSection
-        groups={groups}
-        onCreateGroup={handleCreateGroup}
-        createPending={groupCreatePending}
-        onConfirmDelete={(id, label) =>
-          setConfirmState({ type: "group", id, label })
-        }
-        deletePending={groupDeletePending}
-      />
-
-      {/* ── 12. Untargeted Tokens ────────────────────────────── */}
-      {untargetedSuggestions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-text-muted">
-              {t("rebalance.untargetedTokens")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-text-subtle">
-              {t("rebalance.untargetedDescription")}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-text-subtle">
-                    <th className="pb-3 pr-4">{t("rebalance.token")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
-                    <th className="pb-3 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {untargetedSuggestions.map((s) => (
-                    <tr
-                      key={s.tokenSymbol}
-                      className="border-b border-border-subtle"
-                    >
-                      <td className="py-3 pr-4 font-medium text-text-muted">
-                        {s.tokenSymbol}
-                        <span className="ml-2 rounded bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
-                          {t("rebalance.untargeted")}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-right text-text-muted">
-                        {s.currentPercent.toFixed(1)}%
-                      </td>
-                      <td className="py-3 pr-4 text-right text-text-muted">
-                        {formatUsd(s.currentValue)}
-                      </td>
-                      <td className="py-3 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addTargetFromUntargeted(s)}
-                          disabled={targets.some(
-                            (t) => t.tokenSymbol.toUpperCase() === s.tokenSymbol.toUpperCase()
-                          )}
-                          className="text-xs"
-                        >
-                          <Plus className="mr-1 h-3 w-3" />
-                          {t("rebalance.addTarget")}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── 13. Asset Categories ──────────────────────────────── */}
-      <AssetCategoriesSection
-        categories={categories}
-        categoryBreakdown={categoryBreakdown}
-        symbolOptions={tokenSymbolOptions}
-        onSetCategory={handleSetCategory}
-        setCategoryPending={categorySetPending}
-        onConfirmDelete={(tokenSymbol, label) =>
-          setConfirmState({ type: "category", id: tokenSymbol, label })
-        }
-        deletePending={categoryDeletePending}
       />
 
       {/* ── 14. What-If Calculator ───────────────────────────── */}

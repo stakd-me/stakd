@@ -244,6 +244,7 @@ const de: Record<TranslationKeys, string> = {
   "rebalance.symbolsLabel": "Symbols (comma-separated)",
   "rebalance.symbolsPlaceholder": "ETH, stETH, wstETH",
   "rebalance.createGroup": "Gruppe erstellen",
+  "rebalance.updateGroup": "Gruppe aktualisieren",
   "rebalance.noGroups": "Keine Token-Gruppen konfiguriert. Gruppen ermoeglichen das Kombinieren verwandter Tokens (z. B. ETH + stETH) zu einem einzelnen Allokationsziel.",
   "rebalance.assetCategories": "Asset-Kategorien",
   "rebalance.tokenSymbolLabel": "Token Symbol",

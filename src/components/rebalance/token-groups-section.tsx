@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Trash2, Layers } from "lucide-react";
+import { Plus, Trash2, Layers, Pencil } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TokenGroup } from "./types";
@@ -12,7 +12,9 @@ import type { TokenGroup } from "./types";
 interface TokenGroupsSectionProps {
   groups: TokenGroup[];
   onCreateGroup: (data: { name: string; symbols: string[] }) => void;
+  onUpdateGroup: (id: string | number, data: { name: string; symbols: string[] }) => void;
   createPending: boolean;
+  updatePending: boolean;
   onConfirmDelete: (id: string | number, label: string) => void;
   deletePending: boolean;
 }
@@ -20,14 +22,62 @@ interface TokenGroupsSectionProps {
 export function TokenGroupsSection({
   groups,
   onCreateGroup,
+  onUpdateGroup,
   createPending,
+  updatePending,
   onConfirmDelete,
   deletePending,
 }: TokenGroupsSectionProps) {
   const { t } = useTranslation();
   const [showGroupForm, setShowGroupForm] = useState(false);
+  const [editingGroupId, setEditingGroupId] = useState<string | number | null>(null);
   const [groupName, setGroupName] = useState("");
   const [groupSymbols, setGroupSymbols] = useState("");
+  const isEditing = editingGroupId !== null;
+  const isSubmitting = createPending || updatePending;
+
+  const resetForm = () => {
+    setShowGroupForm(false);
+    setEditingGroupId(null);
+    setGroupName("");
+    setGroupSymbols("");
+  };
+
+  const openCreateForm = () => {
+    setShowGroupForm(true);
+    setEditingGroupId(null);
+    setGroupName("");
+    setGroupSymbols("");
+  };
+
+  const openEditForm = (group: TokenGroup) => {
+    setShowGroupForm(true);
+    setEditingGroupId(group.id);
+    setGroupName(group.name);
+    setGroupSymbols(group.symbols.join(", "));
+  };
+
+  const handleSubmit = () => {
+    const name = groupName.trim();
+    const symbols = Array.from(
+      new Set(
+        groupSymbols
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
+      )
+    );
+
+    if (!name || symbols.length === 0) return;
+
+    if (isEditing && editingGroupId !== null) {
+      onUpdateGroup(editingGroupId, { name, symbols });
+    } else {
+      onCreateGroup({ name, symbols });
+    }
+
+    resetForm();
+  };
 
   return (
     <Card>
@@ -41,7 +91,7 @@ export function TokenGroupsSection({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowGroupForm(true)}
+              onClick={openCreateForm}
             >
               <Plus className="mr-2 h-4 w-4" />
               {t("rebalance.addGroup")}
@@ -78,31 +128,20 @@ export function TokenGroupsSection({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setShowGroupForm(false);
-                  setGroupName("");
-                  setGroupSymbols("");
-                }}
+                onClick={resetForm}
               >
                 {t("common.cancel")}
               </Button>
               <Button
                 size="sm"
-                onClick={() => {
-                  const symbols = groupSymbols
-                    .split(",")
-                    .map((s) => s.trim())
-                    .filter(Boolean);
-                  if (groupName && symbols.length > 0) {
-                    onCreateGroup({ name: groupName, symbols });
-                    setShowGroupForm(false);
-                    setGroupName("");
-                    setGroupSymbols("");
-                  }
-                }}
-                disabled={createPending}
+                onClick={handleSubmit}
+                disabled={isSubmitting}
               >
-                {createPending ? t("common.creating") : t("rebalance.createGroup")}
+                {isSubmitting
+                  ? t("common.saving")
+                  : isEditing
+                    ? t("rebalance.updateGroup")
+                    : t("rebalance.createGroup")}
               </Button>
             </div>
           </div>
@@ -128,18 +167,30 @@ export function TokenGroupsSection({
                       </span>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-text-subtle hover:text-status-negative"
-                    onClick={() =>
-                      onConfirmDelete(group.id, `group "${group.name}"`)
-                    }
-                    disabled={deletePending}
-                    aria-label={`Delete group ${group.name}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-text-subtle hover:text-status-info"
+                      onClick={() => openEditForm(group)}
+                      disabled={isSubmitting}
+                      aria-label={`Edit group ${group.name}`}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-text-subtle hover:text-status-negative"
+                      onClick={() =>
+                        onConfirmDelete(group.id, `group "${group.name}"`)
+                      }
+                      disabled={deletePending}
+                      aria-label={`Delete group ${group.name}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 {group.members && group.members.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
