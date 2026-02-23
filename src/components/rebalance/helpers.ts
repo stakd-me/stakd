@@ -1,15 +1,21 @@
 export function getDeviationColor(deviation: number) {
   const abs = Math.abs(deviation);
-  if (abs <= 1) return "text-status-positive";
-  if (abs <= 5) return "text-status-warning";
-  return "text-status-negative";
+  if (abs <= 1) return "text-text-subtle";
+  if (deviation > 0) {
+    if (abs <= 5) return "text-status-warning";
+    return "text-status-negative";
+  }
+  return "text-status-info";
 }
 
 export function getDeviationBg(deviation: number) {
   const abs = Math.abs(deviation);
-  if (abs <= 1) return "bg-status-positive-soft";
-  if (abs <= 5) return "bg-status-warning-soft";
-  return "bg-status-negative-soft";
+  if (abs <= 1) return "bg-bg-card/40";
+  if (deviation > 0) {
+    if (abs <= 5) return "bg-status-warning-soft";
+    return "bg-status-negative-soft";
+  }
+  return "bg-status-info-soft";
 }
 
 export function getActionBadge(action: string) {

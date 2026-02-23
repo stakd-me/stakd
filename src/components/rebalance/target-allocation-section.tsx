@@ -221,9 +221,13 @@ export function TargetAllocationSection({
 
   const getDeviationClass = (diff: number | null): string => {
     if (diff === null) return "text-text-dim";
-    if (Math.abs(diff) <= 1) return "text-status-positive";
-    if (Math.abs(diff) <= 5) return "text-status-warning";
-    return "text-status-negative";
+    const abs = Math.abs(diff);
+    if (abs <= 1) return "text-text-subtle";
+    if (diff > 0) {
+      if (abs <= 5) return "text-status-warning";
+      return "text-status-negative";
+    }
+    return "text-status-info";
   };
 
   return (
