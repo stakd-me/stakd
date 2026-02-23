@@ -252,6 +252,7 @@ Usually the next refresh cycle resolves this when provider data is available.
 ### 7.3 Refresh Behavior
 
 - Prices are fetched periodically in the client.
+- Prices are also refreshed on the server in the background (independent of user login) when enabled.
 - Manual refresh can be triggered from dashboard/rebalance flows.
 - Server-side refresh requests are debounced to avoid excessive churn.
 - `Auto-refresh` in Settings controls scheduled client refresh interval.
@@ -260,6 +261,7 @@ Current practical timings:
 
 - Client polling: every ~60 seconds.
 - Server refresh debounce: ~60 seconds.
+- Background server refresh interval: configurable via `PRICES_BACKGROUND_REFRESH_MINUTES` (default: 15).
 - CoinGecko fallback cooldown (per token): ~6 hours.
 
 ## 8. Rebalance Page

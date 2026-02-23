@@ -103,9 +103,13 @@ All configuration is managed via a `.env` file (see [`.env.example`](.env.exampl
 | `POSTGRES_PASSWORD` | PostgreSQL password | `portfolio` |
 | `POSTGRES_DB` | PostgreSQL database name | `portfolio` |
 | `REDIS_MAXMEMORY` | Redis max memory limit | `64mb` |
+| `REDIS_URL` | Redis connection string | `redis://localhost:6379` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://portfolio:portfolio@localhost:5432/portfolio` |
 | `APP_PORT` | Host port mapped to the app | `33000` |
 | `JWT_SECRET` | Secret for signing JWT tokens (min 32 chars) | — |
 | `NODE_ENV` | `development` or `production` | `production` |
+| `PRICES_BACKGROUND_REFRESH_ENABLED` | Enable server-side periodic price refresh without user login | `1` |
+| `PRICES_BACKGROUND_REFRESH_MINUTES` | Server-side price refresh interval (minutes) | `15` |
 
 ## Project Structure
 
