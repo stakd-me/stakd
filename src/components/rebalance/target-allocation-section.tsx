@@ -32,6 +32,8 @@ interface TargetAllocationSectionProps {
   totalPercent: number;
   expanded: boolean;
   onToggleExpanded: () => void;
+  stablecoinQuickAdd: { symbol: string; percent: number } | null;
+  onAddStablecoinTarget: () => void;
   suggestionsData: SuggestionsData | undefined;
   groups: TokenGroup[];
   autocompleteData: { suggestions: AutocompleteSuggestion[] } | undefined;
@@ -54,6 +56,8 @@ export function TargetAllocationSection({
   totalPercent,
   expanded,
   onToggleExpanded,
+  stablecoinQuickAdd,
+  onAddStablecoinTarget,
   suggestionsData,
   groups,
   autocompleteData,
@@ -267,6 +271,15 @@ export function TargetAllocationSection({
             <Plus className="mr-2 h-4 w-4" />
             {t("rebalance.addToken")}
           </Button>
+          {stablecoinQuickAdd && (
+            <Button variant="outline" size="sm" onClick={onAddStablecoinTarget}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("rebalance.addStablecoinTarget", {
+                symbol: stablecoinQuickAdd.symbol,
+                percent: stablecoinQuickAdd.percent.toFixed(1),
+              })}
+            </Button>
+          )}
           <div className="relative" ref={autoGenRef}>
             <Button
               variant="outline"

@@ -233,6 +233,7 @@ const en = {
   "rebalance.targetPlaceholder": "Target %",
   "rebalance.coingeckoPlaceholder": "CoinGecko ID (optional)",
   "rebalance.addToken": "Add Token",
+  "rebalance.addStablecoinTarget": "Add Stablecoin Target ({symbol} ~ {percent}%)",
   "rebalance.autoGenerate": "Auto-Generate",
   "rebalance.equalWeight": "Equal Weight",
   "rebalance.currentAllocation": "Current Allocation",

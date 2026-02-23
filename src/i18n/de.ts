@@ -220,6 +220,7 @@ const de: Record<TranslationKeys, string> = {
   "rebalance.targetPlaceholder": "Ziel %",
   "rebalance.coingeckoPlaceholder": "CoinGecko ID (optional)",
   "rebalance.addToken": "Hinzufuegen Token",
+  "rebalance.addStablecoinTarget": "Stablecoin-Ziel hinzufuegen ({symbol} ~ {percent}%)",
   "rebalance.autoGenerate": "Automatisch Generieren",
   "rebalance.equalWeight": "Gleichgewichtung",
   "rebalance.currentAllocation": "Aktuelle Allokation",

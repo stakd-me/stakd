@@ -1196,6 +1196,47 @@ export default function RebalancePage() {
     0
   );
 
+  const stablecoinQuickAdd = useMemo(() => {
+    if (treatStablecoinsAsCashReserve) return null;
+
+    const targetSymbolSet = new Set(
+      targets.map((target) => target.tokenSymbol.trim().toUpperCase())
+    );
+
+    const candidates = Object.entries(symbolValues)
+      .map(([symbol, value]) => ({
+        symbol: symbol.toUpperCase(),
+        value,
+      }))
+      .filter(
+        (candidate) =>
+          candidate.value > dustThresholdUsd &&
+          stablecoinSymbols.has(candidate.symbol) &&
+          !targetSymbolSet.has(candidate.symbol)
+      )
+      .sort((a, b) => b.value - a.value);
+
+    const top = candidates[0];
+    if (!top || totalValue <= 0) return null;
+
+    const percent = Math.round((top.value / totalValue) * 10000) / 100;
+    if (!Number.isFinite(percent) || percent <= 0) return null;
+
+    return {
+      symbol: top.symbol,
+      percent,
+      coingeckoId: strategyContext?.symbolCoingeckoMap[top.symbol] ?? null,
+    };
+  }, [
+    dustThresholdUsd,
+    stablecoinSymbols,
+    strategyContext,
+    symbolValues,
+    targets,
+    totalValue,
+    treatStablecoinsAsCashReserve,
+  ]);
+
   const addTargetFromUntargeted = (s: Suggestion) => {
     const alreadyExists = targets.some(
       (t) => t.tokenSymbol.toUpperCase() === s.tokenSymbol.toUpperCase()
@@ -1210,6 +1251,25 @@ export default function RebalancePage() {
       },
     ]);
   };
+
+  const handleAddStablecoinTarget = useCallback(() => {
+    if (!stablecoinQuickAdd) return;
+
+    const alreadyExists = targets.some(
+      (target) =>
+        target.tokenSymbol.trim().toUpperCase() === stablecoinQuickAdd.symbol
+    );
+    if (alreadyExists) return;
+
+    setTargets([
+      ...targets,
+      {
+        tokenSymbol: stablecoinQuickAdd.symbol,
+        targetPercent: stablecoinQuickAdd.percent,
+        coingeckoId: stablecoinQuickAdd.coingeckoId || "",
+      },
+    ]);
+  }, [stablecoinQuickAdd, targets]);
 
   // ── Confirm delete dispatch ─────────────────────────────────
   const handleConfirmDelete = () => {
@@ -1468,6 +1528,8 @@ export default function RebalancePage() {
         totalPercent={totalPercent}
         expanded={targetExpanded}
         onToggleExpanded={handleToggleTargetExpanded}
+        stablecoinQuickAdd={stablecoinQuickAdd}
+        onAddStablecoinTarget={handleAddStablecoinTarget}
         suggestionsData={suggestionsData}
         groups={groups}
         autocompleteData={autocompleteData}

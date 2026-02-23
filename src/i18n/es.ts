@@ -220,6 +220,7 @@ const es: Record<TranslationKeys, string> = {
   "rebalance.targetPlaceholder": "Objetivo %",
   "rebalance.coingeckoPlaceholder": "CoinGecko ID (opcional)",
   "rebalance.addToken": "Agregar Token",
+  "rebalance.addStablecoinTarget": "Agregar objetivo de Stablecoin ({symbol} ~ {percent}%)",
   "rebalance.autoGenerate": "Generar Automaticamente",
   "rebalance.equalWeight": "Peso Equitativo",
   "rebalance.currentAllocation": "Asignacion Actual",

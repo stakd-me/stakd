@@ -235,6 +235,7 @@ const vi: Record<TranslationKeys, string> = {
   "rebalance.targetPlaceholder": "Mục tiêu %",
   "rebalance.coingeckoPlaceholder": "CoinGecko ID (tùy chọn)",
   "rebalance.addToken": "Thêm token",
+  "rebalance.addStablecoinTarget": "Thêm mục tiêu Stablecoin ({symbol} ~ {percent}%)",
   "rebalance.autoGenerate": "Tự động tạo",
   "rebalance.equalWeight": "Trọng số đều",
   "rebalance.currentAllocation": "Phân bổ hiện tại",
