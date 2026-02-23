@@ -39,6 +39,8 @@ const REBALANCE_SETTING_KEYS = [
   "tradingFeePercent",
   "autoRefreshMinutes",
   "concentrationThresholdPercent",
+  "excludeStablecoinsFromConcentration",
+  "treatStablecoinsAsCashReserve",
   "rebalanceStrategy",
   "rebalanceInterval",
   "portfolioChangeThreshold",
@@ -166,6 +168,8 @@ export default function SettingsPage() {
   const [concentrationThresholdPercent, setConcentrationThresholdPercent] = useState(
     CONCENTRATION_ALERT_THRESHOLD_PERCENT.toString()
   );
+  const [excludeStablecoinsFromConcentration, setExcludeStablecoinsFromConcentration] = useState(false);
+  const [treatStablecoinsAsCashReserve, setTreatStablecoinsAsCashReserve] = useState(false);
   const [rebalanceStrategy, setRebalanceStrategy] = useState("percent-of-portfolio");
   const [rebalanceInterval, setRebalanceInterval] = useState("monthly");
   const [portfolioChangeThreshold, setPortfolioChangeThreshold] = useState("5");
@@ -195,6 +199,16 @@ export default function SettingsPage() {
     if (vaultSettings.concentrationThresholdPercent !== undefined) {
       setConcentrationThresholdPercent(vaultSettings.concentrationThresholdPercent);
     }
+    if (vaultSettings.excludeStablecoinsFromConcentration !== undefined) {
+      setExcludeStablecoinsFromConcentration(
+        vaultSettings.excludeStablecoinsFromConcentration === "1"
+      );
+    }
+    if (vaultSettings.treatStablecoinsAsCashReserve !== undefined) {
+      setTreatStablecoinsAsCashReserve(
+        vaultSettings.treatStablecoinsAsCashReserve === "1"
+      );
+    }
     if (vaultSettings.rebalanceStrategy !== undefined) setRebalanceStrategy(vaultSettings.rebalanceStrategy);
     if (vaultSettings.rebalanceInterval !== undefined) setRebalanceInterval(vaultSettings.rebalanceInterval);
     if (vaultSettings.portfolioChangeThreshold !== undefined) setPortfolioChangeThreshold(vaultSettings.portfolioChangeThreshold);
@@ -223,6 +237,8 @@ export default function SettingsPage() {
         tradingFeePercent,
         autoRefreshMinutes,
         concentrationThresholdPercent: normalizedConcentrationThresholdPercent,
+        excludeStablecoinsFromConcentration: excludeStablecoinsFromConcentration ? "1" : "0",
+        treatStablecoinsAsCashReserve: treatStablecoinsAsCashReserve ? "1" : "0",
         rebalanceStrategy,
         riskParityLookbackDays,
         ...(rebalanceStrategy === "calendar" ? { rebalanceInterval } : {}),
@@ -691,6 +707,24 @@ export default function SettingsPage() {
               <p className="mt-1 text-xs text-text-dim">
                 {t("settings.concentrationThresholdDesc")}
               </p>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={excludeStablecoinsFromConcentration}
+                  onChange={(e) =>
+                    setExcludeStablecoinsFromConcentration(e.target.checked)
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                />
+                <span>
+                  <span className="text-sm text-text-muted">
+                    {t("settings.excludeStableConcentration")}
+                  </span>
+                  <p className="text-xs text-text-dim">
+                    {t("settings.excludeStableConcentrationDesc")}
+                  </p>
+                </span>
+              </label>
             </div>
             <div>
               <label className="mb-1.5 block text-sm text-text-subtle">
@@ -782,6 +816,24 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={treatStablecoinsAsCashReserve}
+                  onChange={(e) =>
+                    setTreatStablecoinsAsCashReserve(e.target.checked)
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                />
+                <span>
+                  <span className="text-sm text-text-muted">
+                    {t("settings.treatStableAsCashReserve")}
+                  </span>
+                  <p className="text-xs text-text-dim">
+                    {t("settings.treatStableAsCashReserveDesc")}
+                  </p>
+                </span>
+              </label>
             </div>
 
             {/* Dust Threshold */}

@@ -31,6 +31,7 @@ import {
   getHighConcentrationThresholdPercent,
   parseConcentrationAlertThresholdPercent,
 } from "@/lib/constants/risk";
+import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
 
 type TimeRange = "24h" | "7d" | "30d" | "90d" | "1y" | "all";
 type DashboardAlertSeverity = "low" | "medium" | "high";
@@ -78,11 +79,17 @@ export default function DashboardPage() {
   const concentrationThresholdPercent = parseConcentrationAlertThresholdPercent(
     vault.settings.concentrationThresholdPercent
   );
+  const excludeStablecoinsFromConcentration =
+    vault.settings.excludeStablecoinsFromConcentration === "1";
   const concentrationThresholdLabel = Number.isInteger(concentrationThresholdPercent)
     ? concentrationThresholdPercent.toString()
     : concentrationThresholdPercent.toFixed(1);
   const highConcentrationThresholdPercent = getHighConcentrationThresholdPercent(
     concentrationThresholdPercent
+  );
+  const stablecoinSymbols = useMemo(
+    () => buildStablecoinSymbolSet(vault.tokenCategories),
+    [vault.tokenCategories]
   );
 
   // ── Client-side rebalance alerts from vault.rebalanceTargets ───────
@@ -123,6 +130,13 @@ export default function DashboardPage() {
 
     // Concentration alerts: any single token above configured threshold
     for (const item of breakdown) {
+      const normalizedSymbol = item.symbol.toUpperCase();
+      if (
+        excludeStablecoinsFromConcentration &&
+        stablecoinSymbols.has(normalizedSymbol)
+      ) {
+        continue;
+      }
       if (item.percent > concentrationThresholdPercent) {
         result.push({
           tokenSymbol: item.symbol,
@@ -143,6 +157,8 @@ export default function DashboardPage() {
     totals.totalValue,
     concentrationThresholdPercent,
     highConcentrationThresholdPercent,
+    excludeStablecoinsFromConcentration,
+    stablecoinSymbols,
   ]);
 
   // ── Client-side category breakdown from vault.tokenCategories ──────

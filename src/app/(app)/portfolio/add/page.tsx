@@ -15,6 +15,7 @@ import { apiFetch } from "@/lib/api-client";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import { rankTokenSearchResults } from "@/lib/search/token-search";
+import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
 
 interface CoinListItem {
   id: string;
@@ -183,6 +184,7 @@ export default function AddTransactionPage() {
     setSubmitting(true);
     try {
       const cgId = coingeckoId.trim() || null;
+      const createdAtIso = new Date().toISOString();
       const newTx = {
         id: crypto.randomUUID(),
         tokenSymbol: symbol.trim(),
@@ -196,12 +198,17 @@ export default function AddTransactionPage() {
         coingeckoId: cgId,
         note: note.trim() || null,
         transactedAt: parsedTransactedAt.toISOString(),
-        createdAt: new Date().toISOString(),
+        createdAt: createdAtIso,
       };
 
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
         transactions: [...prev.transactions, newTx],
+        tokenCategories: withAutoStablecoinCategory(
+          prev.tokenCategories,
+          newTx.tokenSymbol,
+          createdAtIso
+        ),
       }));
 
       // Ensure price tracking for this token

@@ -24,7 +24,13 @@ interface HistoryData {
 export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
   const chartTheme = useChartTheme();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const compactSeries = data.length <= 2;
+  const sanitizedData = data.filter(
+    (point) =>
+      typeof point.date === "string" &&
+      point.date.length > 0 &&
+      Number.isFinite(point.value)
+  );
+  const compactSeries = sanitizedData.length <= 2;
 
   // Force gradient update when data changes
   useEffect(() => {
@@ -38,9 +44,9 @@ export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
     gradient.addColorStop(1, "rgba(59, 130, 246, 0)");
     chart.data.datasets[0].backgroundColor = gradient;
     chart.update("none");
-  }, [data]);
+  }, [sanitizedData]);
 
-  const labels = data.map((d) => {
+  const labels = sanitizedData.map((d) => {
     const date = new Date(d.date);
     const now = new Date();
     const sameYear = date.getFullYear() === now.getFullYear();
@@ -57,7 +63,8 @@ export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
           labels,
           datasets: [
             {
-              data: data.map((d) => d.value),
+              label: "Portfolio Value",
+              data: sanitizedData.map((d) => d.value),
               borderColor: "#3b82f6",
               borderWidth: 2,
               fill: true,
@@ -76,6 +83,9 @@ export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
+            legend: {
+              display: false,
+            },
             tooltip: {
               backgroundColor: chartTheme.tooltipBg,
               titleColor: chartTheme.tooltipText,
@@ -86,8 +96,11 @@ export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
               padding: 10,
               callbacks: {
                 title: (items) => {
+                  if (items.length === 0) return "";
                   const idx = items[0].dataIndex;
-                  const d = new Date(data[idx].date);
+                  const point = sanitizedData[idx];
+                  if (!point) return "";
+                  const d = new Date(point.date);
                   return d.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",

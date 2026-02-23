@@ -8,6 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Tag } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import { isKnownStablecoinSymbol } from "@/lib/constants/stablecoins";
 import type { TokenCategory, CategoryBreakdown } from "./types";
 import { VALID_CATEGORIES } from "./types";
 
@@ -34,6 +35,11 @@ export function AssetCategoriesSection({
   const [categorySymbol, setCategorySymbol] = useState("");
   const [categoryValue, setCategoryValue] = useState("");
   const [showSymbolSuggestions, setShowSymbolSuggestions] = useState(false);
+
+  const maybeSuggestStablecoinCategory = (symbol: string) => {
+    if (!isKnownStablecoinSymbol(symbol)) return;
+    setCategoryValue((prev) => (prev ? prev : "stablecoin"));
+  };
 
   const filteredSymbolOptions = useMemo(() => {
     const normalizedQuery = categorySymbol.trim().toUpperCase();
@@ -73,7 +79,9 @@ export function AssetCategoriesSection({
               placeholder={t("rebalance.tokenSymbolCategoryPlaceholder")}
               value={categorySymbol}
               onChange={(e) => {
-                setCategorySymbol(e.target.value.toUpperCase());
+                const nextSymbol = e.target.value.toUpperCase();
+                setCategorySymbol(nextSymbol);
+                maybeSuggestStablecoinCategory(nextSymbol);
                 setShowSymbolSuggestions(true);
               }}
               onFocus={() => setShowSymbolSuggestions(true)}
@@ -93,6 +101,7 @@ export function AssetCategoriesSection({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       setCategorySymbol(symbol);
+                      maybeSuggestStablecoinCategory(symbol);
                       setShowSymbolSuggestions(false);
                     }}
                   >

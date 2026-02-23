@@ -1,6 +1,7 @@
 import { getSymbolValues, type PriceData } from "@/lib/services/portfolio-calculator";
 import type { VaultData } from "@/lib/crypto/vault-types";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
+import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
 
 export type VolatilityMap = Record<string, { volatility: number }>;
 
@@ -138,8 +139,17 @@ export function buildStrategyContext(
   vault: VaultData,
   priceMap: Record<string, PriceData>
 ): StrategyContext {
-  const targets = mergeTargetsBySymbol(vault.rebalanceTargets);
   const settings = vault.settings;
+  const treatStablecoinsAsCashReserve =
+    getNumericSetting(settings, "treatStablecoinsAsCashReserve", 0) === 1;
+  const stablecoinSymbolSet = buildStablecoinSymbolSet(vault.tokenCategories);
+
+  const mergedTargets = mergeTargetsBySymbol(vault.rebalanceTargets);
+  const targets = treatStablecoinsAsCashReserve
+    ? mergedTargets.filter(
+        (target) => !stablecoinSymbolSet.has(target.tokenSymbol.toUpperCase())
+      )
+    : mergedTargets;
 
   const holdZonePercent = getNumericSetting(settings, "holdZonePercent", 5);
   const minTradeUsd = getNumericSetting(settings, "minTradeUsd", 50);
@@ -151,7 +161,18 @@ export function buildStrategyContext(
   const slippagePercent = getNumericSetting(settings, "slippagePercent", 0.5);
   const tradingFeePercent = getNumericSetting(settings, "tradingFeePercent", 0.1);
 
-  const { symbolValues, totalValue } = getSymbolValues(vault, priceMap);
+  const { symbolValues: rawSymbolValues } = getSymbolValues(vault, priceMap);
+  const symbolValues = treatStablecoinsAsCashReserve
+    ? Object.fromEntries(
+        Object.entries(rawSymbolValues).filter(
+          ([symbol]) => !stablecoinSymbolSet.has(symbol.toUpperCase())
+        )
+      )
+    : rawSymbolValues;
+  const totalValue = Object.values(symbolValues).reduce(
+    (sum, value) => sum + value,
+    0
+  );
   const effectiveTotal = buyOnlyMode ? totalValue + newCashUsd : totalValue;
   const cashReserveFromPercent = effectiveTotal * (cashReservePercent / 100);
   const effectiveCashReserve = Math.max(cashReserveUsd, cashReserveFromPercent);

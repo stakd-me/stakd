@@ -94,6 +94,12 @@ export function usePortfolio() {
   const history = useMemo(() => {
     const sorted = vault.portfolioSnapshots
       .map((s) => ({ date: s.snapshotAt, value: s.totalValueUsd }))
+      .filter(
+        (point) =>
+          typeof point.date === "string" &&
+          point.date.length > 0 &&
+          Number.isFinite(point.value)
+      )
       .sort((a, b) => a.date.localeCompare(b.date));
 
     if (sorted.length === 0 && summary.totalValueUsd > 0) {
@@ -102,6 +108,21 @@ export function usePortfolio() {
 
     return sorted;
   }, [vault.portfolioSnapshots, summary.totalValueUsd]);
+
+  const lastPriceUpdate = useMemo(() => {
+    const relevantUpdatedAts = holdings
+      .filter((holding) => holding.currentQty > 0 && !!holding.coingeckoId)
+      .map((holding) => holding.coingeckoId ? priceMap[holding.coingeckoId]?.updatedAt ?? null : null)
+      .filter((value): value is string => typeof value === "string" && value.length > 0);
+
+    if (relevantUpdatedAts.length === 0) {
+      return updatedAt;
+    }
+
+    return relevantUpdatedAts.reduce((oldest, value) =>
+      value < oldest ? value : oldest
+    );
+  }, [holdings, priceMap, updatedAt]);
 
   useEffect(() => {
     const hasPositions =
@@ -192,7 +213,7 @@ export function usePortfolio() {
     breakdown,
     totals,
     history,
-    lastPriceUpdate: updatedAt,
+    lastPriceUpdate,
     isLoading: pricesLoading,
     refreshPrices,
   };

@@ -114,6 +114,8 @@ export function createEmptyVault(): VaultData {
       rebalanceStrategy: "percent-of-portfolio",
       autoRefreshMinutes: "15",
       concentrationThresholdPercent: "30",
+      excludeStablecoinsFromConcentration: "0",
+      treatStablecoinsAsCashReserve: "0",
     },
   };
 }

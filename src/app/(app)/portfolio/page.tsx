@@ -16,6 +16,7 @@ import { usePrices } from "@/hooks/use-prices";
 import { useVaultStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
 
 interface BreakdownItem {
   holdingKey: string;
@@ -439,9 +440,15 @@ export default function PortfolioPage() {
               createdAt: nowIso,
             },
           ],
+          tokenCategories: withAutoStablecoinCategory(
+            prev.tokenCategories,
+            normalizedSymbol,
+            nowIso
+          ),
         }));
         toast(t("portfolio.transactionAdded", { type: t("portfolio.buy") }), "success");
       } else {
+        const nowIso = new Date().toISOString();
         useVaultStore.getState().updateVault((prev) => ({
           ...prev,
           manualEntries: [...prev.manualEntries, {
@@ -451,9 +458,14 @@ export default function PortfolioPage() {
             coingeckoId: normalizedCoingeckoId || null,
             quantity,
             note: data.note.trim() || null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: nowIso,
+            updatedAt: nowIso,
           }],
+          tokenCategories: withAutoStablecoinCategory(
+            prev.tokenCategories,
+            normalizedSymbol,
+            nowIso
+          ),
         }));
         toast(t("portfolio.manualEntryUpdated"), "success");
       }
@@ -654,6 +666,7 @@ export default function PortfolioPage() {
     setSubmittingInline(true);
     try {
       const id = crypto.randomUUID();
+      const nowIso = new Date().toISOString();
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
         transactions: [...prev.transactions, {
@@ -669,8 +682,13 @@ export default function PortfolioPage() {
           coingeckoId: item.coingeckoId || null,
           note: inlineNote.trim() || null,
           transactedAt: parsedInlineDate.toISOString(),
-          createdAt: new Date().toISOString(),
+          createdAt: nowIso,
         }],
+        tokenCategories: withAutoStablecoinCategory(
+          prev.tokenCategories,
+          item.symbol,
+          nowIso
+        ),
       }));
       if (item.coingeckoId) {
         await ensurePrices([{ coingeckoId: item.coingeckoId, symbol: item.symbol }]);
@@ -972,10 +990,24 @@ export default function PortfolioPage() {
         createdAt: new Date().toISOString(),
       }));
 
-      useVaultStore.getState().updateVault((prev) => ({
-        ...prev,
-        transactions: [...prev.transactions, ...newTransactions],
-      }));
+      useVaultStore.getState().updateVault((prev) => {
+        const nowIso = new Date().toISOString();
+        let nextTokenCategories = prev.tokenCategories;
+
+        for (const tx of newTransactions) {
+          nextTokenCategories = withAutoStablecoinCategory(
+            nextTokenCategories,
+            tx.tokenSymbol,
+            nowIso
+          );
+        }
+
+        return {
+          ...prev,
+          transactions: [...prev.transactions, ...newTransactions],
+          tokenCategories: nextTokenCategories,
+        };
+      });
 
       // Ensure prices for any tokens with coingeckoIds
       const tokensToPrice = newTransactions

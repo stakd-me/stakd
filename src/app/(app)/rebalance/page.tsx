@@ -46,6 +46,10 @@ import {
   parseConcentrationAlertThresholdPercent,
 } from "@/lib/constants/risk";
 import {
+  buildStablecoinSymbolSet,
+  withAutoStablecoinCategory,
+} from "@/lib/constants/stablecoins";
+import {
   buildStrategyContext,
   dispatchStrategy,
 } from "@/lib/services/rebalance-strategies";
@@ -176,6 +180,8 @@ function computeAlerts(
   totalValue: number,
   holdZonePercent: number,
   concentrationThresholdPercent: number,
+  stablecoinSymbols: Set<string>,
+  excludeStablecoinsFromConcentration: boolean,
 ): Alert[] {
   if (totalValue === 0) return [];
 
@@ -221,7 +227,10 @@ function computeAlerts(
     }
 
     // Concentration alert: any token above configured threshold
-    if (currentPercent > concentrationThresholdPercent) {
+    if (
+      currentPercent > concentrationThresholdPercent &&
+      !(excludeStablecoinsFromConcentration && stablecoinSymbols.has(symbol))
+    ) {
       concentrationSet.add(symbol);
       alerts.push({
         tokenSymbol: symbol,
@@ -237,6 +246,9 @@ function computeAlerts(
 
   for (const [symbol, value] of Object.entries(symbolValues)) {
     if (concentrationSet.has(symbol)) continue;
+    if (excludeStablecoinsFromConcentration && stablecoinSymbols.has(symbol)) {
+      continue;
+    }
     const currentPercent = (value / totalValue) * 100;
     if (currentPercent <= concentrationThresholdPercent) continue;
 
@@ -409,6 +421,10 @@ export default function RebalancePage() {
   const concentrationThresholdPercent = parseConcentrationAlertThresholdPercent(
     settings.concentrationThresholdPercent
   );
+  const excludeStablecoinsFromConcentration =
+    settings.excludeStablecoinsFromConcentration === "1";
+  const treatStablecoinsAsCashReserve =
+    settings.treatStablecoinsAsCashReserve === "1";
   const concentrationThresholdLabel = Number.isInteger(concentrationThresholdPercent)
     ? concentrationThresholdPercent.toString()
     : concentrationThresholdPercent.toFixed(1);
@@ -423,6 +439,10 @@ export default function RebalancePage() {
   const { symbolValues, totalValue } = useMemo(
     () => getSymbolValues(vault, priceMap),
     [vault, priceMap]
+  );
+  const stablecoinSymbols = useMemo(
+    () => buildStablecoinSymbolSet(vault.tokenCategories),
+    [vault.tokenCategories]
   );
 
   const strategyContext = useMemo(() => {
@@ -487,6 +507,12 @@ export default function RebalancePage() {
       vault.rebalanceTargets.map((t) => t.tokenSymbol.toUpperCase())
     );
     for (const [symbol, value] of Object.entries(symbolValues)) {
+      if (
+        treatStablecoinsAsCashReserve &&
+        stablecoinSymbols.has(symbol.toUpperCase())
+      ) {
+        continue;
+      }
       if (value > dustThresholdUsd && !targetSymbols.has(symbol)) {
         const currentPercent = totalValue > 0 ? (value / totalValue) * 100 : 0;
         allSuggestions.push({
@@ -545,20 +571,25 @@ export default function RebalancePage() {
     cashReserveUsd, cashReservePercent, dustThresholdUsd,
     slippagePercent, tradingFeePercent, autoRefreshMinutes,
     lastRebalanceDate, rebalanceStrategy, pricesUpdatedAt,
+    stablecoinSymbols, treatStablecoinsAsCashReserve,
   ]);
 
   // ── Computed: alerts ──────────────────────────────────────────
 
   const alertsData = useMemo(() => {
+    const alertSymbolValues = strategyContext?.symbolValues ?? symbolValues;
+    const alertTotalValue = strategyContext?.effectiveTotal ?? totalValue;
     const alerts = computeAlerts(
       vault.rebalanceTargets.map((t) => ({
         tokenSymbol: t.tokenSymbol,
         targetPercent: t.targetPercent,
       })),
-      symbolValues,
-      totalValue,
+      alertSymbolValues,
+      alertTotalValue,
       holdZonePercent,
       concentrationThresholdPercent,
+      stablecoinSymbols,
+      excludeStablecoinsFromConcentration,
     );
     return { alerts };
   }, [
@@ -567,6 +598,9 @@ export default function RebalancePage() {
     totalValue,
     holdZonePercent,
     concentrationThresholdPercent,
+    strategyContext,
+    stablecoinSymbols,
+    excludeStablecoinsFromConcentration,
   ]);
 
   const alertsError = false;
@@ -993,23 +1027,35 @@ export default function RebalancePage() {
           return;
         }
 
-        useVaultStore.getState().updateVault((prev) => ({
-          ...prev,
-          transactions: [...prev.transactions, ...newTransactions],
-          rebalanceSessions: prev.rebalanceSessions.map((session) =>
-            session.id === recordingSessionId
-              ? {
-                  ...session,
-                  status: "completed",
-                  completedAt: recordedAtIso,
-                }
-              : session
-          ),
-          settings: {
-            ...prev.settings,
-            lastRebalanceDate: recordedAtIso.split("T")[0],
-          },
-        }));
+        useVaultStore.getState().updateVault((prev) => {
+          let nextTokenCategories = prev.tokenCategories;
+          for (const tx of newTransactions) {
+            nextTokenCategories = withAutoStablecoinCategory(
+              nextTokenCategories,
+              tx.tokenSymbol,
+              recordedAtIso
+            );
+          }
+
+          return {
+            ...prev,
+            transactions: [...prev.transactions, ...newTransactions],
+            rebalanceSessions: prev.rebalanceSessions.map((session) =>
+              session.id === recordingSessionId
+                ? {
+                    ...session,
+                    status: "completed",
+                    completedAt: recordedAtIso,
+                  }
+                : session
+            ),
+            tokenCategories: nextTokenCategories,
+            settings: {
+              ...prev.settings,
+              lastRebalanceDate: recordedAtIso.split("T")[0],
+            },
+          };
+        });
 
         if (tokensToEnsure.length > 0) {
           await ensurePrices(tokensToEnsure);
