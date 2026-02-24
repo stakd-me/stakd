@@ -17,7 +17,11 @@ import {
   encryptVault,
   generateSalt,
 } from "@/lib/crypto/client-crypto";
-import { clearEncKey, storeEncKey } from "@/lib/crypto/key-store";
+import {
+  clearEncKey,
+  isEncKeyPersistent,
+  storeEncKey,
+} from "@/lib/crypto/key-store";
 import { saveVaultToServer } from "@/lib/services/vault-sync";
 import { createEmptyVault } from "@/lib/crypto/vault-types";
 import {
@@ -53,6 +57,20 @@ type DangerAction = "portfolio" | "settings" | "all" | "account";
 const DANGER_CONFIRM_KEYWORD = "DELETE";
 const DANGER_CONFIRM_DELAY_SECONDS = 5;
 
+function hexToBytes(hex: string): Uint8Array | null {
+  if (hex.length === 0 || hex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(hex)) {
+    return null;
+  }
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    const offset = i * 2;
+    const value = Number.parseInt(hex.slice(offset, offset + 2), 16);
+    if (Number.isNaN(value)) return null;
+    bytes[i] = value;
+  }
+  return bytes;
+}
+
 // ── Page component ──────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -83,9 +101,10 @@ export default function SettingsPage() {
       const saltRes = await apiFetch("/api/auth/salt/me");
       if (!saltRes.ok) throw new Error("Failed to get salt");
       const { salt: saltHex } = await saltRes.json();
-      const oldSalt = new Uint8Array(
-        saltHex.match(/.{2}/g)!.map((b: string) => parseInt(b, 16))
-      );
+      const oldSalt = hexToBytes(typeof saltHex === "string" ? saltHex : "");
+      if (!oldSalt) {
+        throw new Error(t("settings.failedVerifyPassphrase"));
+      }
 
       // 2. Derive old auth key from current passphrase + old salt
       const oldMasterKey = await deriveMasterKey(currentPassphrase, oldSalt);
@@ -127,8 +146,8 @@ export default function SettingsPage() {
 
       const data: { vaultVersion?: number } = await res.json();
 
-      // 6. Store new enc key in sessionStorage
-      await storeEncKey(newEncKey);
+      // 6. Keep existing key persistence mode after passphrase rotation.
+      await storeEncKey(newEncKey, { persist: isEncKeyPersistent() });
 
       // 7. Sync local vault version to avoid optimistic-lock conflict on next save.
       if (typeof data.vaultVersion === "number") {
@@ -326,14 +345,11 @@ export default function SettingsPage() {
       throw new Error(t("settings.failedVerifyPassphrase"));
     }
     const saltPayload: { salt?: string } = await saltRes.json();
-    const saltHex = saltPayload.salt ?? "";
-    const saltParts = saltHex.match(/.{2}/g);
-    if (!saltParts || saltParts.length === 0) {
+    const saltHex = typeof saltPayload.salt === "string" ? saltPayload.salt : "";
+    const salt = hexToBytes(saltHex);
+    if (!salt) {
       throw new Error(t("settings.failedVerifyPassphrase"));
     }
-    const salt = new Uint8Array(
-      saltParts.map((byte) => parseInt(byte, 16))
-    );
 
     const masterKey = await deriveMasterKey(passphrase, salt);
     const authKey = await deriveAuthKey(masterKey);

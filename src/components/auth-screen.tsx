@@ -18,12 +18,27 @@ import { loadVaultFromServer } from "@/lib/services/vault-sync";
 
 type Tab = "login" | "register";
 
+function hexToBytes(hex: string): Uint8Array | null {
+  if (hex.length === 0 || hex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(hex)) {
+    return null;
+  }
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    const offset = i * 2;
+    const value = Number.parseInt(hex.slice(offset, offset + 2), 16);
+    if (Number.isNaN(value)) return null;
+    bytes[i] = value;
+  }
+  return bytes;
+}
+
 export function AuthScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("login");
   const [username, setUsername] = useState("");
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassphraseWarning, setShowPassphraseWarning] = useState(false);
@@ -46,7 +61,10 @@ export function AuthScreen() {
       });
       if (!saltRes.ok) throw new Error("Failed to get salt");
       const { salt: saltHex } = await saltRes.json();
-      const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map((b: string) => parseInt(b, 16)));
+      const salt = hexToBytes(typeof saltHex === "string" ? saltHex : "");
+      if (!salt) {
+        throw new Error("Invalid login response");
+      }
 
       // 2. Derive keys
       const masterKey = await deriveMasterKey(passphrase, salt);
@@ -58,7 +76,7 @@ export function AuthScreen() {
       const loginRes = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ usernameHash, authKeyHex }),
+        body: JSON.stringify({ usernameHash, authKeyHex, rememberMe }),
       });
 
       if (!loginRes.ok) {
@@ -68,8 +86,8 @@ export function AuthScreen() {
 
       const loginData = await loginRes.json();
 
-      // 4. Store enc key in sessionStorage
-      await storeEncKey(encKey);
+      // 4. Store encryption key based on remember-me preference
+      await storeEncKey(encKey, { persist: rememberMe });
 
       // 5. Set auth state
       useAuthStore.getState().setAuth(loginData.userId, loginData.accessToken);
@@ -262,6 +280,18 @@ export function AuthScreen() {
           )}
 
           {error && <p className="text-sm text-status-negative">{error}</p>}
+
+          {tab === "login" && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-text-subtle">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-border-subtle"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              {t("auth.rememberMe")}
+            </label>
+          )}
 
           {tab === "register" && (
             <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-3 text-xs text-status-warning">

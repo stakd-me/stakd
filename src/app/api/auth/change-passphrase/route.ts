@@ -3,6 +3,11 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { createHash, timingSafeEqual } from "crypto";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
+import { isHexOfByteLength } from "@/lib/auth/input-validation";
+
+const REFRESH_COOKIE_PATH = "/api/auth/refresh";
+const REMEMBER_ME_COOKIE = "rememberMe";
+const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,10 +17,24 @@ export async function POST(req: NextRequest) {
     const { oldAuthKeyHex, newAuthKeyHex, newSalt, encryptedVault, iv } =
       await req.json();
 
-    if (!oldAuthKeyHex || !newAuthKeyHex || !newSalt || !encryptedVault || !iv) {
+    if (
+      !isHexOfByteLength(oldAuthKeyHex, 32) ||
+      !isHexOfByteLength(newAuthKeyHex, 32) ||
+      !isHexOfByteLength(newSalt, 32) ||
+      typeof encryptedVault !== "string" ||
+      encryptedVault.length === 0 ||
+      typeof iv !== "string" ||
+      iv.length === 0
+    ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid passphrase update payload" },
         { status: 400 }
+      );
+    }
+    if (encryptedVault.length > MAX_VAULT_SIZE) {
+      return NextResponse.json(
+        { error: "Vault exceeds maximum size (10MB)" },
+        { status: 413 }
       );
     }
 
@@ -93,7 +112,20 @@ export async function POST(req: NextRequest) {
     });
 
     const response = NextResponse.json({ success: true, vaultVersion: result.vaultVersion });
-    response.cookies.delete("refreshToken");
+    response.cookies.set("refreshToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: REFRESH_COOKIE_PATH,
+      maxAge: 0,
+    });
+    response.cookies.set(REMEMBER_ME_COOKIE, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: REFRESH_COOKIE_PATH,
+      maxAge: 0,
+    });
     return response;
   } catch (error) {
     console.error("[auth/change-passphrase]", error);

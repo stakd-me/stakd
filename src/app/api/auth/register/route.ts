@@ -3,17 +3,34 @@ import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import { signAccessToken } from "@/lib/auth/jwt";
+import { rateLimit } from "@/lib/redis";
+import { getRequestIp, isHexOfByteLength } from "@/lib/auth/input-validation";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+const REFRESH_COOKIE_PATH = "/api/auth/refresh";
+const REMEMBER_ME_COOKIE = "rememberMe";
 
 export async function POST(req: NextRequest) {
   try {
     const { usernameHash, authKeyHex, salt } = await req.json();
 
-    if (!usernameHash || !authKeyHex || !salt) {
+    if (
+      !isHexOfByteLength(usernameHash, 32) ||
+      !isHexOfByteLength(authKeyHex, 32) ||
+      !isHexOfByteLength(salt, 32)
+    ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid registration payload" },
         { status: 400 }
+      );
+    }
+
+    const clientIp = getRequestIp(req);
+    const allowed = await rateLimit(`register:ip:${clientIp}`, 10, 60);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Try again later." },
+        { status: 429 }
       );
     }
 
@@ -70,8 +87,13 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60,
+      path: REFRESH_COOKIE_PATH,
+    });
+    response.cookies.set(REMEMBER_ME_COOKIE, "0", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: REFRESH_COOKIE_PATH,
     });
 
     return response;

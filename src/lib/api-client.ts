@@ -1,5 +1,7 @@
 import { useAuthStore } from "@/lib/store";
 
+let refreshInFlight: Promise<boolean> | null = null;
+
 /**
  * JWT-aware fetch wrapper.
  * Auto-attaches Authorization header and handles token refresh on 401.
@@ -37,14 +39,26 @@ export async function apiFetch(
 }
 
 async function attemptTokenRefresh(): Promise<boolean> {
-  try {
-    const res = await fetch("/api/auth/refresh", { method: "POST" });
-    if (!res.ok) return false;
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        // Single-flight refresh to avoid concurrent token rotation races.
+        const res = await fetch("/api/auth/refresh", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        if (!res.ok) return false;
 
-    const data = await res.json();
-    useAuthStore.getState().setAuth(data.userId, data.accessToken);
-    return true;
-  } catch {
-    return false;
+        const data = await res.json();
+        useAuthStore.getState().setAuth(data.userId, data.accessToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshInFlight = null;
+      }
+    })();
   }
+
+  return refreshInFlight;
 }

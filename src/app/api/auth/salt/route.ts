@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { randomBytes } from "crypto";
+import { createHash } from "crypto";
+import { rateLimit } from "@/lib/redis";
+import { getRequestIp, isHexOfByteLength } from "@/lib/auth/input-validation";
 
 export async function POST(req: NextRequest) {
   try {
     const { usernameHash } = await req.json();
 
-    if (!usernameHash) {
+    if (!isHexOfByteLength(usernameHash, 32)) {
       return NextResponse.json(
-        { error: "Missing usernameHash" },
+        { error: "Invalid username hash" },
         { status: 400 }
+      );
+    }
+
+    const clientIp = getRequestIp(req);
+    const allowed = await rateLimit(`auth:salt:${clientIp}`, 60, 60);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429 }
       );
     }
 
@@ -24,9 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ salt: user.salt });
     }
 
-    // Return a fake salt to prevent username enumeration
-    // Generate deterministically from the hash so repeated requests get the same fake salt
-    const fakeSalt = randomBytes(32).toString("base64");
+    // Return deterministic fake salt to prevent username enumeration.
+    // Must match real salt format (64-char hex) used by the client parser.
+    const fakeSalt = createHash("sha256")
+      .update(`stakd-fake-salt:${usernameHash}`)
+      .digest("hex");
     return NextResponse.json({ salt: fakeSalt });
   } catch (error) {
     console.error("[auth/salt]", error);

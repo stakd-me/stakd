@@ -156,8 +156,9 @@ CoinGecko fallback is throttled by per-token cooldown keys in Redis (default tar
 - Master key splits via HKDF into auth key (sent to server) and encryption key (never leaves browser)
 - Server stores SHA-256 hash of auth key — timing-safe comparison on login
 - Vault encrypted with AES-256-GCM; unique IV per save
-- Encryption key stored in `sessionStorage` — lost on tab close, requires re-login
-- JWT access tokens (15 min) with httpOnly refresh cookies (30 days, rotated on use)
+- Encryption key stored in `sessionStorage` by default (tab/session scope)
+- Optional `Remember me` stores encryption key in `localStorage` and keeps refresh session persistent (up to 30 days)
+- JWT access tokens (15 min) with rotating httpOnly refresh cookies
 - Redis rate limiting on login (5 attempts/min)
 - Anti-enumeration: fake salt returned for non-existent usernames
 - Optimistic concurrency on vault writes (version checking)

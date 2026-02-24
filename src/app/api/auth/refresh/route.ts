@@ -5,16 +5,44 @@ import { createHash, randomBytes } from "crypto";
 import { signAccessToken } from "@/lib/auth/jwt";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
+const REFRESH_COOKIE_PATH = "/api/auth/refresh";
+const REMEMBER_ME_COOKIE = "rememberMe";
+
+function getRefreshCookieMaxAge(rememberMe: boolean): number | undefined {
+  if (!rememberMe) return undefined;
+  return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
+}
+
+function clearRefreshCookies(response: NextResponse): void {
+  const secure = process.env.NODE_ENV === "production";
+  response.cookies.set("refreshToken", "", {
+    httpOnly: true,
+    secure,
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
+  response.cookies.set(REMEMBER_ME_COOKIE, "", {
+    httpOnly: true,
+    secure,
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
     const refreshToken = req.cookies.get("refreshToken")?.value;
+    const rememberMe = req.cookies.get(REMEMBER_ME_COOKIE)?.value === "1";
 
     if (!refreshToken) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: "No refresh token" },
         { status: 401 }
       );
+      clearRefreshCookies(response);
+      return response;
     }
 
     const tokenHash = createHash("sha256")
@@ -39,7 +67,7 @@ export async function POST(req: NextRequest) {
         { error: "Invalid or expired refresh token" },
         { status: 401 }
       );
-      response.cookies.delete("refreshToken");
+      clearRefreshCookies(response);
       return response;
     }
 
@@ -73,8 +101,15 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      path: "/api/auth/refresh",
-      maxAge: REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60,
+      path: REFRESH_COOKIE_PATH,
+      maxAge: getRefreshCookieMaxAge(rememberMe),
+    });
+    response.cookies.set(REMEMBER_ME_COOKIE, rememberMe ? "1" : "0", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: REFRESH_COOKIE_PATH,
+      maxAge: getRefreshCookieMaxAge(rememberMe),
     });
 
     return response;

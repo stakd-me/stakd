@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
 
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10MB
+const REFRESH_COOKIE_PATH = "/api/auth/refresh";
+const REMEMBER_ME_COOKIE = "rememberMe";
 
 // GET: Return encrypted vault blob for authenticated user
 export async function GET(req: NextRequest) {
@@ -100,6 +102,19 @@ export async function DELETE(req: NextRequest) {
   await db.delete(schema.users).where(eq(schema.users.id, payload.sub));
 
   const response = NextResponse.json({ success: true });
-  response.cookies.delete("refreshToken");
+  response.cookies.set("refreshToken", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
+  response.cookies.set(REMEMBER_ME_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: 0,
+  });
   return response;
 }

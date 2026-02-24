@@ -21,7 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Auto-save vault on changes
   useVaultAutosave();
 
-  // On mount: check if we have a valid session (enc_key in sessionStorage + refresh token)
+  // On mount: check if we have a valid session (encryption key in session/local storage + refresh token)
   useEffect(() => {
     const tryRestore = async () => {
       if (!hasEncKey()) {

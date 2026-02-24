@@ -3,19 +3,24 @@ import { createHash, timingSafeEqual } from "crypto";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
+import { rateLimit } from "@/lib/redis";
+import { isHexOfByteLength } from "@/lib/auth/input-validation";
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await authenticateRequest(req);
     if (!payload) return authError();
 
+    const allowed = await rateLimit(`verify-passphrase:${payload.sub}`, 10, 60);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many verification attempts. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const { authKeyHex } = await req.json();
-    if (
-      typeof authKeyHex !== "string" ||
-      authKeyHex.length === 0 ||
-      authKeyHex.length % 2 !== 0 ||
-      !/^[0-9a-fA-F]+$/.test(authKeyHex)
-    ) {
+    if (!isHexOfByteLength(authKeyHex, 32)) {
       return NextResponse.json(
         { error: "Invalid current passphrase" },
         { status: 400 }

@@ -1,6 +1,17 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 
-const JWT_SECRET_RAW = process.env.JWT_SECRET || "dev-secret-change-in-production";
+const DEFAULT_DEV_JWT_SECRET = "dev-secret-change-in-production";
+const MIN_JWT_SECRET_LENGTH = 32;
+const configuredJwtSecret = process.env.JWT_SECRET;
+
+if (
+  process.env.NODE_ENV === "production" &&
+  (!configuredJwtSecret || configuredJwtSecret.length < MIN_JWT_SECRET_LENGTH)
+) {
+  throw new Error("JWT_SECRET must be set to at least 32 characters in production.");
+}
+
+const JWT_SECRET_RAW = configuredJwtSecret || DEFAULT_DEV_JWT_SECRET;
 const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_RAW);
 const ISSUER = "stakd";
 const ACCESS_TOKEN_EXPIRY = "15m";
