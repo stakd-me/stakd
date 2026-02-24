@@ -47,7 +47,7 @@ const en = {
   "auth.setPassword": "Set a password to get started (min 8 characters)",
   "auth.enterPasswordPlaceholder": "Enter password",
   "auth.createPasswordPlaceholder": "Create a password",
-  "auth.rememberMe": "Remember me on this device",
+  "auth.rememberMe": "Trust this device for {days} days",
   "auth.unlock": "Unlock",
   "auth.createPassword": "Create Password",
 

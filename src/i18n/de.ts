@@ -42,7 +42,7 @@ const de: Record<TranslationKeys, string> = {
   "auth.setPassword": "Set a Passphrase to get started (min 8 characters)",
   "auth.enterPasswordPlaceholder": "Enter Passphrase",
   "auth.createPasswordPlaceholder": "Erstellen a Passphrase",
-  "auth.rememberMe": "Remember this device",
+  "auth.rememberMe": "Trust this device for {days} days",
   "auth.unlock": "Entsperren",
   "auth.createPassword": "Erstellen Password",
   "dashboard.title": "Uebersicht",

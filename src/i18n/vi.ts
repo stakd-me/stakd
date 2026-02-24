@@ -49,7 +49,7 @@ const vi: Record<TranslationKeys, string> = {
   "auth.setPassword": "Đặt mật khẩu để bắt đầu (tối thiểu 8 ký tự)",
   "auth.enterPasswordPlaceholder": "Nhập mật khẩu",
   "auth.createPasswordPlaceholder": "Tạo mật khẩu",
-  "auth.rememberMe": "Ghi nhớ trên thiết bị này",
+  "auth.rememberMe": "Tin cậy thiết bị này trong {days} ngày",
   "auth.unlock": "Mở khóa",
   "auth.createPassword": "Tạo mật khẩu",
 

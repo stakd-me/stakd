@@ -42,7 +42,7 @@ const es: Record<TranslationKeys, string> = {
   "auth.setPassword": "Set a contrasena to get started (min 8 characters)",
   "auth.enterPasswordPlaceholder": "Enter contrasena",
   "auth.createPasswordPlaceholder": "Crear a contrasena",
-  "auth.rememberMe": "Remember this device",
+  "auth.rememberMe": "Trust this device for {days} days",
   "auth.unlock": "Desbloquear",
   "auth.createPassword": "Crear Password",
   "dashboard.title": "Panel",

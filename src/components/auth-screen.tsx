@@ -17,6 +17,7 @@ import { storeEncKey } from "@/lib/crypto/key-store";
 import { loadVaultFromServer } from "@/lib/services/vault-sync";
 
 type Tab = "login" | "register";
+const TRUST_DEVICE_DAYS = 30;
 
 function hexToBytes(hex: string): Uint8Array | null {
   if (hex.length === 0 || hex.length % 2 !== 0 || !/^[0-9a-f]+$/i.test(hex)) {
@@ -289,7 +290,7 @@ export function AuthScreen() {
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
               />
-              {t("auth.rememberMe")}
+              {t("auth.rememberMe", { days: TRUST_DEVICE_DAYS })}
             </label>
           )}
 
