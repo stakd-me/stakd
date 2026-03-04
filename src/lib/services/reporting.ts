@@ -47,12 +47,17 @@ export interface ReportHoldingRow {
   percent: number;
   unrealizedPLUsd: number;
   unrealizedPLPercent: number;
+  heldDays: number;
+  unrealizedPnlPerHeldDayUsd: number;
 }
 
 export interface ReportLeader {
   symbol: string;
   returnPercent: number;
   pnlUsd: number;
+  heldDays: number;
+  pnlPerHeldDayUsd: number;
+  annualizedReturnPercent: number;
 }
 
 export interface ReportPoint {
@@ -167,6 +172,44 @@ function splitAssetKey(assetKey: string): { symbol: string; coingeckoId: string 
     symbol: normalizeSymbol(symbolRaw),
     coingeckoId: normalizeCoingeckoId(coingeckoIdRaw),
   };
+}
+
+function computeHeldDaysByAsset(
+  transactions: VaultTransaction[],
+  endMs: number
+): Record<string, number> {
+  const firstAcquireMsByAsset: Record<string, number> = {};
+
+  for (const tx of transactions) {
+    const timestamp = new Date(tx.transactedAt).getTime();
+    if (!Number.isFinite(timestamp) || timestamp > endMs) continue;
+    if (tx.type !== "buy" && tx.type !== "receive") continue;
+    if (toSafeNumber(tx.quantity) <= 0) continue;
+
+    const key = makeAssetKey(tx.tokenSymbol, tx.coingeckoId);
+    if (!key) continue;
+
+    if (!(key in firstAcquireMsByAsset) || timestamp < firstAcquireMsByAsset[key]) {
+      firstAcquireMsByAsset[key] = timestamp;
+    }
+  }
+
+  const heldDaysByAsset: Record<string, number> = {};
+  for (const [assetKey, firstAcquireMs] of Object.entries(firstAcquireMsByAsset)) {
+    const deltaDays = (endMs - firstAcquireMs) / MS_PER_DAY;
+    heldDaysByAsset[assetKey] = Math.max(1, Math.ceil(deltaDays));
+  }
+
+  return heldDaysByAsset;
+}
+
+function annualizeReturnPercent(returnPercent: number, heldDays: number): number {
+  if (!Number.isFinite(returnPercent) || heldDays <= 0) return 0;
+  const base = 1 + returnPercent / 100;
+  if (base <= 0) return -100;
+  const annualized = (base ** (365 / heldDays) - 1) * 100;
+  if (!Number.isFinite(annualized)) return 0;
+  return annualized;
 }
 
 function toUtcDate(
@@ -568,7 +611,8 @@ function computeWindow(
 
 function computeRiskSnapshot(
   holdings: TokenHolding[],
-  currentTotalValueUsd: number
+  currentTotalValueUsd: number,
+  heldDaysByAsset: Record<string, number>
 ): RiskSnapshotResult {
   const active = holdings
     .filter((holding) => holding.currentQty > 0 && holding.currentValue > 0)
@@ -577,12 +621,19 @@ function computeRiskSnapshot(
         currentTotalValueUsd > 0
           ? (holding.currentValue / currentTotalValueUsd) * 100
           : 0;
+      const assetKey = makeAssetKey(holding.symbol, holding.coingeckoId);
+      const heldDays = heldDaysByAsset[assetKey] ?? 0;
+      const unrealizedPnlPerHeldDayUsd =
+        heldDays > 0 ? holding.unrealizedPL / heldDays : holding.unrealizedPL;
+
       return {
         symbol: holding.symbol.toUpperCase(),
         valueUsd: roundTo(holding.currentValue, 2),
         percent: roundTo(percent, 2),
         unrealizedPLUsd: roundTo(holding.unrealizedPL, 2),
         unrealizedPLPercent: roundTo(holding.unrealizedPLPercent, 2),
+        heldDays,
+        unrealizedPnlPerHeldDayUsd: roundTo(unrealizedPnlPerHeldDayUsd, 2),
       };
     })
     .sort((a, b) => b.valueUsd - a.valueUsd);
@@ -611,6 +662,7 @@ function computePeriodLeaders(params: {
   holdings: TokenHolding[];
   snapshots: SnapshotPoint[];
   transactions: VaultTransaction[];
+  heldDaysByAsset: Record<string, number>;
   startMs: number;
   endMs: number;
 }): {
@@ -642,12 +694,18 @@ function computePeriodLeaders(params: {
       const pnlUsd = endValue - startValue - netFlowUsd;
       const denominator = startValue + Math.max(netFlowUsd, 0);
       const returnPercent = denominator > 0 ? (pnlUsd / denominator) * 100 : 0;
+      const heldDays = params.heldDaysByAsset[assetKey] ?? 0;
+      const pnlPerHeldDayUsd = heldDays > 0 ? pnlUsd / heldDays : pnlUsd;
+      const annualizedReturnPercent = annualizeReturnPercent(returnPercent, heldDays);
       const { symbol } = splitAssetKey(assetKey);
 
       return {
         symbol,
         pnlUsd,
         returnPercent,
+        heldDays,
+        pnlPerHeldDayUsd,
+        annualizedReturnPercent,
         hasMeaningfulData: startValue > 0 || endValue > 0 || netFlowUsd !== 0,
       };
     })
@@ -668,6 +726,9 @@ function computePeriodLeaders(params: {
           symbol: best.symbol,
           returnPercent: roundTo(best.returnPercent, 2),
           pnlUsd: roundTo(best.pnlUsd, 2),
+          heldDays: best.heldDays,
+          pnlPerHeldDayUsd: roundTo(best.pnlPerHeldDayUsd, 2),
+          annualizedReturnPercent: roundTo(best.annualizedReturnPercent, 2),
         }
       : null,
     worstPerformer: worst
@@ -675,6 +736,9 @@ function computePeriodLeaders(params: {
           symbol: worst.symbol,
           returnPercent: roundTo(worst.returnPercent, 2),
           pnlUsd: roundTo(worst.pnlUsd, 2),
+          heldDays: worst.heldDays,
+          pnlPerHeldDayUsd: roundTo(worst.pnlPerHeldDayUsd, 2),
+          annualizedReturnPercent: roundTo(worst.annualizedReturnPercent, 2),
         }
       : null,
   };
@@ -707,14 +771,21 @@ export function computePortfolioReport(params: {
     currentWindow.summary.startValueUsd
   );
 
+  const heldDaysByAsset = computeHeldDaysByAsset(
+    params.vault.transactions,
+    boundaries.end.getTime()
+  );
+
   const riskSnapshot = computeRiskSnapshot(
     params.holdings,
-    params.currentTotalValueUsd
+    params.currentTotalValueUsd,
+    heldDaysByAsset
   );
   const periodLeaders = computePeriodLeaders({
     holdings: params.holdings,
     snapshots: normalizedSnapshots,
     transactions: params.vault.transactions,
+    heldDaysByAsset,
     startMs: boundaries.start.getTime(),
     endMs: boundaries.end.getTime(),
   });

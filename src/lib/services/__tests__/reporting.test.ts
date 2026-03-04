@@ -215,6 +215,36 @@ describe("computePortfolioReport", () => {
     ];
     vault.transactions = [
       {
+        id: "seed-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "0.6",
+        pricePerUnit: "1000",
+        totalCost: "600",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-02-20T00:00:00.000Z",
+        createdAt: "2026-02-20T00:00:00.000Z",
+      },
+      {
+        id: "seed-eth",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "",
+        type: "receive",
+        quantity: "1",
+        pricePerUnit: "400",
+        totalCost: "400",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: null,
+        transactedAt: "2026-02-20T00:00:00.000Z",
+        createdAt: "2026-02-20T00:00:00.000Z",
+      },
+      {
         id: "buy-btc",
         tokenSymbol: "BTC",
         tokenName: "Bitcoin",
@@ -272,9 +302,13 @@ describe("computePortfolioReport", () => {
     expect(report.bestPerformer?.symbol).toBe("BTC");
     expect(report.bestPerformer?.returnPercent).toBeCloseTo(7.69, 2);
     expect(report.bestPerformer?.pnlUsd).toBe(50);
+    expect(report.bestPerformer?.heldDays).toBe(13);
+    expect(report.bestPerformer?.pnlPerHeldDayUsd).toBeCloseTo(3.85, 2);
+    expect(report.bestPerformer?.annualizedReturnPercent).toBeGreaterThan(0);
     expect(report.worstPerformer?.symbol).toBe("ETH");
     expect(report.worstPerformer?.returnPercent).toBeCloseTo(0, 2);
     expect(report.worstPerformer?.pnlUsd).toBe(0);
+    expect(report.worstPerformer?.heldDays).toBe(13);
   });
 
   it("handles empty data without crashes", () => {

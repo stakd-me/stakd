@@ -76,7 +76,9 @@ function toCsv(report: PortfolioPeriodReport): string {
     "Top Holding Symbol",
     "Value USD",
     "Percent",
+    "Held Days",
     "Unrealized PnL USD",
+    "Unrealized PnL Per Held Day USD",
     "Unrealized PnL Percent",
   ]);
 
@@ -85,7 +87,9 @@ function toCsv(report: PortfolioPeriodReport): string {
       row.symbol,
       String(row.valueUsd),
       String(row.percent),
+      String(row.heldDays),
       String(row.unrealizedPLUsd),
+      String(row.unrealizedPnlPerHeldDayUsd),
       String(row.unrealizedPLPercent),
     ]);
   }
@@ -361,6 +365,13 @@ export default function ReportsPage() {
                       )} (${getSignedCurrency(report.bestPerformer.pnlUsd)})`
                     : "N/A"}
                 </p>
+                {report.bestPerformer && (
+                  <p className="text-xs text-text-dim">
+                    Held: {report.bestPerformer.heldDays}d · P/L/day:{" "}
+                    {getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd)} · Annualized:{" "}
+                    {getSignedPercent(report.bestPerformer.annualizedReturnPercent)}
+                  </p>
+                )}
               </div>
               <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
                 <p className="text-text-subtle">Worst Performer</p>
@@ -371,6 +382,13 @@ export default function ReportsPage() {
                       )} (${getSignedCurrency(report.worstPerformer.pnlUsd)})`
                     : "N/A"}
                 </p>
+                {report.worstPerformer && (
+                  <p className="text-xs text-text-dim">
+                    Held: {report.worstPerformer.heldDays}d · P/L/day:{" "}
+                    {getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd)} · Annualized:{" "}
+                    {getSignedPercent(report.worstPerformer.annualizedReturnPercent)}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -407,7 +425,9 @@ export default function ReportsPage() {
                     <th className="px-2 py-2 font-medium">Token</th>
                     <th className="px-2 py-2 font-medium">Value</th>
                     <th className="px-2 py-2 font-medium">Weight</th>
+                    <th className="px-2 py-2 font-medium">Held</th>
                     <th className="px-2 py-2 font-medium">Unrealized P&L</th>
+                    <th className="px-2 py-2 font-medium">Unrealized P&L / day</th>
                     <th className="px-2 py-2 font-medium">Return</th>
                   </tr>
                 </thead>
@@ -420,6 +440,7 @@ export default function ReportsPage() {
                       <td className="px-2 py-2 font-medium">{holding.symbol}</td>
                       <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
                       <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
+                      <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
                       <td
                         className={`px-2 py-2 ${
                           holding.unrealizedPLUsd >= 0
@@ -428,6 +449,15 @@ export default function ReportsPage() {
                         }`}
                       >
                         {getSignedCurrency(holding.unrealizedPLUsd)}
+                      </td>
+                      <td
+                        className={`px-2 py-2 ${
+                          holding.unrealizedPnlPerHeldDayUsd >= 0
+                            ? "text-status-positive"
+                            : "text-status-negative"
+                        }`}
+                      >
+                        {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
                       </td>
                       <td
                         className={`px-2 py-2 ${
