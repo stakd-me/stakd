@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Crypto Portfolio Manager",
-  description: "Private, offline-first crypto portfolio tracker",
+  title: "Portfolio Operating System",
+  description: "Decision support, risk control, and audit trail for manual crypto operations",
 };
 
 export default function RootLayout({
