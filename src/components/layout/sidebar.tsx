@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useTranslation } from "@/hooks/use-translation";
@@ -27,7 +28,9 @@ const navKeys = [
   { href: "/dashboard", labelKey: "nav.dashboard" as const, icon: LayoutDashboard },
   { href: "/portfolio", labelKey: "nav.portfolio" as const, icon: Coins },
   { href: "/rebalance", labelKey: "nav.rebalance" as const, icon: Scale },
+  { href: "/reports", labelKey: "dashboard.report" as const, icon: FileText },
   { href: "/history", labelKey: "nav.history" as const, icon: Clock },
+  { href: "/guide", labelKey: "nav.guide" as const, icon: BookOpen },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];
 
