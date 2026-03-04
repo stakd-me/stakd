@@ -226,6 +226,7 @@ export default function DashboardPage() {
 
   const totalValue = totals.totalValue;
   const totalPL = totals.totalPL;
+  const change24hUsdt = (totals.totalValue * totals.change24h) / 100;
   const isPriceStale = useMemo(() => {
     if (!lastPriceUpdate) return true;
     return Date.now() - new Date(lastPriceUpdate).getTime() > 30 * 60 * 1000;
@@ -405,6 +406,14 @@ export default function DashboardPage() {
             >
               {totals.change24h >= 0 ? "+" : ""}
               {totals.change24h.toFixed(2)}%
+            </p>
+            <p
+              className={`mt-1 text-sm font-medium ${
+                change24hUsdt >= 0 ? "text-status-positive" : "text-status-negative"
+              }`}
+            >
+              {change24hUsdt >= 0 ? "+" : ""}
+              {formatUsd(change24hUsdt)} USDT
             </p>
             <p className="mt-1 text-xs text-text-dim">{t("portfolio.weightedChangeDesc")}</p>
           </CardContent>
