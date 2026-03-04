@@ -22,6 +22,7 @@ const PERIOD_OPTIONS: { value: ReportPeriod; label: string }[] = [
   { value: "monthly", label: "Month" },
   { value: "quarterly", label: "Quarter" },
   { value: "yearly", label: "Year" },
+  { value: "all-time", label: "All-time" },
 ];
 
 function getSignedPercent(value: number): string {
@@ -137,6 +138,7 @@ export default function ReportsPage() {
     report.summary.pnlUsd - report.previousSummary.pnlUsd,
     2
   );
+  const showPreviousComparison = period !== "all-time";
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -148,7 +150,7 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-bold text-text-primary">Reports</h1>
           <p className="text-text-subtle">
-            Weekly, monthly, quarterly, yearly performance and risk.
+            Weekly, monthly, quarterly, yearly, and all-time performance and risk.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -253,9 +255,11 @@ export default function ReportsPage() {
               >
                 {getSignedPercent(report.summary.returnPercent)}
               </p>
-              <p className="text-xs text-text-dim">
-                vs prev to-date: {getSignedPercent(returnDelta)}
-              </p>
+              {showPreviousComparison && (
+                <p className="text-xs text-text-dim">
+                  vs prev to-date: {getSignedPercent(returnDelta)}
+                </p>
+              )}
             </div>
             <div>
               <p className="text-xs text-text-subtle">Max Drawdown</p>
@@ -267,9 +271,11 @@ export default function ReportsPage() {
               </p>
             </div>
           </div>
-          <p className="mt-3 text-xs text-text-dim">
-            Previous to-date P&L delta: {getSignedCurrency(pnlDelta)}
-          </p>
+          {showPreviousComparison && (
+            <p className="mt-3 text-xs text-text-dim">
+              Previous to-date P&L delta: {getSignedCurrency(pnlDelta)}
+            </p>
+          )}
         </CardContent>
       </Card>
 

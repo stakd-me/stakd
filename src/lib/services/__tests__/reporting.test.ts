@@ -445,4 +445,78 @@ describe("computePortfolioReport", () => {
     expect(report.risk.activeAssets).toBe(0);
     expect(report.timeline.length).toBeGreaterThanOrEqual(1);
   });
+
+  it("supports all-time period from earliest known activity", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "old-buy",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "100",
+        totalCost: "100",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2021-01-10T00:00:00.000Z",
+        createdAt: "2021-01-10T00:00:00.000Z",
+      },
+      {
+        id: "recent-buy",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "200",
+        totalCost: "200",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-10T00:00:00.000Z",
+        createdAt: "2026-01-10T00:00:00.000Z",
+      },
+    ];
+    vault.portfolioSnapshots = [
+      {
+        id: "s-old",
+        totalValueUsd: 120,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 120 }]),
+        snapshotAt: "2021-01-11T00:00:00.000Z",
+      },
+      {
+        id: "s-now",
+        totalValueUsd: 500,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 500 }]),
+        snapshotAt: "2026-03-04T00:00:00.000Z",
+      },
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 2,
+          currentPrice: 250,
+          currentValue: 500,
+          unrealizedPL: 200,
+          unrealizedPLPercent: 66.67,
+        }),
+      ],
+      currentTotalValueUsd: 500,
+      period: "all-time",
+      referenceDate: new Date("2026-03-04T18:00:00.000Z"),
+    });
+
+    expect(report.window.label).toBe("All-time");
+    expect(report.window.startIso).toBe("2021-01-10T00:00:00.000Z");
+    expect(report.previousSummary.pnlUsd).toBe(0);
+    expect(report.summary.startValueUsd).toBeGreaterThan(0);
+    expect(report.summary.endValueUsd).toBe(500);
+  });
 });

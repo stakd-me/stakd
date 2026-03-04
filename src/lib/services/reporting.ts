@@ -4,7 +4,7 @@ import type { TokenHolding } from "@/lib/services/portfolio-calculator";
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
 
-export type ReportPeriod = "weekly" | "monthly" | "quarterly" | "yearly";
+export type ReportPeriod = "weekly" | "monthly" | "quarterly" | "yearly" | "all-time";
 
 export interface ReportWindow {
   startIso: string;
@@ -263,6 +263,10 @@ function getIsoWeekNumber(date: Date): number {
 }
 
 function formatWindowLabel(period: ReportPeriod, start: Date): string {
+  if (period === "all-time") {
+    return "All-time";
+  }
+
   const year = start.getUTCFullYear();
 
   if (period === "weekly") {
@@ -283,8 +287,46 @@ function formatWindowLabel(period: ReportPeriod, start: Date): string {
   return String(year);
 }
 
-function getBoundaries(period: ReportPeriod, referenceDate: Date): WindowBoundaries {
+function findAllTimeStart(vault: VaultData, referenceDate: Date): Date {
+  const endMs = referenceDate.getTime();
+  const candidates: number[] = [];
+
+  for (const snapshot of vault.portfolioSnapshots) {
+    const timestamp = new Date(snapshot.snapshotAt).getTime();
+    if (Number.isFinite(timestamp) && timestamp <= endMs) {
+      candidates.push(timestamp);
+    }
+  }
+
+  for (const tx of vault.transactions) {
+    const timestamp = new Date(tx.transactedAt).getTime();
+    if (Number.isFinite(timestamp) && timestamp <= endMs) {
+      candidates.push(timestamp);
+    }
+  }
+
+  for (const entry of vault.manualEntries) {
+    const timestamp = new Date(entry.createdAt).getTime();
+    if (Number.isFinite(timestamp) && timestamp <= endMs) {
+      candidates.push(timestamp);
+    }
+  }
+
+  if (candidates.length === 0) return referenceDate;
+  return new Date(Math.min(...candidates));
+}
+
+function getBoundaries(
+  period: ReportPeriod,
+  referenceDate: Date,
+  vault: VaultData
+): WindowBoundaries {
   const end = new Date(referenceDate);
+
+  if (period === "all-time") {
+    const start = findAllTimeStart(vault, referenceDate);
+    return { start, end, previousStart: start, previousEnd: start };
+  }
 
   if (period === "weekly") {
     const start = startOfUtcWeek(referenceDate);
@@ -899,7 +941,7 @@ export function computePortfolioReport(params: {
   referenceDate?: Date;
 }): PortfolioPeriodReport {
   const referenceDate = params.referenceDate ?? new Date();
-  const boundaries = getBoundaries(params.period, referenceDate);
+  const boundaries = getBoundaries(params.period, referenceDate, params.vault);
   const normalizedSnapshots = normalizeSnapshots(params.vault);
   const estimatedPriceByAsset = buildEstimatedPriceByAsset(
     params.holdings,
@@ -916,14 +958,36 @@ export function computePortfolioReport(params: {
     estimatedPriceByAsset
   );
 
-  const previousWindow = computeWindow(
-    normalizedSnapshots,
-    params.vault.transactions,
-    boundaries.previousStart.getTime(),
-    boundaries.previousEnd.getTime(),
-    currentWindow.summary.startValueUsd,
-    estimatedPriceByAsset
-  );
+  const previousWindow =
+    params.period === "all-time"
+      ? {
+          summary: {
+            startValueUsd: 0,
+            endValueUsd: 0,
+            netFlowUsd: 0,
+            pnlUsd: 0,
+            returnPercent: 0,
+            maxDrawdownPercent: 0,
+            annualizedVolatilityPercent: 0,
+          },
+          activity: {
+            transactionCount: 0,
+            buyVolumeUsd: 0,
+            sellVolumeUsd: 0,
+            receiveVolumeUsd: 0,
+            sendVolumeUsd: 0,
+            totalFeesUsd: 0,
+          },
+          timeline: [],
+        }
+      : computeWindow(
+          normalizedSnapshots,
+          params.vault.transactions,
+          boundaries.previousStart.getTime(),
+          boundaries.previousEnd.getTime(),
+          currentWindow.summary.startValueUsd,
+          estimatedPriceByAsset
+        );
 
   const heldDaysByAsset = computeHeldDaysByAsset(
     params.vault.transactions,
