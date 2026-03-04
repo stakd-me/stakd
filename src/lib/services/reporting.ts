@@ -384,20 +384,118 @@ function buildCurrentAssetValueMap(holdings: TokenHolding[]): Record<string, num
   return byAsset;
 }
 
-function getTransactionUsdAmount(tx: VaultTransaction): number {
+function buildEstimatedPriceByAsset(
+  holdings: TokenHolding[],
+  transactions: VaultTransaction[],
+  endMs: number
+): Record<string, number> {
+  const estimatedPriceByAsset: Record<string, number> = {};
+
+  for (const holding of holdings) {
+    const key = makeAssetKey(holding.symbol, holding.coingeckoId);
+    if (!key || holding.currentPrice <= 0) continue;
+    estimatedPriceByAsset[key] = holding.currentPrice;
+  }
+
+  const sortedTransactions = [...transactions].sort(
+    (a, b) => new Date(a.transactedAt).getTime() - new Date(b.transactedAt).getTime()
+  );
+
+  for (const tx of sortedTransactions) {
+    const timestamp = new Date(tx.transactedAt).getTime();
+    if (!Number.isFinite(timestamp) || timestamp > endMs) continue;
+
+    const key = makeAssetKey(tx.tokenSymbol, tx.coingeckoId);
+    if (!key) continue;
+
+    const quantity = toSafeNumber(tx.quantity);
+    const pricePerUnit = toSafeNumber(tx.pricePerUnit);
+    const totalCost = toSafeNumber(tx.totalCost);
+    const derivedPrice = quantity > 0 ? totalCost / quantity : 0;
+    const candidatePrice =
+      pricePerUnit > 0 ? pricePerUnit : derivedPrice > 0 ? derivedPrice : 0;
+
+    if (candidatePrice > 0) {
+      estimatedPriceByAsset[key] = candidatePrice;
+    }
+  }
+
+  return estimatedPriceByAsset;
+}
+
+function getTransactionUsdAmount(
+  tx: VaultTransaction,
+  estimatedPriceByAsset?: Record<string, number>
+): number {
   const totalCost = toSafeNumber(tx.totalCost);
   if (totalCost > 0) return totalCost;
 
   const quantity = toSafeNumber(tx.quantity);
   const pricePerUnit = toSafeNumber(tx.pricePerUnit);
   const derived = quantity * pricePerUnit;
-  return Number.isFinite(derived) && derived > 0 ? derived : 0;
+  if (Number.isFinite(derived) && derived > 0) return derived;
+
+  if (estimatedPriceByAsset && quantity > 0) {
+    const key = makeAssetKey(tx.tokenSymbol, tx.coingeckoId);
+    const estimatedPrice = key ? estimatedPriceByAsset[key] ?? 0 : 0;
+    const estimatedAmount = quantity * estimatedPrice;
+    if (Number.isFinite(estimatedAmount) && estimatedAmount > 0) {
+      return estimatedAmount;
+    }
+  }
+
+  return 0;
+}
+
+function computeEstimatedAssetValueByAssetAt(params: {
+  transactions: VaultTransaction[];
+  atMs: number;
+  estimatedPriceByAsset: Record<string, number>;
+}): Record<string, number> {
+  const qtyByAsset: Record<string, number> = {};
+
+  for (const tx of params.transactions) {
+    const timestamp = new Date(tx.transactedAt).getTime();
+    if (!Number.isFinite(timestamp) || timestamp > params.atMs) continue;
+
+    const key = makeAssetKey(tx.tokenSymbol, tx.coingeckoId);
+    if (!key) continue;
+
+    const qty = Math.max(0, toSafeNumber(tx.quantity));
+    if (qty <= 0) continue;
+
+    if (tx.type === "buy" || tx.type === "receive") {
+      qtyByAsset[key] = (qtyByAsset[key] ?? 0) + qty;
+    } else {
+      qtyByAsset[key] = (qtyByAsset[key] ?? 0) - qty;
+    }
+  }
+
+  const valueByAsset: Record<string, number> = {};
+  for (const [assetKey, qty] of Object.entries(qtyByAsset)) {
+    if (qty <= 0) continue;
+    const estimatedPrice = params.estimatedPriceByAsset[assetKey] ?? 0;
+    if (estimatedPrice <= 0) continue;
+    valueByAsset[assetKey] = qty * estimatedPrice;
+  }
+
+  return valueByAsset;
+}
+
+function computeEstimatedPortfolioValueAt(params: {
+  transactions: VaultTransaction[];
+  atMs: number;
+  estimatedPriceByAsset: Record<string, number>;
+}): number {
+  const valueByAsset = computeEstimatedAssetValueByAssetAt(params);
+  return Object.values(valueByAsset).reduce((sum, value) => sum + value, 0);
 }
 
 function computeNetFlowByAsset(
   transactions: VaultTransaction[],
   startMs: number,
-  endMs: number
+  endMs: number,
+  estimatedPriceByAsset: Record<string, number>
 ): Record<string, number> {
   const netFlowByAsset: Record<string, number> = {};
 
@@ -411,7 +509,7 @@ function computeNetFlowByAsset(
     if (!key) continue;
 
     const feeUsd = Math.max(0, toSafeNumber(tx.fee));
-    const amountUsd = Math.max(0, getTransactionUsdAmount(tx));
+    const amountUsd = Math.max(0, getTransactionUsdAmount(tx, estimatedPriceByAsset));
 
     let flowUsd = 0;
     if (tx.type === "buy") {
@@ -433,7 +531,8 @@ function computeNetFlowByAsset(
 function computeActivity(
   transactions: VaultTransaction[],
   startMs: number,
-  endMs: number
+  endMs: number,
+  estimatedPriceByAsset: Record<string, number>
 ): ReportActivity & { netFlowUsd: number } {
   let transactionCount = 0;
   let buyVolumeUsd = 0;
@@ -450,7 +549,7 @@ function computeActivity(
     }
 
     const feeUsd = Math.max(0, toSafeNumber(tx.fee));
-    const amountUsd = Math.max(0, getTransactionUsdAmount(tx));
+    const amountUsd = Math.max(0, getTransactionUsdAmount(tx, estimatedPriceByAsset));
     transactionCount += 1;
     totalFeesUsd += feeUsd;
 
@@ -549,18 +648,54 @@ function computeWindow(
   transactions: VaultTransaction[],
   startMs: number,
   endMs: number,
-  fallbackEndValue: number
+  fallbackEndValue: number,
+  estimatedPriceByAsset: Record<string, number>
 ): WindowComputationResult {
-  const activityWithFlow = computeActivity(transactions, startMs, endMs);
   const endValue = getValueAtOrBefore(snapshots, endMs) ?? fallbackEndValue;
-  const startValueAtOrBefore = getValueAtOrBefore(snapshots, startMs);
-  const inferredStartValue = Math.max(0, endValue - activityWithFlow.netFlowUsd);
-  const startValue = startValueAtOrBefore ?? inferredStartValue;
+  const startPointAtOrBefore = getPointAtOrBefore(snapshots, startMs);
+  const firstSnapshotInWindow =
+    snapshots.find((snapshot) => snapshot.timestamp >= startMs && snapshot.timestamp <= endMs) ??
+    null;
+
+  let effectiveStartMs = startMs;
+  let startValue = 0;
+
+  if (startPointAtOrBefore) {
+    startValue = startPointAtOrBefore.value;
+  } else if (firstSnapshotInWindow) {
+    effectiveStartMs = firstSnapshotInWindow.timestamp;
+    startValue = firstSnapshotInWindow.value;
+  } else {
+    const estimatedStartValue = computeEstimatedPortfolioValueAt({
+      transactions,
+      atMs: startMs,
+      estimatedPriceByAsset,
+    });
+
+    if (estimatedStartValue > 0) {
+      startValue = estimatedStartValue;
+    } else {
+      const provisionalActivity = computeActivity(
+        transactions,
+        startMs,
+        endMs,
+        estimatedPriceByAsset
+      );
+      startValue = Math.max(0, endValue - provisionalActivity.netFlowUsd);
+    }
+  }
+
+  const activityWithFlow = computeActivity(
+    transactions,
+    effectiveStartMs,
+    endMs,
+    estimatedPriceByAsset
+  );
 
   const timelineMap = new Map<number, number>();
-  addTimelinePoint(timelineMap, startMs, startValue);
+  addTimelinePoint(timelineMap, effectiveStartMs, startValue);
   for (const snapshot of snapshots) {
-    if (snapshot.timestamp >= startMs && snapshot.timestamp <= endMs) {
+    if (snapshot.timestamp >= effectiveStartMs && snapshot.timestamp <= endMs) {
       addTimelinePoint(timelineMap, snapshot.timestamp, snapshot.value);
     }
   }
@@ -582,7 +717,7 @@ function computeWindow(
     timeline.length > 1
       ? timeline
       : [
-          { date: new Date(startMs).toISOString(), value: startValue },
+          { date: new Date(effectiveStartMs).toISOString(), value: startValue },
           { date: new Date(endMs).toISOString(), value: endValue },
         ];
   const drawdownVolatility = computeDrawdownAndVolatility(riskSeries);
@@ -663,21 +798,33 @@ function computePeriodLeaders(params: {
   snapshots: SnapshotPoint[];
   transactions: VaultTransaction[];
   heldDaysByAsset: Record<string, number>;
+  estimatedPriceByAsset: Record<string, number>;
   startMs: number;
   endMs: number;
 }): {
   bestPerformer: ReportLeader | null;
   worstPerformer: ReportLeader | null;
 } {
-  const startSnapshot = getPointAtOrBefore(params.snapshots, params.startMs);
+  const startSnapshot =
+    getPointAtOrBefore(params.snapshots, params.startMs) ??
+    params.snapshots.find(
+      (snapshot) => snapshot.timestamp >= params.startMs && snapshot.timestamp <= params.endMs
+    ) ??
+    null;
   const endSnapshot = getPointAtOrBefore(params.snapshots, params.endMs);
   const endFallbackValues = buildCurrentAssetValueMap(params.holdings);
-  const startValues = startSnapshot?.breakdownValues ?? {};
+  const estimatedStartValues = computeEstimatedAssetValueByAssetAt({
+    transactions: params.transactions,
+    atMs: params.startMs,
+    estimatedPriceByAsset: params.estimatedPriceByAsset,
+  });
+  const startValues = startSnapshot?.breakdownValues ?? estimatedStartValues;
   const endValues = endSnapshot?.breakdownValues ?? endFallbackValues;
   const netFlowByAsset = computeNetFlowByAsset(
     params.transactions,
     params.startMs,
-    params.endMs
+    params.endMs,
+    params.estimatedPriceByAsset
   );
 
   const keys = new Set([
@@ -754,13 +901,19 @@ export function computePortfolioReport(params: {
   const referenceDate = params.referenceDate ?? new Date();
   const boundaries = getBoundaries(params.period, referenceDate);
   const normalizedSnapshots = normalizeSnapshots(params.vault);
+  const estimatedPriceByAsset = buildEstimatedPriceByAsset(
+    params.holdings,
+    params.vault.transactions,
+    boundaries.end.getTime()
+  );
 
   const currentWindow = computeWindow(
     normalizedSnapshots,
     params.vault.transactions,
     boundaries.start.getTime(),
     boundaries.end.getTime(),
-    params.currentTotalValueUsd
+    params.currentTotalValueUsd,
+    estimatedPriceByAsset
   );
 
   const previousWindow = computeWindow(
@@ -768,7 +921,8 @@ export function computePortfolioReport(params: {
     params.vault.transactions,
     boundaries.previousStart.getTime(),
     boundaries.previousEnd.getTime(),
-    currentWindow.summary.startValueUsd
+    currentWindow.summary.startValueUsd,
+    estimatedPriceByAsset
   );
 
   const heldDaysByAsset = computeHeldDaysByAsset(
@@ -786,6 +940,7 @@ export function computePortfolioReport(params: {
     snapshots: normalizedSnapshots,
     transactions: params.vault.transactions,
     heldDaysByAsset,
+    estimatedPriceByAsset,
     startMs: boundaries.start.getTime(),
     endMs: boundaries.end.getTime(),
   });

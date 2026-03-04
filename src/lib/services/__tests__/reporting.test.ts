@@ -111,7 +111,7 @@ describe("computePortfolioReport", () => {
     expect(report.window.previousEndIso).toBe("2026-02-20T12:00:00.000Z");
   });
 
-  it("does not forward-fill start value from future snapshots", () => {
+  it("anchors start to the first in-window snapshot when earlier snapshot is missing", () => {
     const vault = createEmptyVault();
     vault.portfolioSnapshots = [
       {
@@ -153,8 +153,126 @@ describe("computePortfolioReport", () => {
       referenceDate: new Date("2026-03-04T18:00:00.000Z"),
     });
 
-    expect(report.summary.startValueUsd).toBe(1090);
+    expect(report.summary.startValueUsd).toBe(1100);
     expect(report.summary.endValueUsd).toBe(1200);
+    expect(report.summary.netFlowUsd).toBe(110);
+    expect(report.summary.pnlUsd).toBe(-10);
+  });
+
+  it("estimates start value from pre-period holdings when snapshots are missing", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "pre-buy-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "10",
+        pricePerUnit: "100",
+        totalCost: "1000",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2025-12-15T00:00:00.000Z",
+        createdAt: "2025-12-15T00:00:00.000Z",
+      },
+      {
+        id: "q1-sell-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "sell",
+        quantity: "2",
+        pricePerUnit: "120",
+        totalCost: "240",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-02-01T00:00:00.000Z",
+        createdAt: "2026-02-01T00:00:00.000Z",
+      },
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 8,
+          currentPrice: 120,
+          currentValue: 960,
+          unrealizedPL: 160,
+          unrealizedPLPercent: 20,
+        }),
+      ],
+      currentTotalValueUsd: 960,
+      period: "quarterly",
+      referenceDate: new Date("2026-03-04T18:00:00.000Z"),
+    });
+
+    expect(report.summary.startValueUsd).toBe(1200);
+    expect(report.summary.endValueUsd).toBe(960);
+    expect(report.summary.netFlowUsd).toBe(-240);
+    expect(report.summary.pnlUsd).toBe(0);
+  });
+
+  it("estimates amount for legacy send/receive rows with zero price", () => {
+    const vault = createEmptyVault();
+    vault.portfolioSnapshots = [
+      {
+        id: "m1",
+        totalValueUsd: 1000,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 1000 }]),
+        snapshotAt: "2026-03-01T00:00:00.000Z",
+      },
+      {
+        id: "m2",
+        totalValueUsd: 900,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 900 }]),
+        snapshotAt: "2026-03-04T00:00:00.000Z",
+      },
+    ];
+    vault.transactions = [
+      {
+        id: "legacy-send",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "send",
+        quantity: "1",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-02T00:00:00.000Z",
+        createdAt: "2026-03-02T00:00:00.000Z",
+      },
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 9,
+          currentPrice: 100,
+          currentValue: 900,
+          unrealizedPL: 0,
+          unrealizedPLPercent: 0,
+        }),
+      ],
+      currentTotalValueUsd: 900,
+      period: "monthly",
+      referenceDate: new Date("2026-03-04T18:00:00.000Z"),
+    });
+
+    expect(report.summary.startValueUsd).toBe(1000);
+    expect(report.summary.endValueUsd).toBe(900);
+    expect(report.summary.netFlowUsd).toBe(-100);
     expect(report.summary.pnlUsd).toBe(0);
   });
 
