@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { createHash } from "crypto";
 import { rateLimit } from "@/lib/redis";
 import { getRequestIp, isHexOfByteLength } from "@/lib/auth/input-validation";
+import { deriveFakeSalt } from "@/lib/auth/fake-salt";
 
 export async function POST(req: NextRequest) {
   try {
@@ -35,11 +35,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ salt: user.salt });
     }
 
-    // Return deterministic fake salt to prevent username enumeration.
+    // Return deterministic-but-secret fake salt to prevent username enumeration.
     // Must match real salt format (64-char hex) used by the client parser.
-    const fakeSalt = createHash("sha256")
-      .update(`stakd-fake-salt:${usernameHash}`)
-      .digest("hex");
+    const fakeSalt = deriveFakeSalt(usernameHash);
     return NextResponse.json({ salt: fakeSalt });
   } catch (error) {
     console.error("[auth/salt]", error);

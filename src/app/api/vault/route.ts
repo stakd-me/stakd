@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
 
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10MB
 const REFRESH_COOKIE_PATH = "/api/auth/refresh";
 const REMEMBER_ME_COOKIE = "rememberMe";
+
+function isValidVaultVersion(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
+async function getCurrentVaultVersion(userId: string): Promise<number> {
+  const [current] = await db
+    .select({ version: schema.encryptedVaults.version })
+    .from(schema.encryptedVaults)
+    .where(eq(schema.encryptedVaults.userId, userId))
+    .limit(1);
+  return current?.version ?? 0;
+}
 
 // GET: Return encrypted vault blob for authenticated user
 export async function GET(req: NextRequest) {
@@ -37,11 +50,22 @@ export async function PUT(req: NextRequest) {
   const payload = await authenticateRequest(req);
   if (!payload) return authError();
 
-  const { encryptedData, iv, version } = await req.json();
+  const body = await req.json();
+  const encryptedData =
+    typeof body.encryptedData === "string" ? body.encryptedData : "";
+  const iv = typeof body.iv === "string" ? body.iv : "";
+  const version = body.version;
 
-  if (!encryptedData || !iv) {
+  if (encryptedData.length === 0 || iv.length === 0) {
     return NextResponse.json(
       { error: "Missing encrypted data or IV" },
+      { status: 400 }
+    );
+  }
+
+  if (!isValidVaultVersion(version)) {
+    return NextResponse.json(
+      { error: "Version must be a non-negative integer" },
       { status: 400 }
     );
   }
@@ -53,45 +77,57 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  const [existing] = await db
-    .select()
-    .from(schema.encryptedVaults)
-    .where(eq(schema.encryptedVaults.userId, payload.sub))
-    .limit(1);
+  if (version === 0) {
+    const inserted = await db
+      .insert(schema.encryptedVaults)
+      .values({
+        userId: payload.sub,
+        encryptedData,
+        iv,
+        version: 1,
+        sizeBytes: encryptedData.length,
+      })
+      .onConflictDoNothing()
+      .returning({ version: schema.encryptedVaults.version });
 
-  if (!existing) {
-    // Create new vault
-    await db.insert(schema.encryptedVaults).values({
-      userId: payload.sub,
-      encryptedData,
-      iv,
-      version: 1,
-      sizeBytes: encryptedData.length,
-    });
-    return NextResponse.json({ version: 1 }, { status: 201 });
-  }
+    if (inserted.length > 0) {
+      return NextResponse.json({ version: inserted[0].version }, { status: 201 });
+    }
 
-  // Optimistic concurrency: check version
-  if (version !== undefined && version !== existing.version) {
+    const currentVersion = await getCurrentVaultVersion(payload.sub);
     return NextResponse.json(
-      { error: "Version conflict. Please reload.", currentVersion: existing.version },
+      { error: "Version conflict. Please reload.", currentVersion },
       { status: 409 }
     );
   }
 
-  const newVersion = existing.version + 1;
-  await db
+  const nextVersion = version + 1;
+  const updated = await db
     .update(schema.encryptedVaults)
     .set({
       encryptedData,
       iv,
-      version: newVersion,
+      version: nextVersion,
       updatedAt: new Date(),
       sizeBytes: encryptedData.length,
     })
-    .where(eq(schema.encryptedVaults.userId, payload.sub));
+    .where(
+      and(
+        eq(schema.encryptedVaults.userId, payload.sub),
+        eq(schema.encryptedVaults.version, version)
+      )
+    )
+    .returning({ version: schema.encryptedVaults.version });
 
-  return NextResponse.json({ version: newVersion });
+  if (updated.length === 0) {
+    const currentVersion = await getCurrentVaultVersion(payload.sub);
+    return NextResponse.json(
+      { error: "Version conflict. Please reload.", currentVersion },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json({ version: updated[0].version });
 }
 
 // DELETE: Delete user account and all data (CASCADE)

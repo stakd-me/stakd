@@ -11,6 +11,12 @@ export default defineConfig({
       provider: "v8",
       include: ["src/lib/**/*.ts"],
       exclude: ["src/lib/db/migrate.ts"],
+      thresholds: {
+        statements: 45,
+        lines: 45,
+        functions: 60,
+        branches: 60,
+      },
     },
   },
   resolve: {

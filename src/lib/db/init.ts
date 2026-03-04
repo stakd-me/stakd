@@ -45,6 +45,12 @@ export async function initializeDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      -- Ensure refresh-token uniqueness for safe one-time rotation.
+      DELETE FROM sessions a
+      USING sessions b
+      WHERE a.id < b.id
+        AND a.refresh_token_hash = b.refresh_token_hash;
+
       CREATE TABLE IF NOT EXISTS prices (
         coingecko_id TEXT PRIMARY KEY,
         symbol TEXT NOT NULL,
@@ -64,6 +70,8 @@ export async function initializeDatabase() {
         ON price_history(coingecko_id, recorded_at);
       CREATE INDEX IF NOT EXISTS idx_sessions_user
         ON sessions(user_id);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_refresh_token_hash
+        ON sessions(refresh_token_hash);
       CREATE INDEX IF NOT EXISTS idx_prices_symbol
         ON prices(symbol);
     `);

@@ -1,4 +1,14 @@
-import { pgTable, text, integer, doublePrecision, timestamp, uuid, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  integer,
+  doublePrecision,
+  timestamp,
+  uuid,
+  serial,
+  uniqueIndex,
+  index,
+} from "drizzle-orm/pg-core";
 
 // ── Users ────────────────────────────────────────────────────────────
 export const users = pgTable("users", {
@@ -37,7 +47,10 @@ export const sessions = pgTable("sessions", {
   refreshTokenHash: text("refresh_token_hash").notNull(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("idx_sessions_user").on(table.userId),
+  uniqueIndex("idx_sessions_refresh_token_hash").on(table.refreshTokenHash),
+]);
 
 // ── Prices (shared, server-managed) ──────────────────────────────────
 export const prices = pgTable("prices", {

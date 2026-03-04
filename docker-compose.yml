@@ -33,6 +33,9 @@ services:
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
+      - AUTH_FAKE_SALT_SECRET=${AUTH_FAKE_SALT_SECRET:-}
+      - TRUST_PROXY_IP_HEADERS=${TRUST_PROXY_IP_HEADERS:-0}
+      - PRICE_HISTORY_RETENTION_DAYS=${PRICE_HISTORY_RETENTION_DAYS:-365}
     depends_on:
       postgres:
         condition: service_healthy

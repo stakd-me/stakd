@@ -18,7 +18,7 @@ A private, self-hosted crypto portfolio tracker with end-to-end encryption. The 
 - **USD-Only Valuation** — All portfolio values are displayed consistently in USD
 - **Multi-Exchange Price Feeds** — Binance first, then OKX/Bybit/MEXC/Gate, then CoinGecko fallback with cooldown protection
 - **Dark/Light Theme** — System-aware with manual toggle
-- **i18n** — English and Vietnamese
+- **i18n** — English, Vietnamese, Spanish, and German
 
 ## Architecture
 
@@ -51,7 +51,7 @@ All user-specific data (transactions, manual entries, rebalance targets, snapsho
 | Frontend | Next.js 16 (App Router), React 19, TypeScript |
 | Styling | Tailwind CSS |
 | State | Zustand, TanStack React Query |
-| Charts | Chart.js, Recharts |
+| Charts | Chart.js |
 | Crypto | Web Crypto API (PBKDF2, HKDF, AES-256-GCM) |
 | Auth | JWT (jose), httpOnly refresh cookies |
 | Database | PostgreSQL 16 (Drizzle ORM) |
@@ -107,9 +107,12 @@ All configuration is managed via a `.env` file (see [`.env.example`](.env.exampl
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://portfolio:portfolio@localhost:5432/portfolio` |
 | `APP_PORT` | Host port mapped to the app | `33000` |
 | `JWT_SECRET` | Secret for signing JWT tokens (min 32 chars) | — |
+| `AUTH_FAKE_SALT_SECRET` | Secret used for anti-enumeration fake salts (falls back to `JWT_SECRET`) | — |
+| `TRUST_PROXY_IP_HEADERS` | Trust `x-forwarded-for`/proxy IP headers for rate limiting (`1`/`0`) | `0` |
 | `NODE_ENV` | `development` or `production` | `production` |
 | `PRICES_BACKGROUND_REFRESH_ENABLED` | Enable server-side periodic price refresh without user login | `1` |
 | `PRICES_BACKGROUND_REFRESH_MINUTES` | Server-side price refresh interval (minutes) | `15` |
+| `PRICE_HISTORY_RETENTION_DAYS` | Retain price history for N days (`0` disables pruning) | `365` |
 
 ## Project Structure
 
@@ -137,7 +140,7 @@ src/
 │   ├── redis/              # Redis singleton + helpers
 │   ├── pricing/            # Binance + secondary exchanges + CoinGecko fallback
 │   └── services/           # Portfolio calculator, rebalance strategies
-└── i18n/                   # English + Vietnamese translations
+└── i18n/                   # English + Vietnamese + Spanish + German translations
 ```
 
 ## Price Source Strategy

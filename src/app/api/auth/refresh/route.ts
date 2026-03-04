@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
-import { eq, and, gt } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { createHash, randomBytes } from "crypto";
 import { signAccessToken } from "@/lib/auth/jwt";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 const REFRESH_COOKIE_PATH = "/api/auth/refresh";
 const REMEMBER_ME_COOKIE = "rememberMe";
+const MAX_TOKEN_GENERATION_ATTEMPTS = 5;
+const PG_UNIQUE_VIOLATION_CODE = "23505";
 
 function getRefreshCookieMaxAge(rememberMe: boolean): number | undefined {
   if (!rememberMe) return undefined;
@@ -31,6 +33,15 @@ function clearRefreshCookies(response: NextResponse): void {
   });
 }
 
+function isPgUniqueViolation(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: string }).code === PG_UNIQUE_VIOLATION_CODE
+  );
+}
+
 export async function POST(req: NextRequest) {
   try {
     const refreshToken = req.cookies.get("refreshToken")?.value;
@@ -49,20 +60,53 @@ export async function POST(req: NextRequest) {
       .update(refreshToken)
       .digest("hex");
 
-    // Find valid session
-    const [session] = await db
-      .select()
-      .from(schema.sessions)
-      .where(
-        and(
-          eq(schema.sessions.refreshTokenHash, tokenHash),
-          gt(schema.sessions.expiresAt, new Date())
+    // Atomic single-use rotation:
+    // consume the old session and issue a new one in the same transaction.
+    const rotation = await db.transaction(async (tx) => {
+      const [consumed] = await tx
+        .delete(schema.sessions)
+        .where(
+          and(
+            eq(schema.sessions.refreshTokenHash, tokenHash),
+            gt(schema.sessions.expiresAt, new Date())
+          )
         )
-      )
-      .limit(1);
+        .returning({
+          userId: schema.sessions.userId,
+        });
 
-    if (!session) {
-      // Clear invalid cookie
+      if (!consumed) return null;
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+
+      for (let attempt = 0; attempt < MAX_TOKEN_GENERATION_ATTEMPTS; attempt++) {
+        const newRefreshToken = randomBytes(32).toString("hex");
+        const newRefreshTokenHash = createHash("sha256")
+          .update(newRefreshToken)
+          .digest("hex");
+
+        try {
+          await tx.insert(schema.sessions).values({
+            userId: consumed.userId,
+            refreshTokenHash: newRefreshTokenHash,
+            expiresAt,
+          });
+
+          return {
+            userId: consumed.userId,
+            newRefreshToken,
+          };
+        } catch (error) {
+          if (isPgUniqueViolation(error)) continue;
+          throw error;
+        }
+      }
+
+      throw new Error("Failed to generate a unique refresh token.");
+    });
+
+    if (!rotation) {
       const response = NextResponse.json(
         { error: "Invalid or expired refresh token" },
         { status: 401 }
@@ -71,33 +115,14 @@ export async function POST(req: NextRequest) {
       return response;
     }
 
-    // Delete old session (token rotation)
-    await db
-      .delete(schema.sessions)
-      .where(eq(schema.sessions.id, session.id));
-
-    // Create new tokens
-    const accessToken = await signAccessToken(session.userId);
-    const newRefreshToken = randomBytes(32).toString("hex");
-    const newRefreshTokenHash = createHash("sha256")
-      .update(newRefreshToken)
-      .digest("hex");
-
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
-
-    await db.insert(schema.sessions).values({
-      userId: session.userId,
-      refreshTokenHash: newRefreshTokenHash,
-      expiresAt,
-    });
+    const accessToken = await signAccessToken(rotation.userId);
 
     const response = NextResponse.json({
       accessToken,
-      userId: session.userId,
+      userId: rotation.userId,
     });
 
-    response.cookies.set("refreshToken", newRefreshToken, {
+    response.cookies.set("refreshToken", rotation.newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

@@ -24,6 +24,21 @@ async function run() {
         DROP COLUMN IF EXISTS usd_to_vnd_rate;
     `);
 
+    await client.query(`
+      DO $$
+      BEGIN
+        IF to_regclass('public.sessions') IS NOT NULL THEN
+          DELETE FROM sessions a
+          USING sessions b
+          WHERE a.id < b.id
+            AND a.refresh_token_hash = b.refresh_token_hash;
+
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_sessions_refresh_token_hash
+          ON sessions(refresh_token_hash);
+        END IF;
+      END $$;
+    `);
+
     await client.query("COMMIT");
     console.log("[db:migrate] Completed successfully");
   } catch (error) {

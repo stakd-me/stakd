@@ -1,5 +1,5 @@
 import { db, schema } from "@/lib/db";
-import { and, gte, inArray } from "drizzle-orm";
+import { and, gte, inArray, lt, sql } from "drizzle-orm";
 import { getPrice } from "./coingecko";
 import { fetchBinancePrices } from "./binance";
 import {
@@ -9,154 +9,281 @@ import {
 import { resolveBinanceSymbol } from "./binance-symbol-resolver";
 import { fetchSecondaryExchangePrices } from "./secondary-exchanges";
 
+const COINGECKO_BATCH_SIZE = 50;
+const DB_WRITE_BATCH_SIZE = 200;
+const DEFAULT_PRICE_HISTORY_RETENTION_DAYS = 365;
+const MIN_PRICE_HISTORY_RETENTION_DAYS = 7;
+const MAX_PRICE_HISTORY_RETENTION_DAYS = 3650;
+const PRICE_HISTORY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+let lastPriceHistoryPruneAttemptAtMs = 0;
+
+interface PriceWriteRow {
+  coingeckoId: string;
+  symbol: string;
+  priceUsd: number;
+  change24h: number | null;
+}
+
+interface RefreshMetrics {
+  totalIds: number;
+  binanceHits: number;
+  secondaryHits: number;
+  coingeckoRequested: number;
+  coingeckoAllowed: number;
+  coingeckoBlocked: number;
+  coingeckoHits: number;
+  priceRowsWritten: number;
+  historyRowsWritten: number;
+  historyRowsPruned: number;
+}
+
+export function parsePriceHistoryRetentionDays(rawValue: string | undefined): number {
+  const parsed = Number.parseInt(rawValue ?? "", 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_PRICE_HISTORY_RETENTION_DAYS;
+  if (parsed <= 0) return 0;
+  return Math.max(
+    MIN_PRICE_HISTORY_RETENTION_DAYS,
+    Math.min(MAX_PRICE_HISTORY_RETENTION_DAYS, parsed)
+  );
+}
+
+function chunkArray<T>(items: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += chunkSize) {
+    chunks.push(items.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+async function fetchCoinGeckoRows(
+  ids: string[],
+  symbolLookup: Record<string, string>
+): Promise<PriceWriteRow[]> {
+  const rows: PriceWriteRow[] = [];
+
+  for (let i = 0; i < ids.length; i += COINGECKO_BATCH_SIZE) {
+    const batch = ids.slice(i, i + COINGECKO_BATCH_SIZE);
+    const priceData = await getPrice(batch);
+
+    for (const [coingeckoId, data] of Object.entries(priceData)) {
+      rows.push({
+        coingeckoId,
+        symbol: symbolLookup[coingeckoId] || coingeckoId,
+        priceUsd: data.usd,
+        change24h: data.usd_24h_change,
+      });
+    }
+  }
+
+  return rows;
+}
+
+async function persistPriceRows(
+  rows: PriceWriteRow[],
+  now: Date
+): Promise<{ priceRowsWritten: number; historyRowsWritten: number }> {
+  if (rows.length === 0) {
+    return { priceRowsWritten: 0, historyRowsWritten: 0 };
+  }
+
+  for (const chunk of chunkArray(rows, DB_WRITE_BATCH_SIZE)) {
+    await db
+      .insert(schema.prices)
+      .values(
+        chunk.map((row) => ({
+          coingeckoId: row.coingeckoId,
+          symbol: row.symbol,
+          priceUsd: row.priceUsd,
+          change24h: row.change24h,
+          updatedAt: now,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: schema.prices.coingeckoId,
+        set: {
+          symbol: sql`excluded.symbol`,
+          priceUsd: sql`excluded.price_usd`,
+          change24h: sql`excluded.change_24h`,
+          updatedAt: sql`excluded.updated_at`,
+        },
+      });
+  }
+
+  for (const chunk of chunkArray(rows, DB_WRITE_BATCH_SIZE)) {
+    await db.insert(schema.priceHistory).values(
+      chunk.map((row) => ({
+        coingeckoId: row.coingeckoId,
+        priceUsd: row.priceUsd,
+      }))
+    );
+  }
+
+  return {
+    priceRowsWritten: rows.length,
+    historyRowsWritten: rows.length,
+  };
+}
+
+async function prunePriceHistoryIfDue(now: Date): Promise<number> {
+  const retentionDays = parsePriceHistoryRetentionDays(
+    process.env.PRICE_HISTORY_RETENTION_DAYS
+  );
+  if (retentionDays === 0) return 0;
+
+  const nowMs = now.getTime();
+  if (nowMs - lastPriceHistoryPruneAttemptAtMs < PRICE_HISTORY_PRUNE_INTERVAL_MS) {
+    return 0;
+  }
+  lastPriceHistoryPruneAttemptAtMs = nowMs;
+
+  const cutoff = new Date(nowMs - retentionDays * 24 * 60 * 60 * 1000);
+  const [countRow] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(schema.priceHistory)
+    .where(lt(schema.priceHistory.recordedAt, cutoff));
+  const rowsToDelete = Number(countRow?.count ?? 0);
+
+  if (rowsToDelete <= 0) return 0;
+
+  await db
+    .delete(schema.priceHistory)
+    .where(lt(schema.priceHistory.recordedAt, cutoff));
+
+  return rowsToDelete;
+}
+
 /**
  * Refreshes prices for all tokens in the prices table.
  * Uses Binance as primary source, then other CEXs, then CoinGecko fallback.
  */
 export async function refreshAllPrices(priceSource: string = "binance"): Promise<void> {
-  const allPrices = await db.select().from(schema.prices);
-  if (allPrices.length === 0) return;
+  const startedAt = Date.now();
+  const metrics: RefreshMetrics = {
+    totalIds: 0,
+    binanceHits: 0,
+    secondaryHits: 0,
+    coingeckoRequested: 0,
+    coingeckoAllowed: 0,
+    coingeckoBlocked: 0,
+    coingeckoHits: 0,
+    priceRowsWritten: 0,
+    historyRowsWritten: 0,
+    historyRowsPruned: 0,
+  };
 
-  const symbolLookup: Record<string, string> = {};
-  const uniqueIds = new Set<string>();
+  try {
+    const allPrices = await db
+      .select({
+        coingeckoId: schema.prices.coingeckoId,
+        symbol: schema.prices.symbol,
+      })
+      .from(schema.prices);
+    if (allPrices.length === 0) {
+      return;
+    }
 
-  for (const p of allPrices) {
-    const id = p.coingeckoId.trim().toLowerCase();
-    uniqueIds.add(id);
-    symbolLookup[id] = p.symbol.trim().toUpperCase();
-  }
+    const symbolLookup: Record<string, string> = {};
+    const uniqueIds = new Set<string>();
 
-  const now = new Date();
-  const ids = Array.from(uniqueIds);
+    for (const row of allPrices) {
+      const id = row.coingeckoId.trim().toLowerCase();
+      uniqueIds.add(id);
+      symbolLookup[id] = row.symbol.trim().toUpperCase();
+    }
 
-  if (priceSource === "binance") {
-    const binancePrices = await fetchBinancePrices();
-    const secondaryExchangeFallbackIds: string[] = [];
+    const rowsToPersist: PriceWriteRow[] = [];
+    const now = new Date();
+    const ids = Array.from(uniqueIds);
+    metrics.totalIds = ids.length;
 
-    for (const coingeckoId of ids) {
-      const symbol = resolveBinanceSymbol(coingeckoId, symbolLookup[coingeckoId]);
-      const binanceData = symbol ? binancePrices[symbol] : undefined;
+    if (priceSource === "binance") {
+      const binancePrices = await fetchBinancePrices();
+      const secondaryExchangeFallbackIds: string[] = [];
 
-      if (symbol && binanceData) {
-        await db
-          .insert(schema.prices)
-          .values({
+      for (const coingeckoId of ids) {
+        const symbol = resolveBinanceSymbol(coingeckoId, symbolLookup[coingeckoId]);
+        const binanceData = symbol ? binancePrices[symbol] : undefined;
+
+        if (symbol && binanceData) {
+          rowsToPersist.push({
             coingeckoId,
             symbol,
             priceUsd: binanceData.priceUsd,
             change24h: binanceData.change24h,
-            updatedAt: now,
-          })
-          .onConflictDoUpdate({
-            target: schema.prices.coingeckoId,
-            set: {
-              priceUsd: binanceData.priceUsd,
-              change24h: binanceData.change24h,
-              symbol,
-              updatedAt: now,
-            },
           });
+          metrics.binanceHits += 1;
+          continue;
+        }
 
-        await db.insert(schema.priceHistory).values({
-          coingeckoId,
-          priceUsd: binanceData.priceUsd,
-        });
-      } else {
         secondaryExchangeFallbackIds.push(coingeckoId);
       }
-    }
 
-    const coingeckoFallbackIds: string[] = [];
-    if (secondaryExchangeFallbackIds.length > 0) {
-      const secondaryPrices = await fetchSecondaryExchangePrices();
+      const coingeckoFallbackIds: string[] = [];
+      if (secondaryExchangeFallbackIds.length > 0) {
+        const secondaryPrices = await fetchSecondaryExchangePrices();
 
-      for (const coingeckoId of secondaryExchangeFallbackIds) {
-        const symbol = resolveBinanceSymbol(coingeckoId, symbolLookup[coingeckoId]);
-        const secondaryData = symbol ? secondaryPrices[symbol] : undefined;
+        for (const coingeckoId of secondaryExchangeFallbackIds) {
+          const symbol = resolveBinanceSymbol(coingeckoId, symbolLookup[coingeckoId]);
+          const secondaryData = symbol ? secondaryPrices[symbol] : undefined;
 
-        if (symbol && secondaryData) {
-          await db
-            .insert(schema.prices)
-            .values({
+          if (symbol && secondaryData) {
+            rowsToPersist.push({
               coingeckoId,
               symbol,
               priceUsd: secondaryData.priceUsd,
               change24h: secondaryData.change24h,
-              updatedAt: now,
-            })
-            .onConflictDoUpdate({
-              target: schema.prices.coingeckoId,
-              set: {
-                priceUsd: secondaryData.priceUsd,
-                change24h: secondaryData.change24h,
-                symbol,
-                updatedAt: now,
-              },
             });
+            metrics.secondaryHits += 1;
+            continue;
+          }
 
-          await db.insert(schema.priceHistory).values({
-            coingeckoId,
-            priceUsd: secondaryData.priceUsd,
-          });
-        } else {
           coingeckoFallbackIds.push(coingeckoId);
         }
       }
-    }
 
-    // CoinGecko fallback
-    if (coingeckoFallbackIds.length > 0) {
-      const { allowed, blocked } = await splitByCoinGeckoCooldown(coingeckoFallbackIds);
-      if (blocked.length > 0) {
-        console.info(
-          `[pricing] Skipped ${blocked.length} CoinGecko fallback tokens (cooldown: ${COINGECKO_FALLBACK_FETCHES_PER_DAY}x/day)`
+      if (coingeckoFallbackIds.length > 0) {
+        metrics.coingeckoRequested += coingeckoFallbackIds.length;
+        const { allowed, blocked } = await splitByCoinGeckoCooldown(
+          coingeckoFallbackIds
         );
+
+        metrics.coingeckoAllowed += allowed.length;
+        metrics.coingeckoBlocked += blocked.length;
+        if (blocked.length > 0) {
+          console.info(
+            `[pricing] Skipped ${blocked.length} CoinGecko fallback tokens (cooldown: ${COINGECKO_FALLBACK_FETCHES_PER_DAY}x/day)`
+          );
+        }
+
+        if (allowed.length > 0) {
+          const coingeckoRows = await fetchCoinGeckoRows(allowed, symbolLookup);
+          rowsToPersist.push(...coingeckoRows);
+          metrics.coingeckoHits += coingeckoRows.length;
+        }
       }
-      if (allowed.length > 0) {
-        await refreshFromCoinGecko(allowed, symbolLookup, now);
-      }
+    } else {
+      metrics.coingeckoRequested += ids.length;
+      metrics.coingeckoAllowed += ids.length;
+      const coingeckoRows = await fetchCoinGeckoRows(ids, symbolLookup);
+      rowsToPersist.push(...coingeckoRows);
+      metrics.coingeckoHits += coingeckoRows.length;
     }
-  } else {
-    await refreshFromCoinGecko(ids, symbolLookup, now);
-  }
-}
 
-async function refreshFromCoinGecko(
-  ids: string[],
-  symbolLookup: Record<string, string>,
-  now: Date
-): Promise<void> {
-  for (let i = 0; i < ids.length; i += 50) {
-    const batch = ids.slice(i, i + 50);
-    const priceData = await getPrice(batch);
+    const writeResult = await persistPriceRows(rowsToPersist, now);
+    metrics.priceRowsWritten = writeResult.priceRowsWritten;
+    metrics.historyRowsWritten = writeResult.historyRowsWritten;
+    metrics.historyRowsPruned = await prunePriceHistoryIfDue(now);
 
-    for (const [coingeckoId, data] of Object.entries(priceData)) {
-      const symbol = symbolLookup[coingeckoId] || coingeckoId;
-
-      await db
-        .insert(schema.prices)
-        .values({
-          coingeckoId,
-          symbol,
-          priceUsd: data.usd,
-          change24h: data.usd_24h_change,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: schema.prices.coingeckoId,
-          set: {
-            priceUsd: data.usd,
-            change24h: data.usd_24h_change,
-            symbol,
-            updatedAt: now,
-          },
-        });
-
-      await db.insert(schema.priceHistory).values({
-        coingeckoId,
-        priceUsd: data.usd,
-      });
-    }
+    console.info(
+      `[pricing] Refresh complete source=${priceSource} ids=${metrics.totalIds} binance=${metrics.binanceHits} secondary=${metrics.secondaryHits} coingeckoHits=${metrics.coingeckoHits}/${metrics.coingeckoAllowed} blocked=${metrics.coingeckoBlocked} wrotePrices=${metrics.priceRowsWritten} wroteHistory=${metrics.historyRowsWritten} prunedHistory=${metrics.historyRowsPruned} durationMs=${Date.now() - startedAt}`
+    );
+  } catch (error) {
+    console.error(
+      `[pricing] Refresh failed source=${priceSource} ids=${metrics.totalIds} durationMs=${Date.now() - startedAt}:`,
+      error
+    );
+    throw error;
   }
 }
 
