@@ -43,6 +43,22 @@ function triggerDownload(filename: string, content: string, mimeType: string): v
   URL.revokeObjectURL(url);
 }
 
+function getDataQualityLabel(level: PortfolioPeriodReport["dataQuality"]["level"]): string {
+  if (level === "exact") return "Exact";
+  if (level === "estimated") return "Estimated";
+  return "Incomplete";
+}
+
+function getDataQualityClass(level: PortfolioPeriodReport["dataQuality"]["level"]): string {
+  if (level === "exact") {
+    return "border-status-positive-border bg-status-positive-soft text-status-positive";
+  }
+  if (level === "estimated") {
+    return "border-status-caution-border bg-status-caution-soft text-status-caution";
+  }
+  return "border-status-negative-border bg-status-negative-soft text-status-negative";
+}
+
 function toCsv(report: PortfolioPeriodReport): string {
   const rows: string[][] = [
     ["Report Label", report.window.label],
@@ -51,15 +67,28 @@ function toCsv(report: PortfolioPeriodReport): string {
     ["Window End", report.window.endIso],
     ["Start Value USD", String(report.summary.startValueUsd)],
     ["End Value USD", String(report.summary.endValueUsd)],
-    ["Net Flow USD", String(report.summary.netFlowUsd)],
+    ["Capital Net Flow USD", String(report.summary.capitalNetFlowUsd)],
+    ["External Net Flow USD", String(report.summary.externalNetFlowUsd)],
+    ["Trading Turnover USD", String(report.summary.tradingTurnoverUsd)],
+    ["Net Flow USD (Legacy Alias)", String(report.summary.netFlowUsd)],
     ["PnL USD", String(report.summary.pnlUsd)],
-    ["Return Percent", String(report.summary.returnPercent)],
+    ["Return Percent (Modified Dietz)", String(report.summary.returnPercent)],
+    ["Simple Return Percent", String(report.summary.simpleReturnPercent)],
+    ["Reconciliation Gap USD", String(report.summary.reconciliationGapUsd)],
     ["Max Drawdown Percent", String(report.summary.maxDrawdownPercent)],
     [
       "Annualized Volatility Percent",
       String(report.summary.annualizedVolatilityPercent),
     ],
     ["Transactions", String(report.activity.transactionCount)],
+    [
+      "Estimated Amount Transactions",
+      String(report.activity.estimatedAmountTransactionCount),
+    ],
+    [
+      "Unknown Amount Transactions",
+      String(report.activity.unknownAmountTransactionCount),
+    ],
     ["Buy Volume USD", String(report.activity.buyVolumeUsd)],
     ["Sell Volume USD", String(report.activity.sellVolumeUsd)],
     ["Receive Volume USD", String(report.activity.receiveVolumeUsd)],
@@ -139,6 +168,10 @@ export default function ReportsPage() {
     2
   );
   const showPreviousComparison = period !== "all-time";
+  const reconciledEnd = roundTo(
+    report.summary.startValueUsd + report.summary.capitalNetFlowUsd + report.summary.pnlUsd,
+    2
+  );
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -210,10 +243,19 @@ export default function ReportsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{report.window.label}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle>{report.window.label}</CardTitle>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getDataQualityClass(
+                report.dataQuality.level
+              )}`}
+            >
+              Data Quality: {getDataQualityLabel(report.dataQuality.level)}
+            </span>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-8">
             <div>
               <p className="text-xs text-text-subtle">Start Value</p>
               <p className="text-lg font-semibold">
@@ -227,9 +269,21 @@ export default function ReportsPage() {
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-subtle">Net Flow</p>
+              <p className="text-xs text-text-subtle">Capital Net Flow</p>
               <p className="text-lg font-semibold">
-                {getSignedCurrency(report.summary.netFlowUsd)}
+                {getSignedCurrency(report.summary.capitalNetFlowUsd)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-subtle">External Net Flow</p>
+              <p className="text-lg font-semibold">
+                {getSignedCurrency(report.summary.externalNetFlowUsd)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-text-subtle">Trading Turnover</p>
+              <p className="text-lg font-semibold">
+                {formatValue(report.summary.tradingTurnoverUsd)}
               </p>
             </div>
             <div>
@@ -245,7 +299,7 @@ export default function ReportsPage() {
               </p>
             </div>
             <div>
-              <p className="text-xs text-text-subtle">Return</p>
+              <p className="text-xs text-text-subtle">Return (Modified Dietz)</p>
               <p
                 className={`text-lg font-semibold ${
                   report.summary.returnPercent >= 0
@@ -255,9 +309,12 @@ export default function ReportsPage() {
               >
                 {getSignedPercent(report.summary.returnPercent)}
               </p>
+              <p className="text-xs text-text-dim">
+                Simple: {getSignedPercent(report.summary.simpleReturnPercent)}
+              </p>
               {showPreviousComparison && (
                 <p className="text-xs text-text-dim">
-                  vs prev to-date: {getSignedPercent(returnDelta)}
+                  delta vs prev to-date: {getSignedPercent(returnDelta)}
                 </p>
               )}
             </div>
@@ -271,6 +328,20 @@ export default function ReportsPage() {
               </p>
             </div>
           </div>
+          <div className="mt-3 rounded-md border border-border-subtle bg-bg-card px-3 py-2 text-xs text-text-dim">
+            Reconciliation: {formatValue(report.summary.startValueUsd)} +{" "}
+            {getSignedCurrency(report.summary.capitalNetFlowUsd)} +{" "}
+            {getSignedCurrency(report.summary.pnlUsd)} = {formatValue(reconciledEnd)}{" "}
+            (reported end: {formatValue(report.summary.endValueUsd)}, gap:{" "}
+            {getSignedCurrency(report.summary.reconciliationGapUsd)})
+          </div>
+          {report.dataQuality.notes.length > 0 && (
+            <div className="mt-3 space-y-1 text-xs text-text-dim">
+              {report.dataQuality.notes.map((note, index) => (
+                <p key={`${note}-${index}`}>{note}</p>
+              ))}
+            </div>
+          )}
           {showPreviousComparison && (
             <p className="mt-3 text-xs text-text-dim">
               Previous to-date P&L delta: {getSignedCurrency(pnlDelta)}
@@ -296,6 +367,18 @@ export default function ReportsPage() {
                 <p className="text-text-subtle">Total Fees</p>
                 <p className="text-lg font-semibold text-text-primary">
                   {formatUsd(report.activity.totalFeesUsd)}
+                </p>
+              </div>
+              <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
+                <p className="text-text-subtle">Estimated Amount Tx</p>
+                <p className="text-lg font-semibold text-text-primary">
+                  {report.activity.estimatedAmountTransactionCount}
+                </p>
+              </div>
+              <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
+                <p className="text-text-subtle">Unknown Amount Tx</p>
+                <p className="text-lg font-semibold text-text-primary">
+                  {report.activity.unknownAmountTransactionCount}
                 </p>
               </div>
               <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">

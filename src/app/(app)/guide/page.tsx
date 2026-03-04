@@ -77,11 +77,13 @@ export default function AppGuidePage() {
                 <CardTitle className="text-base">How to use Reports page</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-text-muted">
-                <p>1. Open Reports and choose the period: Week, Month, Quarter, or Year.</p>
-                <p>2. Review core KPIs: Start/End value, Net flow, P&L, Return, Max drawdown, Volatility.</p>
-                <p>3. Compare current period return/P&L with previous period delta.</p>
-                <p>4. Inspect top-holdings concentration and best/worst performers.</p>
-                <p>5. Export JSON/CSV for external review or investment committee records.</p>
+                <p>1. Open Reports and choose the period: Week, Month, Quarter, Year, or All-time.</p>
+                <p>2. Review KPI contract: Start/End Value, Capital Net Flow, External Net Flow, Trading Turnover, Period P&L, Return (Modified Dietz).</p>
+                <p>3. Check the Data Quality badge (Exact/Estimated/Incomplete) before using report numbers for decision-making.</p>
+                <p>4. Validate reconciliation line: Start + Capital Net Flow + P&L should match End Value.</p>
+                <p>5. Compare return/P&L delta versus previous to-date window.</p>
+                <p>6. Inspect concentration and best/worst performers.</p>
+                <p>7. Export JSON/CSV for external review or investment committee records.</p>
                 <div className="pt-1">
                   <Link href="/reports">
                     <Button variant="outline" size="sm">

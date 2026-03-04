@@ -91,7 +91,10 @@ describe("computePortfolioReport", () => {
     expect(report.summary.startValueUsd).toBe(1000);
     expect(report.summary.endValueUsd).toBe(1200);
     expect(report.summary.netFlowUsd).toBe(110);
+    expect(report.summary.externalNetFlowUsd).toBe(0);
+    expect(report.summary.tradingTurnoverUsd).toBe(100);
     expect(report.summary.pnlUsd).toBe(90);
+    expect(report.dataQuality.level).toBe("exact");
     expect(report.activity.transactionCount).toBe(1);
     expect(report.activity.buyVolumeUsd).toBe(100);
     expect(report.activity.totalFeesUsd).toBe(10);
@@ -212,10 +215,10 @@ describe("computePortfolioReport", () => {
       referenceDate: new Date("2026-03-04T18:00:00.000Z"),
     });
 
-    expect(report.summary.startValueUsd).toBe(1200);
+    expect(report.summary.startValueUsd).toBe(1000);
     expect(report.summary.endValueUsd).toBe(960);
     expect(report.summary.netFlowUsd).toBe(-240);
-    expect(report.summary.pnlUsd).toBe(0);
+    expect(report.summary.pnlUsd).toBe(200);
   });
 
   it("estimates amount for legacy send/receive rows with zero price", () => {
@@ -272,8 +275,10 @@ describe("computePortfolioReport", () => {
 
     expect(report.summary.startValueUsd).toBe(1000);
     expect(report.summary.endValueUsd).toBe(900);
-    expect(report.summary.netFlowUsd).toBe(-100);
-    expect(report.summary.pnlUsd).toBe(0);
+    expect(report.summary.netFlowUsd).toBe(0);
+    expect(report.summary.pnlUsd).toBe(-100);
+    expect(report.activity.unknownAmountTransactionCount).toBe(1);
+    expect(report.dataQuality.level).toBe("incomplete");
   });
 
   it("computes concentration risk snapshot from current holdings", () => {
@@ -516,7 +521,154 @@ describe("computePortfolioReport", () => {
     expect(report.window.label).toBe("All-time");
     expect(report.window.startIso).toBe("2021-01-10T00:00:00.000Z");
     expect(report.previousSummary.pnlUsd).toBe(0);
-    expect(report.summary.startValueUsd).toBeGreaterThan(0);
+    expect(report.summary.startValueUsd).toBe(100);
     expect(report.summary.endValueUsd).toBe(500);
+    expect(report.summary.netFlowUsd).toBe(200);
+    expect(report.summary.pnlUsd).toBe(200);
+  });
+
+  it("marks estimated quality when historical price inference is used", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "legacy-buy-missing-price",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-02T00:00:00.000Z",
+        createdAt: "2026-03-02T00:00:00.000Z",
+      },
+      {
+        id: "recent-buy-known-price",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "100",
+        totalCost: "100",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-04T00:00:00.000Z",
+        createdAt: "2026-03-04T00:00:00.000Z",
+      },
+    ];
+    vault.portfolioSnapshots = [
+      {
+        id: "s-start",
+        totalValueUsd: 0,
+        breakdown: "[]",
+        snapshotAt: "2026-03-01T00:00:00.000Z",
+      },
+      {
+        id: "s-end",
+        totalValueUsd: 200,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 200 }]),
+        snapshotAt: "2026-03-05T00:00:00.000Z",
+      },
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 2,
+          currentPrice: 100,
+          currentValue: 200,
+          unrealizedPL: 0,
+          unrealizedPLPercent: 0,
+        }),
+      ],
+      currentTotalValueUsd: 200,
+      period: "monthly",
+      referenceDate: new Date("2026-03-05T12:00:00.000Z"),
+    });
+
+    expect(report.activity.estimatedAmountTransactionCount).toBeGreaterThan(0);
+    expect(report.dataQuality.level).toBe("estimated");
+  });
+
+  it("keeps bridge identity: start + capital net flow + pnl = end", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "buy-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "100",
+        totalCost: "100",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-02T00:00:00.000Z",
+        createdAt: "2026-03-02T00:00:00.000Z",
+      },
+      {
+        id: "sell-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "sell",
+        quantity: "0.5",
+        pricePerUnit: "120",
+        totalCost: "60",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-03T00:00:00.000Z",
+        createdAt: "2026-03-03T00:00:00.000Z",
+      },
+    ];
+    vault.portfolioSnapshots = [
+      {
+        id: "s-start",
+        totalValueUsd: 100,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 100 }]),
+        snapshotAt: "2026-03-01T00:00:00.000Z",
+      },
+      {
+        id: "s-end",
+        totalValueUsd: 60,
+        breakdown: makeBreakdown([{ symbol: "BTC", coingeckoId: "bitcoin", valueUsd: 60 }]),
+        snapshotAt: "2026-03-04T00:00:00.000Z",
+      },
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 0.5,
+          currentPrice: 120,
+          currentValue: 60,
+          unrealizedPL: 10,
+          unrealizedPLPercent: 20,
+        }),
+      ],
+      currentTotalValueUsd: 60,
+      period: "monthly",
+      referenceDate: new Date("2026-03-04T12:00:00.000Z"),
+    });
+
+    const lhs =
+      report.summary.startValueUsd +
+      report.summary.capitalNetFlowUsd +
+      report.summary.pnlUsd;
+    expect(Math.abs(lhs - report.summary.endValueUsd)).toBeLessThanOrEqual(0.01);
   });
 });
