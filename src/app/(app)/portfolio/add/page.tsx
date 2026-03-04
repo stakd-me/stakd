@@ -158,8 +158,8 @@ export default function AddTransactionPage() {
       return;
     }
     const price = parseFloat(pricePerUnit);
-    if (isNaN(price) || price < 0) {
-      setError(t("portfolio.validationPriceNonNegative"));
+    if (!Number.isFinite(price) || price <= 0) {
+      setError(t("portfolio.validationPricePositive"));
       return;
     }
     const parsedFee = fee.trim().length > 0 ? parseFloat(fee) : 0;
@@ -248,9 +248,6 @@ export default function AddTransactionPage() {
             type="button"
             onClick={() => {
               setType(txType);
-              if (txType === "receive" || txType === "send") {
-                setPricePerUnit("0");
-              }
             }}
             className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${getTxTypeToggleClass(
               txType,

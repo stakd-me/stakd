@@ -52,7 +52,7 @@ export interface ReportHoldingRow {
 export interface ReportLeader {
   symbol: string;
   returnPercent: number;
-  unrealizedPLUsd: number;
+  pnlUsd: number;
 }
 
 export interface ReportPoint {
@@ -78,6 +78,7 @@ interface SnapshotPoint {
   timestamp: number;
   date: string;
   value: number;
+  breakdownValues: Record<string, number>;
 }
 
 interface WindowBoundaries {
@@ -98,6 +99,11 @@ interface WindowComputationResult {
   timeline: ReportPoint[];
 }
 
+interface RiskSnapshotResult {
+  risk: ReportRisk;
+  topHoldings: ReportHoldingRow[];
+}
+
 function roundTo(value: number, decimals: number): number {
   const factor = 10 ** decimals;
   return Math.round(value * factor) / factor;
@@ -110,6 +116,57 @@ function toSafeNumber(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+function normalizeSymbol(value: unknown): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+function normalizeCoingeckoId(value: unknown): string {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function makeAssetKey(symbol: unknown, coingeckoId: unknown): string {
+  const normalizedSymbol = normalizeSymbol(symbol);
+  const normalizedId = normalizeCoingeckoId(coingeckoId);
+  if (!normalizedSymbol) return "";
+  return `${normalizedSymbol}:${normalizedId}`;
+}
+
+function parseSnapshotBreakdown(raw: string): Record<string, number> {
+  if (!raw || raw.trim().length === 0) return {};
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return {};
+
+    const byAsset: Record<string, number> = {};
+
+    for (const item of parsed) {
+      if (!item || typeof item !== "object") continue;
+      const key = makeAssetKey(
+        (item as { symbol?: unknown }).symbol,
+        (item as { coingeckoId?: unknown }).coingeckoId
+      );
+      if (!key) continue;
+
+      const valueUsd = toSafeNumber((item as { valueUsd?: unknown }).valueUsd);
+      if (!Number.isFinite(valueUsd)) continue;
+      byAsset[key] = (byAsset[key] ?? 0) + valueUsd;
+    }
+
+    return byAsset;
+  } catch {
+    return {};
+  }
+}
+
+function splitAssetKey(assetKey: string): { symbol: string; coingeckoId: string } {
+  const [symbolRaw = "", coingeckoIdRaw = ""] = assetKey.split(":");
+  return {
+    symbol: normalizeSymbol(symbolRaw),
+    coingeckoId: normalizeCoingeckoId(coingeckoIdRaw),
+  };
 }
 
 function toUtcDate(
@@ -189,27 +246,51 @@ function getBoundaries(period: ReportPeriod, referenceDate: Date): WindowBoundar
   if (period === "weekly") {
     const start = startOfUtcWeek(referenceDate);
     const previousStart = new Date(start.getTime() - WEEK_DAYS * MS_PER_DAY);
-    const previousEnd = new Date(start.getTime() - 1);
+    const elapsedMs = Math.max(0, end.getTime() - start.getTime());
+    const previousPeriodEnd = new Date(start.getTime() - 1);
+    const previousEndCandidate = new Date(previousStart.getTime() + elapsedMs);
+    const previousEnd =
+      previousEndCandidate.getTime() > previousPeriodEnd.getTime()
+        ? previousPeriodEnd
+        : previousEndCandidate;
     return { start, end, previousStart, previousEnd };
   }
 
   if (period === "monthly") {
     const start = startOfUtcMonth(referenceDate);
     const previousStart = shiftMonths(start, -1);
-    const previousEnd = new Date(start.getTime() - 1);
+    const elapsedMs = Math.max(0, end.getTime() - start.getTime());
+    const previousPeriodEnd = new Date(start.getTime() - 1);
+    const previousEndCandidate = new Date(previousStart.getTime() + elapsedMs);
+    const previousEnd =
+      previousEndCandidate.getTime() > previousPeriodEnd.getTime()
+        ? previousPeriodEnd
+        : previousEndCandidate;
     return { start, end, previousStart, previousEnd };
   }
 
   if (period === "quarterly") {
     const start = startOfUtcQuarter(referenceDate);
     const previousStart = shiftMonths(start, -3);
-    const previousEnd = new Date(start.getTime() - 1);
+    const elapsedMs = Math.max(0, end.getTime() - start.getTime());
+    const previousPeriodEnd = new Date(start.getTime() - 1);
+    const previousEndCandidate = new Date(previousStart.getTime() + elapsedMs);
+    const previousEnd =
+      previousEndCandidate.getTime() > previousPeriodEnd.getTime()
+        ? previousPeriodEnd
+        : previousEndCandidate;
     return { start, end, previousStart, previousEnd };
   }
 
   const start = startOfUtcYear(referenceDate);
   const previousStart = toUtcDate(start.getUTCFullYear() - 1, 0, 1);
-  const previousEnd = new Date(start.getTime() - 1);
+  const elapsedMs = Math.max(0, end.getTime() - start.getTime());
+  const previousPeriodEnd = new Date(start.getTime() - 1);
+  const previousEndCandidate = new Date(previousStart.getTime() + elapsedMs);
+  const previousEnd =
+    previousEndCandidate.getTime() > previousPeriodEnd.getTime()
+      ? previousPeriodEnd
+      : previousEndCandidate;
   return { start, end, previousStart, previousEnd };
 }
 
@@ -223,28 +304,41 @@ function normalizeSnapshots(vault: VaultData): SnapshotPoint[] {
         timestamp,
         date: new Date(timestamp).toISOString(),
         value,
+        breakdownValues: parseSnapshotBreakdown(snapshot.breakdown),
       };
     })
     .filter((point): point is SnapshotPoint => point !== null)
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 
-function getValueAt(points: SnapshotPoint[], atMs: number, fallback: number): number {
-  if (points.length === 0) return fallback;
+function getPointAtOrBefore(points: SnapshotPoint[], atMs: number): SnapshotPoint | null {
+  if (points.length === 0) return null;
 
   let bestBefore: SnapshotPoint | null = null;
   for (const point of points) {
-    if (point.timestamp <= atMs) {
-      bestBefore = point;
-      continue;
-    }
-    break;
+    if (point.timestamp > atMs) break;
+    bestBefore = point;
   }
 
-  if (bestBefore) return bestBefore.value;
+  return bestBefore;
+}
 
-  const firstAfter = points.find((point) => point.timestamp >= atMs);
-  return firstAfter?.value ?? fallback;
+function getValueAtOrBefore(points: SnapshotPoint[], atMs: number): number | null {
+  const point = getPointAtOrBefore(points, atMs);
+  return point ? point.value : null;
+}
+
+function buildCurrentAssetValueMap(holdings: TokenHolding[]): Record<string, number> {
+  const byAsset: Record<string, number> = {};
+
+  for (const holding of holdings) {
+    if (holding.currentValue <= 0) continue;
+    const key = makeAssetKey(holding.symbol, holding.coingeckoId);
+    if (!key) continue;
+    byAsset[key] = (byAsset[key] ?? 0) + holding.currentValue;
+  }
+
+  return byAsset;
 }
 
 function getTransactionUsdAmount(tx: VaultTransaction): number {
@@ -255,6 +349,42 @@ function getTransactionUsdAmount(tx: VaultTransaction): number {
   const pricePerUnit = toSafeNumber(tx.pricePerUnit);
   const derived = quantity * pricePerUnit;
   return Number.isFinite(derived) && derived > 0 ? derived : 0;
+}
+
+function computeNetFlowByAsset(
+  transactions: VaultTransaction[],
+  startMs: number,
+  endMs: number
+): Record<string, number> {
+  const netFlowByAsset: Record<string, number> = {};
+
+  for (const tx of transactions) {
+    const timestamp = new Date(tx.transactedAt).getTime();
+    if (!Number.isFinite(timestamp) || timestamp < startMs || timestamp > endMs) {
+      continue;
+    }
+
+    const key = makeAssetKey(tx.tokenSymbol, tx.coingeckoId);
+    if (!key) continue;
+
+    const feeUsd = Math.max(0, toSafeNumber(tx.fee));
+    const amountUsd = Math.max(0, getTransactionUsdAmount(tx));
+
+    let flowUsd = 0;
+    if (tx.type === "buy") {
+      flowUsd = amountUsd + feeUsd;
+    } else if (tx.type === "sell") {
+      flowUsd = -Math.max(0, amountUsd - feeUsd);
+    } else if (tx.type === "receive") {
+      flowUsd = amountUsd;
+    } else {
+      flowUsd = -amountUsd;
+    }
+
+    netFlowByAsset[key] = (netFlowByAsset[key] ?? 0) + flowUsd;
+  }
+
+  return netFlowByAsset;
 }
 
 function computeActivity(
@@ -378,10 +508,11 @@ function computeWindow(
   endMs: number,
   fallbackEndValue: number
 ): WindowComputationResult {
-  const startValue = getValueAt(snapshots, startMs, fallbackEndValue);
-  const endValue = getValueAt(snapshots, endMs, fallbackEndValue);
-
   const activityWithFlow = computeActivity(transactions, startMs, endMs);
+  const endValue = getValueAtOrBefore(snapshots, endMs) ?? fallbackEndValue;
+  const startValueAtOrBefore = getValueAtOrBefore(snapshots, startMs);
+  const inferredStartValue = Math.max(0, endValue - activityWithFlow.netFlowUsd);
+  const startValue = startValueAtOrBefore ?? inferredStartValue;
 
   const timelineMap = new Map<number, number>();
   addTimelinePoint(timelineMap, startMs, startValue);
@@ -435,15 +566,10 @@ function computeWindow(
   };
 }
 
-function computeRiskAndLeaders(
+function computeRiskSnapshot(
   holdings: TokenHolding[],
   currentTotalValueUsd: number
-): {
-  risk: ReportRisk;
-  topHoldings: ReportHoldingRow[];
-  bestPerformer: ReportLeader | null;
-  worstPerformer: ReportLeader | null;
-} {
+): RiskSnapshotResult {
   const active = holdings
     .filter((holding) => holding.currentQty > 0 && holding.currentValue > 0)
     .map((holding) => {
@@ -469,13 +595,6 @@ function computeRiskAndLeaders(
   const diversificationScore =
     herfindahlIndex > 0 ? 1 / herfindahlIndex : active.length;
 
-  const rankedByReturn = active
-    .filter((row) => Number.isFinite(row.unrealizedPLPercent))
-    .sort((a, b) => b.unrealizedPLPercent - a.unrealizedPLPercent);
-
-  const best = rankedByReturn[0] ?? null;
-  const worst = rankedByReturn[rankedByReturn.length - 1] ?? null;
-
   return {
     risk: {
       activeAssets: active.length,
@@ -485,18 +604,77 @@ function computeRiskAndLeaders(
       diversificationScore: roundTo(diversificationScore, 2),
     },
     topHoldings: active.slice(0, 10),
+  };
+}
+
+function computePeriodLeaders(params: {
+  holdings: TokenHolding[];
+  snapshots: SnapshotPoint[];
+  transactions: VaultTransaction[];
+  startMs: number;
+  endMs: number;
+}): {
+  bestPerformer: ReportLeader | null;
+  worstPerformer: ReportLeader | null;
+} {
+  const startSnapshot = getPointAtOrBefore(params.snapshots, params.startMs);
+  const endSnapshot = getPointAtOrBefore(params.snapshots, params.endMs);
+  const endFallbackValues = buildCurrentAssetValueMap(params.holdings);
+  const startValues = startSnapshot?.breakdownValues ?? {};
+  const endValues = endSnapshot?.breakdownValues ?? endFallbackValues;
+  const netFlowByAsset = computeNetFlowByAsset(
+    params.transactions,
+    params.startMs,
+    params.endMs
+  );
+
+  const keys = new Set([
+    ...Object.keys(startValues),
+    ...Object.keys(endValues),
+    ...Object.keys(netFlowByAsset),
+  ]);
+
+  const ranked = [...keys]
+    .map((assetKey) => {
+      const startValue = startValues[assetKey] ?? 0;
+      const endValue = endValues[assetKey] ?? 0;
+      const netFlowUsd = netFlowByAsset[assetKey] ?? 0;
+      const pnlUsd = endValue - startValue - netFlowUsd;
+      const denominator = startValue + Math.max(netFlowUsd, 0);
+      const returnPercent = denominator > 0 ? (pnlUsd / denominator) * 100 : 0;
+      const { symbol } = splitAssetKey(assetKey);
+
+      return {
+        symbol,
+        pnlUsd,
+        returnPercent,
+        hasMeaningfulData: startValue > 0 || endValue > 0 || netFlowUsd !== 0,
+      };
+    })
+    .filter((row) => row.symbol.length > 0 && row.hasMeaningfulData)
+    .sort((a, b) => {
+      if (b.returnPercent !== a.returnPercent) {
+        return b.returnPercent - a.returnPercent;
+      }
+      return b.pnlUsd - a.pnlUsd;
+    });
+
+  const best = ranked[0] ?? null;
+  const worst = ranked[ranked.length - 1] ?? null;
+
+  return {
     bestPerformer: best
       ? {
           symbol: best.symbol,
-          returnPercent: best.unrealizedPLPercent,
-          unrealizedPLUsd: best.unrealizedPLUsd,
+          returnPercent: roundTo(best.returnPercent, 2),
+          pnlUsd: roundTo(best.pnlUsd, 2),
         }
       : null,
     worstPerformer: worst
       ? {
           symbol: worst.symbol,
-          returnPercent: worst.unrealizedPLPercent,
-          unrealizedPLUsd: worst.unrealizedPLUsd,
+          returnPercent: roundTo(worst.returnPercent, 2),
+          pnlUsd: roundTo(worst.pnlUsd, 2),
         }
       : null,
   };
@@ -529,10 +707,17 @@ export function computePortfolioReport(params: {
     currentWindow.summary.startValueUsd
   );
 
-  const riskAndLeaders = computeRiskAndLeaders(
+  const riskSnapshot = computeRiskSnapshot(
     params.holdings,
     params.currentTotalValueUsd
   );
+  const periodLeaders = computePeriodLeaders({
+    holdings: params.holdings,
+    snapshots: normalizedSnapshots,
+    transactions: params.vault.transactions,
+    startMs: boundaries.start.getTime(),
+    endMs: boundaries.end.getTime(),
+  });
 
   return {
     period: params.period,
@@ -547,10 +732,10 @@ export function computePortfolioReport(params: {
     summary: currentWindow.summary,
     previousSummary: previousWindow.summary,
     activity: currentWindow.activity,
-    risk: riskAndLeaders.risk,
-    topHoldings: riskAndLeaders.topHoldings,
-    bestPerformer: riskAndLeaders.bestPerformer,
-    worstPerformer: riskAndLeaders.worstPerformer,
+    risk: riskSnapshot.risk,
+    topHoldings: riskSnapshot.topHoldings,
+    bestPerformer: periodLeaders.bestPerformer,
+    worstPerformer: periodLeaders.worstPerformer,
     timeline: currentWindow.timeline,
   };
 }

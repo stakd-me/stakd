@@ -584,8 +584,8 @@ export default function PortfolioPage() {
       return;
     }
     const price = parseFloat(editPrice);
-    if (isNaN(price) || price < 0) {
-      setEditError(t("portfolio.validationPriceNonNegative"));
+    if (isNaN(price) || price <= 0) {
+      setEditError(t("portfolio.validationPricePositive"));
       return;
     }
     if (!editDate) {
@@ -658,8 +658,8 @@ export default function PortfolioPage() {
       return;
     }
     const price = parseFloat(inlinePrice);
-    if (isNaN(price) || price < 0) {
-      setInlineError(t("portfolio.validationPriceNonNegative"));
+    if (isNaN(price) || price <= 0) {
+      setInlineError(t("portfolio.validationPricePositive"));
       return;
     }
     if (!inlineDate) {
@@ -907,7 +907,7 @@ export default function PortfolioPage() {
           }
 
           const pricePerUnit = parseFloat(getCsvField(rowMap, CSV_HEADER_ALIASES.price));
-          if (!Number.isFinite(pricePerUnit) || pricePerUnit < 0) {
+          if (!Number.isFinite(pricePerUnit) || pricePerUnit <= 0) {
             issues.push(
               t("portfolio.csvRowIssue", {
                 row: rowNumber,

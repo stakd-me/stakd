@@ -250,7 +250,7 @@ export default function ReportsPage() {
                 {getSignedPercent(report.summary.returnPercent)}
               </p>
               <p className="text-xs text-text-dim">
-                vs prev: {getSignedPercent(returnDelta)}
+                vs prev to-date: {getSignedPercent(returnDelta)}
               </p>
             </div>
             <div>
@@ -264,7 +264,7 @@ export default function ReportsPage() {
             </div>
           </div>
           <p className="mt-3 text-xs text-text-dim">
-            Previous period P&L delta: {getSignedCurrency(pnlDelta)}
+            Previous to-date P&L delta: {getSignedCurrency(pnlDelta)}
           </p>
         </CardContent>
       </Card>
@@ -358,7 +358,7 @@ export default function ReportsPage() {
                   {report.bestPerformer
                     ? `${report.bestPerformer.symbol} ${getSignedPercent(
                         report.bestPerformer.returnPercent
-                      )}`
+                      )} (${getSignedCurrency(report.bestPerformer.pnlUsd)})`
                     : "N/A"}
                 </p>
               </div>
@@ -368,7 +368,7 @@ export default function ReportsPage() {
                   {report.worstPerformer
                     ? `${report.worstPerformer.symbol} ${getSignedPercent(
                         report.worstPerformer.returnPercent
-                      )}`
+                      )} (${getSignedCurrency(report.worstPerformer.pnlUsd)})`
                     : "N/A"}
                 </p>
               </div>
