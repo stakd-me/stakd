@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatCrypto, formatUsd, formatTimeAgo } from "@/lib/utils";
+import { formatUsd, formatTimeAgo } from "@/lib/utils";
 import {
   Plus,
   AlertTriangle,
@@ -551,6 +551,38 @@ export default function RebalancePage() {
       return suggestion.amount / unitPrice;
     },
     [groupTargetSymbols, knownSymbolCoingeckoMap, priceMap]
+  );
+
+  const getRoundedSuggestionTradeQuantity = useCallback(
+    (suggestion: Suggestion): number | null => {
+      const quantity = getSuggestionTradeQuantity(suggestion);
+      if (quantity === null) {
+        return null;
+      }
+
+      const symbol = suggestion.tokenSymbol.trim().toUpperCase();
+      return symbol === "BTC"
+        ? Math.round(quantity * 10) / 10
+        : Math.round(quantity);
+    },
+    [getSuggestionTradeQuantity]
+  );
+
+  const formatSuggestionTradeQuantity = useCallback(
+    (suggestion: Suggestion): string => {
+      const roundedQuantity = getRoundedSuggestionTradeQuantity(suggestion);
+      if (roundedQuantity === null) {
+        return "-";
+      }
+
+      const symbol = suggestion.tokenSymbol.trim().toUpperCase();
+      return symbol === "BTC"
+        ? roundedQuantity.toFixed(1)
+        : roundedQuantity.toLocaleString("en-US", {
+            maximumFractionDigits: 0,
+          });
+    },
+    [getRoundedSuggestionTradeQuantity]
   );
 
   const buildTrackableTokens = useCallback(
@@ -1518,9 +1550,8 @@ export default function RebalancePage() {
         "------|--------|---------|-----------|--------|----------|-------",
       ];
       for (const s of suggestionsData.targets.filter((s) => !s.isUntargeted)) {
-        const quantity = getSuggestionTradeQuantity(s);
         lines.push(
-          `${s.tokenSymbol} | ${s.targetPercent.toFixed(1)}% | ${s.currentPercent.toFixed(1)}% | ${s.deviation >= 0 ? "+" : ""}${s.deviation.toFixed(1)}% | ${s.action} | ${quantity !== null ? formatCrypto(quantity, 8) : "-"} | ${s.action !== "hold" ? formatUsd(s.amount) : "-"}`
+          `${s.tokenSymbol} | ${s.targetPercent.toFixed(1)}% | ${s.currentPercent.toFixed(1)}% | ${s.deviation >= 0 ? "+" : ""}${s.deviation.toFixed(1)}% | ${s.action} | ${formatSuggestionTradeQuantity(s)} | ${s.action !== "hold" ? formatUsd(s.amount) : "-"}`
         );
       }
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
@@ -1534,7 +1565,7 @@ export default function RebalancePage() {
     } catch {
       toast(t("rebalance.exportFailed"), "error");
     }
-  }, [getSuggestionTradeQuantity, suggestionsData, rebalanceStrategy, toast, t]);
+  }, [formatSuggestionTradeQuantity, suggestionsData, rebalanceStrategy, toast, t]);
 
   const handleExportCsv = useCallback(() => {
     try {
@@ -1543,14 +1574,19 @@ export default function RebalancePage() {
       const rows = suggestionsData.targets
         .filter((s) => !s.isUntargeted)
         .map((s) => {
-          const quantity = getSuggestionTradeQuantity(s);
+          const roundedQuantity = getRoundedSuggestionTradeQuantity(s);
+          const symbol = s.tokenSymbol.trim().toUpperCase();
           return [
             s.tokenSymbol,
             s.targetPercent.toFixed(1),
             s.currentPercent.toFixed(1),
             s.deviation.toFixed(1),
             s.action,
-            quantity !== null ? quantity.toFixed(8) : "",
+            roundedQuantity !== null
+              ? symbol === "BTC"
+                ? roundedQuantity.toFixed(1)
+                : roundedQuantity.toFixed(0)
+              : "",
             s.action !== "hold" ? s.amount.toFixed(2) : "0",
           ].join(",");
         });
@@ -1566,7 +1602,7 @@ export default function RebalancePage() {
     } catch {
       toast(t("rebalance.exportFailed"), "error");
     }
-  }, [getSuggestionTradeQuantity, suggestionsData, toast, t]);
+  }, [getRoundedSuggestionTradeQuantity, suggestionsData, toast, t]);
 
   // ── Derived data ─────────────────────────────────────────────
 
@@ -2230,8 +2266,6 @@ export default function RebalancePage() {
                   </thead>
                   <tbody>
                     {targetedSuggestionsSorted.map((s) => {
-                      const tradeQuantity = getSuggestionTradeQuantity(s);
-
                       return (
                         <tr
                           key={s.tokenSymbol}
@@ -2263,7 +2297,7 @@ export default function RebalancePage() {
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-right">
-                            {tradeQuantity !== null ? formatCrypto(tradeQuantity, 8) : "-"}
+                            {formatSuggestionTradeQuantity(s)}
                           </td>
                           <td className="py-3 text-right">
                             {s.action !== "hold" ? formatUsd(s.amount) : "-"}
