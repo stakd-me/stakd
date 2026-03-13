@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatUsd, formatTimeAgo } from "@/lib/utils";
+import { formatCrypto, formatUsd, formatTimeAgo } from "@/lib/utils";
 import {
   Plus,
   AlertTriangle,
@@ -515,6 +515,43 @@ export default function RebalancePage() {
 
     return map;
   }, [vault.manualEntries, vault.rebalanceTargets, vault.transactions]);
+
+  const groupTargetSymbols = useMemo(
+    () =>
+      new Set(
+        vault.tokenGroups.map((group) => group.name.trim().toUpperCase()).filter(Boolean)
+      ),
+    [vault.tokenGroups]
+  );
+
+  const getSuggestionTradeQuantity = useCallback(
+    (suggestion: Suggestion): number | null => {
+      if (suggestion.action === "hold" || suggestion.amount <= 0) {
+        return null;
+      }
+
+      const symbol = suggestion.tokenSymbol.trim().toUpperCase();
+      if (groupTargetSymbols.has(symbol)) {
+        return null;
+      }
+
+      const coingeckoId =
+        suggestion.coingeckoId ??
+        knownSymbolCoingeckoMap[symbol] ??
+        resolveCanonicalCoinGeckoIdBySymbol(symbol);
+      if (!coingeckoId) {
+        return null;
+      }
+
+      const unitPrice = priceMap[coingeckoId]?.usd ?? 0;
+      if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+        return null;
+      }
+
+      return suggestion.amount / unitPrice;
+    },
+    [groupTargetSymbols, knownSymbolCoingeckoMap, priceMap]
+  );
 
   const buildTrackableTokens = useCallback(
     (symbols: string[]) => {
@@ -1477,12 +1514,13 @@ export default function RebalancePage() {
         `Total Portfolio: ${formatUsd(suggestionsData.totalValue)}`,
         `Strategy: ${rebalanceStrategy}`,
         "",
-        "TOKEN | TARGET | CURRENT | DEVIATION | ACTION | AMOUNT",
-        "------|--------|---------|-----------|--------|-------",
+        "TOKEN | TARGET | CURRENT | DEVIATION | ACTION | QUANTITY | AMOUNT",
+        "------|--------|---------|-----------|--------|----------|-------",
       ];
       for (const s of suggestionsData.targets.filter((s) => !s.isUntargeted)) {
+        const quantity = getSuggestionTradeQuantity(s);
         lines.push(
-          `${s.tokenSymbol} | ${s.targetPercent.toFixed(1)}% | ${s.currentPercent.toFixed(1)}% | ${s.deviation >= 0 ? "+" : ""}${s.deviation.toFixed(1)}% | ${s.action} | ${s.action !== "hold" ? formatUsd(s.amount) : "-"}`
+          `${s.tokenSymbol} | ${s.targetPercent.toFixed(1)}% | ${s.currentPercent.toFixed(1)}% | ${s.deviation >= 0 ? "+" : ""}${s.deviation.toFixed(1)}% | ${s.action} | ${quantity !== null ? formatCrypto(quantity, 8) : "-"} | ${s.action !== "hold" ? formatUsd(s.amount) : "-"}`
         );
       }
       const blob = new Blob([lines.join("\n")], { type: "text/plain" });
@@ -1496,24 +1534,26 @@ export default function RebalancePage() {
     } catch {
       toast(t("rebalance.exportFailed"), "error");
     }
-  }, [suggestionsData, rebalanceStrategy, toast, t]);
+  }, [getSuggestionTradeQuantity, suggestionsData, rebalanceStrategy, toast, t]);
 
   const handleExportCsv = useCallback(() => {
     try {
       if (!suggestionsData) return;
-      const headers = ["Token", "Target%", "Current%", "Deviation%", "Action", "Amount"];
+      const headers = ["Token", "Target%", "Current%", "Deviation%", "Action", "Quantity", "Amount"];
       const rows = suggestionsData.targets
         .filter((s) => !s.isUntargeted)
-        .map((s) =>
-          [
+        .map((s) => {
+          const quantity = getSuggestionTradeQuantity(s);
+          return [
             s.tokenSymbol,
             s.targetPercent.toFixed(1),
             s.currentPercent.toFixed(1),
             s.deviation.toFixed(1),
             s.action,
+            quantity !== null ? quantity.toFixed(8) : "",
             s.action !== "hold" ? s.amount.toFixed(2) : "0",
-          ].join(",")
-        );
+          ].join(",");
+        });
       const csv = [headers.join(","), ...rows].join("\n");
       const blob = new Blob([csv], { type: "text/csv" });
       const url = URL.createObjectURL(blob);
@@ -1526,7 +1566,7 @@ export default function RebalancePage() {
     } catch {
       toast(t("rebalance.exportFailed"), "error");
     }
-  }, [suggestionsData, toast, t]);
+  }, [getSuggestionTradeQuantity, suggestionsData, toast, t]);
 
   // ── Derived data ─────────────────────────────────────────────
 
@@ -2184,50 +2224,58 @@ export default function RebalancePage() {
                       <th className="pb-3 pr-4 text-right">{t("rebalance.deviation")}</th>
                       <th className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
                       <th className="pb-3 pr-4 text-center">{t("rebalance.action")}</th>
+                      <th className="pb-3 pr-4 text-right">{t("rebalance.quantity")}</th>
                       <th className="pb-3 text-right">{t("rebalance.amount")}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {targetedSuggestionsSorted.map((s) => (
-                      <tr
-                        key={s.tokenSymbol}
-                        className={`border-b border-border-subtle ${getDeviationBg(s.deviation)}`}
-                      >
-                        <td className="py-3 pr-4 font-medium text-text-primary">
-                          {s.tokenSymbol}
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {s.targetPercent.toFixed(1)}%
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {s.currentPercent.toFixed(1)}%
-                        </td>
-                        <td
-                          className={`py-3 pr-4 text-right font-medium ${getDeviationColor(s.deviation)}`}
+                    {targetedSuggestionsSorted.map((s) => {
+                      const tradeQuantity = getSuggestionTradeQuantity(s);
+
+                      return (
+                        <tr
+                          key={s.tokenSymbol}
+                          className={`border-b border-border-subtle ${getDeviationBg(s.deviation)}`}
                         >
-                          {s.deviation >= 0 ? "+" : ""}
-                          {s.deviation.toFixed(1)}%
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {formatUsd(s.currentValue)}
-                        </td>
-                        <td className="py-3 pr-4 text-center">
-                          <span
-                            className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(s.action)}`}
+                          <td className="py-3 pr-4 font-medium text-text-primary">
+                            {s.tokenSymbol}
+                          </td>
+                          <td className="py-3 pr-4 text-right">
+                            {s.targetPercent.toFixed(1)}%
+                          </td>
+                          <td className="py-3 pr-4 text-right">
+                            {s.currentPercent.toFixed(1)}%
+                          </td>
+                          <td
+                            className={`py-3 pr-4 text-right font-medium ${getDeviationColor(s.deviation)}`}
                           >
-                            {s.action}
-                          </span>
-                        </td>
-                        <td className="py-3 text-right">
-                          {s.action !== "hold" ? formatUsd(s.amount) : "-"}
-                          {s.action !== "hold" && (s.estimatedSlippage > 0 || s.estimatedFee > 0) && (
-                            <div className="text-xs text-text-dim mt-0.5">
-                              {t("rebalance.fees")}: {formatUsd(s.estimatedFee)} | {t("rebalance.slip")}: {formatUsd(s.estimatedSlippage)}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            {s.deviation >= 0 ? "+" : ""}
+                            {s.deviation.toFixed(1)}%
+                          </td>
+                          <td className="py-3 pr-4 text-right">
+                            {formatUsd(s.currentValue)}
+                          </td>
+                          <td className="py-3 pr-4 text-center">
+                            <span
+                              className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(s.action)}`}
+                            >
+                              {s.action}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 text-right">
+                            {tradeQuantity !== null ? formatCrypto(tradeQuantity, 8) : "-"}
+                          </td>
+                          <td className="py-3 text-right">
+                            {s.action !== "hold" ? formatUsd(s.amount) : "-"}
+                            {s.action !== "hold" && (s.estimatedSlippage > 0 || s.estimatedFee > 0) && (
+                              <div className="text-xs text-text-dim mt-0.5">
+                                {t("rebalance.fees")}: {formatUsd(s.estimatedFee)} | {t("rebalance.slip")}: {formatUsd(s.estimatedSlippage)}
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
