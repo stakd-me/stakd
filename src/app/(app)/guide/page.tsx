@@ -3,32 +3,47 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { GuideSection } from "@/components/guide/guide-section";
+import { useTranslation } from "@/hooks/use-translation";
 import { ArrowRight } from "lucide-react";
 
-const tocItems = [
-  { id: "quick-start", label: "Quick Start" },
-  { id: "daily-ops", label: "Daily Operations" },
-  { id: "reports", label: "Weekly/Monthly/Quarterly/Yearly Reports" },
-  { id: "manual-execution", label: "Manual Execution Workflow" },
-  { id: "reconciliation", label: "Post-Trade Reconciliation" },
-];
-
 export default function AppGuidePage() {
+  const { t } = useTranslation();
+  const tocItems = [
+    { id: "quick-start", label: t("appGuide.quickStart") },
+    { id: "daily-ops", label: t("appGuide.dailyOperations") },
+    { id: "reports", label: t("appGuide.reports") },
+    { id: "manual-execution", label: t("appGuide.manualExecution") },
+    { id: "reconciliation", label: t("appGuide.reconciliation") },
+  ];
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">App Guide</h1>
-        <p className="text-text-subtle">
-          Operating handbook for portfolio tracking, reporting, and manual execution.
-        </p>
-      </div>
+      <PageHeader
+        title={t("appGuide.title")}
+        description={t("appGuide.subtitle")}
+      />
 
-      <div className="flex gap-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+        <div className="overflow-x-auto lg:hidden">
+          <div className="flex min-w-max gap-2">
+            {tocItems.map((item) => (
+              <a
+                key={item.id}
+                href={`#${item.id}`}
+                className="rounded-full border border-border-subtle bg-bg-card px-3 py-1.5 text-sm text-text-subtle transition-colors hover:bg-bg-hover hover:text-text-primary"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
         <div className="hidden w-64 shrink-0 lg:block">
           <div className="sticky top-6 space-y-1 rounded-lg border border-border-subtle bg-bg-card p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-dim">
-              Table of contents
+              {t("appGuide.toc")}
             </p>
             {tocItems.map((item) => (
               <a
@@ -43,51 +58,51 @@ export default function AppGuidePage() {
         </div>
 
         <div className="min-w-0 flex-1 space-y-10">
-          <GuideSection id="quick-start" title="Quick Start">
+          <GuideSection id="quick-start" title={t("appGuide.quickStart")}>
             <Card>
               <CardContent className="space-y-2 pt-6 text-sm text-text-muted">
-                <p>1. Add transactions in Portfolio or import CSV history.</p>
-                <p>2. Set target allocations in Rebalance.</p>
-                <p>3. Review risk alerts in Dashboard.</p>
-                <p>4. Generate Reports and execute trades manually outside the app.</p>
+                <p>{t("appGuide.quickStartStep1")}</p>
+                <p>{t("appGuide.quickStartStep2")}</p>
+                <p>{t("appGuide.quickStartStep3")}</p>
+                <p>{t("appGuide.quickStartStep4")}</p>
               </CardContent>
             </Card>
           </GuideSection>
 
-          <GuideSection id="daily-ops" title="Daily Operations">
+          <GuideSection id="daily-ops" title={t("appGuide.dailyOperations")}>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Daily checklist</CardTitle>
+                <CardTitle className="text-base">{t("appGuide.dailyChecklist")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-text-muted">
-                <p>1. Refresh prices and review stale-price warning.</p>
-                <p>2. Check concentration/drift alerts on Dashboard.</p>
-                <p>3. Record new trades or transfers from your exchange/wallet activity.</p>
-                <p>4. Verify that holdings and P&L are aligned with your broker/exchange statements.</p>
+                <p>{t("appGuide.dailyStep1")}</p>
+                <p>{t("appGuide.dailyStep2")}</p>
+                <p>{t("appGuide.dailyStep3")}</p>
+                <p>{t("appGuide.dailyStep4")}</p>
               </CardContent>
             </Card>
           </GuideSection>
 
           <GuideSection
             id="reports"
-            title="Weekly / Monthly / Quarterly / Yearly Reports"
+            title={t("appGuide.reports")}
           >
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">How to use Reports page</CardTitle>
+                <CardTitle className="text-base">{t("appGuide.reportsHowTo")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-text-muted">
-                <p>1. Open Reports and choose the period: Week, Month, Quarter, Year, or All-time.</p>
-                <p>2. Review KPI contract: Start/End Value, Capital Net Flow, External Net Flow, Trading Turnover, Period P&L, Return (Modified Dietz).</p>
-                <p>3. Check the Data Quality badge (Exact/Estimated/Incomplete) before using report numbers for decision-making.</p>
-                <p>4. Validate reconciliation line: Start + Capital Net Flow + P&L should match End Value.</p>
-                <p>5. Compare return/P&L delta versus previous to-date window.</p>
-                <p>6. Inspect concentration and best/worst performers.</p>
-                <p>7. Export JSON/CSV for external review or investment committee records.</p>
+                <p>{t("appGuide.reportsStep1")}</p>
+                <p>{t("appGuide.reportsStep2")}</p>
+                <p>{t("appGuide.reportsStep3")}</p>
+                <p>{t("appGuide.reportsStep4")}</p>
+                <p>{t("appGuide.reportsStep5")}</p>
+                <p>{t("appGuide.reportsStep6")}</p>
+                <p>{t("appGuide.reportsStep7")}</p>
                 <div className="pt-1">
                   <Link href="/reports">
                     <Button variant="outline" size="sm">
-                      Open Reports
+                      {t("appGuide.openReports")}
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
@@ -96,31 +111,28 @@ export default function AppGuidePage() {
             </Card>
           </GuideSection>
 
-          <GuideSection id="manual-execution" title="Manual Execution Workflow">
+          <GuideSection id="manual-execution" title={t("appGuide.manualExecution")}>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Important</CardTitle>
+                <CardTitle className="text-base">{t("appGuide.important")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-text-muted">
-                <p>
-                  This app does not place exchange orders. Use it as a decision and
-                  control system, then execute orders manually on your exchange.
-                </p>
-                <p>1. Create rebalance suggestions in Rebalance.</p>
-                <p>2. Confirm the order list and risk constraints.</p>
-                <p>3. Execute trades manually outside the app.</p>
-                <p>4. Record executed trades in Portfolio immediately after execution.</p>
+                <p>{t("appGuide.manualExecutionIntro")}</p>
+                <p>{t("appGuide.manualStep1")}</p>
+                <p>{t("appGuide.manualStep2")}</p>
+                <p>{t("appGuide.manualStep3")}</p>
+                <p>{t("appGuide.manualStep4")}</p>
               </CardContent>
             </Card>
           </GuideSection>
 
-          <GuideSection id="reconciliation" title="Post-Trade Reconciliation">
+          <GuideSection id="reconciliation" title={t("appGuide.reconciliation")}>
             <Card>
               <CardContent className="space-y-2 pt-6 text-sm text-text-muted">
-                <p>1. Import or add the executed fills as transactions.</p>
-                <p>2. Compare resulting holdings to target allocation and expected drift.</p>
-                <p>3. Validate fee impact and realized/unrealized P&L changes.</p>
-                <p>4. Save weekly/monthly snapshots for audit continuity.</p>
+                <p>{t("appGuide.reconciliationStep1")}</p>
+                <p>{t("appGuide.reconciliationStep2")}</p>
+                <p>{t("appGuide.reconciliationStep3")}</p>
+                <p>{t("appGuide.reconciliationStep4")}</p>
               </CardContent>
             </Card>
           </GuideSection>

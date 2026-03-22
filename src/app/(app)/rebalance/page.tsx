@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatUsd, formatTimeAgo } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { cn, formatUsd, formatTimeAgo } from "@/lib/utils";
 import {
   Plus,
   AlertTriangle,
@@ -342,6 +343,8 @@ function normalizeCoinGeckoId(
 
 const TARGET_EXPANDED_STORAGE_KEY = "rebalance:target-allocation-expanded";
 
+type RebalancePhase = "setup" | "analysis" | "execution" | "all";
+
 // ── Page Component ──────────────────────────────────────────────
 
 export default function RebalancePage() {
@@ -361,6 +364,8 @@ export default function RebalancePage() {
   // Collapsible sections
   const [targetExpanded, setTargetExpanded] = useState(false);
   const [targetExpandedPref, setTargetExpandedPref] = useState<boolean | null>(null);
+  const [activePhase, setActivePhase] = useState<RebalancePhase>("setup");
+  const [phaseInitialized, setPhaseInitialized] = useState(false);
 
   // Post-execution recording flow
   const [recordingSessionId, setRecordingSessionId] = useState<string | number | null>(null);
@@ -1258,6 +1263,8 @@ export default function RebalancePage() {
           },
         ],
       }));
+      setActivePhase("execution");
+      setPhaseInitialized(true);
       toast(t("rebalance.sessionStarted"), "success");
     } finally {
       setStartSessionPending(false);
@@ -1652,17 +1659,98 @@ export default function RebalancePage() {
     Current: s.currentPercent,
   }));
 
+  useEffect(() => {
+    if (phaseInitialized) return;
+
+    if (activeSessions.length > 0) {
+      setActivePhase("execution");
+      setPhaseInitialized(true);
+      return;
+    }
+
+    if (targetedSuggestions.length > 0 || allAlerts.length > 0) {
+      setActivePhase("analysis");
+      setPhaseInitialized(true);
+      return;
+    }
+
+    if (
+      targets.length > 0 ||
+      untargetedSuggestions.length > 0 ||
+      groups.length > 0 ||
+      categories.length > 0
+    ) {
+      setPhaseInitialized(true);
+    }
+  }, [
+    activeSessions.length,
+    allAlerts.length,
+    categories.length,
+    groups.length,
+    phaseInitialized,
+    targetedSuggestions.length,
+    targets.length,
+    untargetedSuggestions.length,
+  ]);
+
+  const showSetupPhase = activePhase === "all" || activePhase === "setup";
+  const showAnalysisPhase = activePhase === "all" || activePhase === "analysis";
+  const showExecutionPhase = activePhase === "all" || activePhase === "execution";
+
+  const setupPhaseCount =
+    targets.length +
+    untargetedSuggestions.length +
+    groups.length +
+    categories.length;
+  const analysisPhaseCount =
+    targetedSuggestions.length +
+    allAlerts.length +
+    (suggestionsData?.dcaChunks?.length ?? 0) +
+    logs.length;
+  const executionPhaseCount =
+    (suggestionsData?.executionSteps?.length ?? 0) +
+    activeSessions.length +
+    pastSessions.length;
+  const phaseOptions = useMemo(
+    () => [
+      {
+        value: "setup" as const,
+        label: t("rebalance.phaseSetup"),
+        count: setupPhaseCount,
+      },
+      {
+        value: "analysis" as const,
+        label: t("rebalance.phaseAnalysis"),
+        count: analysisPhaseCount,
+      },
+      {
+        value: "execution" as const,
+        label: t("rebalance.phaseExecution"),
+        count: executionPhaseCount,
+      },
+      {
+        value: "all" as const,
+        label: t("rebalance.viewAll"),
+        count: setupPhaseCount + analysisPhaseCount + executionPhaseCount,
+      },
+    ],
+    [
+      analysisPhaseCount,
+      executionPhaseCount,
+      setupPhaseCount,
+      t,
+    ]
+  );
+
   // ── Loading / error states ───────────────────────────────────
 
   if (pricesLoading && vault.rebalanceTargets.length === 0) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{t("rebalance.title")}</h1>
-          <p className="text-text-subtle">
-            {t("rebalance.subtitle")}
-          </p>
-        </div>
+        <PageHeader
+          title={t("rebalance.title")}
+          description={t("rebalance.subtitle")}
+        />
         <CardSkeleton />
         <div className="rounded-lg border border-border bg-bg-card p-6">
           <Skeleton className="mb-4 h-5 w-40" />
@@ -1679,35 +1767,33 @@ export default function RebalancePage() {
   return (
     <div className="space-y-6">
       {/* ── 1. Header + Log Snapshot ─────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("rebalance.title")}</h1>
-          <p className="text-text-subtle">
-            {t("rebalance.subtitle")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshPrices}
-            disabled={refreshingPrices}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshingPrices ? "animate-spin" : ""}`} />
-            {t("dashboard.refresh")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogSnapshot}
-            disabled={logPending}
-            title={t("rebalance.snapshotTooltip")}
-          >
-            <Clock className="mr-2 h-4 w-4" />
-            {logPending ? t("rebalance.logging") : t("rebalance.logSnapshot")}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={t("rebalance.title")}
+        description={t("rebalance.subtitle")}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshPrices}
+              disabled={refreshingPrices}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${refreshingPrices ? "animate-spin" : ""}`} />
+              {t("dashboard.refresh")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogSnapshot}
+              disabled={logPending}
+              title={t("rebalance.snapshotTooltip")}
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              {logPending ? t("rebalance.logging") : t("rebalance.logSnapshot")}
+            </Button>
+          </>
+        }
+      />
 
       {/* ── 2. Info Bar ──────────────────────────────────────── */}
       {suggestionsData && (
@@ -1751,6 +1837,43 @@ export default function RebalancePage() {
         </div>
       )}
 
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              {t("rebalance.focusView")}
+            </p>
+            <p className="text-xs text-text-dim">
+              {t("rebalance.subtitle")}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            {phaseOptions.map((phase) => (
+              <button
+                key={phase.value}
+                type="button"
+                onClick={() => {
+                  setActivePhase(phase.value);
+                  setPhaseInitialized(true);
+                }}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                  activePhase === phase.value
+                    ? "border-accent bg-accent/10 text-text-primary"
+                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
+                )}
+                aria-pressed={activePhase === phase.value}
+              >
+                <span className="min-w-0 truncate font-medium">{phase.label}</span>
+                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
+                  {phase.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
       {suggestionsData && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card>
@@ -1777,30 +1900,32 @@ export default function RebalancePage() {
       )}
 
       {/* ── 3. Target Allocation ─────────────────────────────── */}
-      <TargetAllocationSection
-        targets={targets}
-        setTargets={setTargets}
-        totalPercent={totalPercent}
-        expanded={targetExpanded}
-        onToggleExpanded={handleToggleTargetExpanded}
-        stablecoinQuickAdd={stablecoinQuickAdd}
-        onAddStablecoinTarget={handleAddStablecoinTarget}
-        suggestionsData={suggestionsData}
-        groups={groups}
-        autocompleteData={autocompleteData}
-        activeAutocompleteIndex={activeAutocompleteIndex}
-        setActiveAutocompleteIndex={setActiveAutocompleteIndex}
-        autocompleteQuery={autocompleteQuery}
-        setAutocompleteQuery={setAutocompleteQuery}
-        onSave={handleSave}
-        savePending={savePending}
-        saveError={saveError !== null}
-        saveErrorMessage={saveError ?? undefined}
-        onAutoGenerate={handleAutoGenerate}
-      />
+      {showSetupPhase && (
+        <TargetAllocationSection
+          targets={targets}
+          setTargets={setTargets}
+          totalPercent={totalPercent}
+          expanded={targetExpanded}
+          onToggleExpanded={handleToggleTargetExpanded}
+          stablecoinQuickAdd={stablecoinQuickAdd}
+          onAddStablecoinTarget={handleAddStablecoinTarget}
+          suggestionsData={suggestionsData}
+          groups={groups}
+          autocompleteData={autocompleteData}
+          activeAutocompleteIndex={activeAutocompleteIndex}
+          setActiveAutocompleteIndex={setActiveAutocompleteIndex}
+          autocompleteQuery={autocompleteQuery}
+          setAutocompleteQuery={setAutocompleteQuery}
+          onSave={handleSave}
+          savePending={savePending}
+          saveError={saveError !== null}
+          saveErrorMessage={saveError ?? undefined}
+          onAutoGenerate={handleAutoGenerate}
+        />
+      )}
 
       {/* ── 4. Untargeted Tokens ────────────────────────────── */}
-      {untargetedSuggestions.length > 0 && (
+      {showSetupPhase && untargetedSuggestions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-text-muted">
@@ -1863,36 +1988,38 @@ export default function RebalancePage() {
       )}
 
       {/* ── 5. Configuration Blocks ─────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <TokenGroupsSection
-          groups={groups}
-          onCreateGroup={handleCreateGroup}
-          createPending={groupCreatePending}
-          onUpdateGroup={handleUpdateGroup}
-          updatePending={groupUpdatePending}
-          onTrackGroup={handleTrackGroup}
-          trackPendingGroupId={groupTrackPendingId}
-          onConfirmDelete={(id, label) =>
-            setConfirmState({ type: "group", id, label })
-          }
-          deletePending={groupDeletePending}
-        />
+      {showSetupPhase && (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <TokenGroupsSection
+            groups={groups}
+            onCreateGroup={handleCreateGroup}
+            createPending={groupCreatePending}
+            onUpdateGroup={handleUpdateGroup}
+            updatePending={groupUpdatePending}
+            onTrackGroup={handleTrackGroup}
+            trackPendingGroupId={groupTrackPendingId}
+            onConfirmDelete={(id, label) =>
+              setConfirmState({ type: "group", id, label })
+            }
+            deletePending={groupDeletePending}
+          />
 
-        <AssetCategoriesSection
-          categories={categories}
-          categoryBreakdown={categoryBreakdown}
-          symbolOptions={tokenSymbolOptions}
-          onSetCategory={handleSetCategory}
-          setCategoryPending={categorySetPending}
-          onConfirmDelete={(tokenSymbol, label) =>
-            setConfirmState({ type: "category", id: tokenSymbol, label })
-          }
-          deletePending={categoryDeletePending}
-        />
-      </div>
+          <AssetCategoriesSection
+            categories={categories}
+            categoryBreakdown={categoryBreakdown}
+            symbolOptions={tokenSymbolOptions}
+            onSetCategory={handleSetCategory}
+            setCategoryPending={categorySetPending}
+            onConfirmDelete={(tokenSymbol, label) =>
+              setConfirmState({ type: "category", id: tokenSymbol, label })
+            }
+            deletePending={categoryDeletePending}
+          />
+        </div>
+      )}
 
       {/* ── Calendar-Blocked Notice ─────────────────────────── */}
-      {suggestionsData?.calendarBlocked && (
+      {showAnalysisPhase && suggestionsData?.calendarBlocked && (
         <Card>
           <CardContent className="py-6">
             <div className="flex items-center gap-3 text-status-warning">
@@ -1912,7 +2039,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── Risk-Parity Targets Info ──────────────────────────── */}
-      {suggestionsData?.riskParityTargets && suggestionsData.riskParityTargets.length > 0 && (() => {
+      {showAnalysisPhase && suggestionsData?.riskParityTargets && suggestionsData.riskParityTargets.length > 0 && (() => {
         const usesFallback = suggestionsData.riskParityTargets.some(
           (target) => !target.hasVolatilityData
         );
@@ -1964,7 +2091,7 @@ export default function RebalancePage() {
       })()}
 
       {/* ── 3. Alerts (moved near top) ───────────────────────── */}
-      {allAlerts.length > 0 && (
+      {showAnalysisPhase && allAlerts.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -2057,7 +2184,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── 4. Well-Balanced / Rebalance Summary ─────────────── */}
-      {suggestionsData?.summary?.isWellBalanced && (
+      {showAnalysisPhase && suggestionsData?.summary?.isWellBalanced && (
         <Card>
           <CardContent className="py-6">
             <div
@@ -2094,7 +2221,7 @@ export default function RebalancePage() {
         </Card>
       )}
 
-      {suggestionsData?.summary && !suggestionsData.summary.isWellBalanced && targetedSuggestions.length > 0 && (
+      {showAnalysisPhase && suggestionsData?.summary && !suggestionsData.summary.isWellBalanced && targetedSuggestions.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -2147,7 +2274,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── 5. Chart ─────────────────────────────────────────── */}
-      {chartData.length > 0 && (
+      {showAnalysisPhase && chartData.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>{t("rebalance.targetVsCurrent")}</CardTitle>
@@ -2214,7 +2341,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── 6. Current vs Target Table ───────────────────────── */}
-      {suggestionsData && targetedSuggestions.length > 0 && !suggestionsData.summary?.isWellBalanced && (
+      {showAnalysisPhase && suggestionsData && targetedSuggestions.length > 0 && !suggestionsData.summary?.isWellBalanced && (
         <Card>
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2319,7 +2446,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── 7. Execution Plan ────────────────────────────────── */}
-      {suggestionsData?.executionSteps && suggestionsData.executionSteps.length > 0 && !suggestionsData.summary?.isWellBalanced && (
+      {showExecutionPhase && suggestionsData?.executionSteps && suggestionsData.executionSteps.length > 0 && !suggestionsData.summary?.isWellBalanced && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -2370,7 +2497,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── DCA Schedule ─────────────────────────────────────── */}
-      {suggestionsData?.dcaChunks && suggestionsData.dcaChunks.length > 0 && (
+      {showAnalysisPhase && suggestionsData?.dcaChunks && suggestionsData.dcaChunks.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -2422,9 +2549,9 @@ export default function RebalancePage() {
       )}
 
       {/* ── 8. Start Execution / Active Sessions ─────────────── */}
-      {hasActionableSuggestions && activeSessions.length === 0 && !suggestionsData?.summary?.isWellBalanced && (
+      {showExecutionPhase && hasActionableSuggestions && activeSessions.length === 0 && !suggestionsData?.summary?.isWellBalanced && (
         <Card>
-          <CardContent className="flex items-center justify-between py-4">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-text-subtle">
               {t("rebalance.readyToExecute")}
             </p>
@@ -2440,7 +2567,7 @@ export default function RebalancePage() {
         </Card>
       )}
 
-      {activeSessions.map((session) => {
+      {showExecutionPhase && activeSessions.map((session) => {
         const completedCount = session.trades.filter((t) => t.status === "completed").length;
         const progress = session.trades.length > 0 ? (completedCount / session.trades.length) * 100 : 0;
         return (
@@ -2492,7 +2619,7 @@ export default function RebalancePage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   onClick={() => handleCompleteSession({ id: session.id, status: "completed" })}
@@ -2518,7 +2645,7 @@ export default function RebalancePage() {
                     <p className="text-sm text-status-info">
                       {t("rebalance.allTradesCompleted")}
                     </p>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-2 flex flex-wrap gap-2">
                       <Button
                         size="sm"
                         onClick={() => {
@@ -2591,7 +2718,7 @@ export default function RebalancePage() {
                       />
                     </div>
                   ))}
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex flex-wrap gap-2 pt-2">
                     <Button
                       size="sm"
                       onClick={() => {
@@ -2627,19 +2754,23 @@ export default function RebalancePage() {
       })}
 
       {/* ── 9. Past Sessions ─────────────────────────────────── */}
-      <PastSessionsSection
-        pastSessions={pastSessions}
-        onConfirmDelete={(id, label) =>
-          setConfirmState({ type: "session", id, label })
-        }
-        deletePending={deleteSessionPending}
-      />
+      {showExecutionPhase && (
+        <PastSessionsSection
+          pastSessions={pastSessions}
+          onConfirmDelete={(id, label) =>
+            setConfirmState({ type: "session", id, label })
+          }
+          deletePending={deleteSessionPending}
+        />
+      )}
 
       {/* ── 14. What-If Calculator ───────────────────────────── */}
-      <WhatIfCalculatorSection symbolOptions={tokenSymbolOptions} />
+      {showAnalysisPhase && (
+        <WhatIfCalculatorSection symbolOptions={tokenSymbolOptions} />
+      )}
 
       {/* ── 15. Rebalance History ────────────────────────────── */}
-      {logs.length > 0 && (
+      {showAnalysisPhase && logs.length > 0 && (
         <Card>
           <CardHeader>
             <button

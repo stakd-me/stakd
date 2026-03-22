@@ -2,13 +2,14 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useTranslation } from "@/hooks/use-translation";
 import { useChartTheme } from "@/hooks/use-chart-theme";
 import { AllocationPieChart } from "@/components/charts/allocation-pie";
 import { PortfolioLineChart } from "@/components/charts/portfolio-line";
-import { RefreshCw, Scale, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, RefreshCw, Scale, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 import {
   Chart as ChartJS,
@@ -227,6 +228,11 @@ export default function DashboardPage() {
   const totalValue = totals.totalValue;
   const totalPL = totals.totalPL;
   const change24hUsdt = (totals.totalValue * totals.change24h) / 100;
+  const topHoldings = useMemo(
+    () => [...breakdown].sort((a, b) => b.value - a.value).slice(0, 6),
+    [breakdown]
+  );
+  const remainingHoldingsCount = Math.max(0, breakdown.length - topHoldings.length);
   const isPriceStale = useMemo(() => {
     if (!lastPriceUpdate) return true;
     return Date.now() - new Date(lastPriceUpdate).getTime() > 30 * 60 * 1000;
@@ -292,6 +298,9 @@ export default function DashboardPage() {
           Math.abs(b.value) - Math.abs(a.value)
       );
   }, [alerts]);
+  const hasAlerts = alerts.length > 0;
+  const primaryAlert = mergedAlertBadges[0] ?? null;
+  const highestAlertSeverity = primaryAlert?.severity ?? "low";
 
   // Filter history by time range
   const filteredHistory = useMemo(() => {
@@ -318,12 +327,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
-          <p className="text-text-subtle">{t("dashboard.subtitle")}</p>
-        </div>
-        <div className="flex items-center gap-3">
+      <PageHeader
+        title={t("dashboard.title")}
+        description={t("dashboard.subtitle")}
+        actions={
+          <>
           {lastPriceUpdate && (
             <span
               className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
@@ -335,7 +343,6 @@ export default function DashboardPage() {
               {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
             </span>
           )}
-          {/* Report download removed — no server-side report generation in vault architecture */}
           <Button
             variant="outline"
             size="sm"
@@ -345,209 +352,242 @@ export default function DashboardPage() {
             <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
             {t("dashboard.refresh")}
           </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.totalValue")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{formatValue(totalValue)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.totalPL")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={`text-3xl font-bold ${
-                totalPL >= 0 ? "text-status-positive" : "text-status-negative"
-              }`}
-            >
-              {totalPL >= 0 ? "+" : ""}
-              {formatUsd(totalPL)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.totalFees")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-status-caution">
-              {formatUsd(totals.totalFeesPaid)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.assets")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{breakdown.length}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("portfolio.change24h")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={`text-3xl font-bold ${
-                totals.change24h >= 0 ? "text-status-positive" : "text-status-negative"
-              }`}
-            >
-              {totals.change24h >= 0 ? "+" : ""}
-              {totals.change24h.toFixed(2)}%
-            </p>
-            <p
-              className={`mt-1 text-sm font-medium ${
-                change24hUsdt >= 0 ? "text-status-positive" : "text-status-negative"
-              }`}
-            >
-              {change24hUsdt >= 0 ? "+" : ""}
-              {formatUsd(change24hUsdt)} USDT
-            </p>
-            <p className="mt-1 text-xs text-text-dim">{t("portfolio.weightedChangeDesc")}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Rebalance Status Card */}
-      {alerts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5 text-status-warning" />
-                {t("dashboard.rebalanceStatus")}
-              </CardTitle>
-              <Link
-                href="/rebalance"
-                className="text-sm text-status-info hover:text-status-info"
-              >
+      <Card
+        className={cn(
+          hasAlerts
+            ? highestAlertSeverity === "high"
+              ? "border-status-negative-border"
+              : "border-status-warning-border"
+            : "border-status-positive-border"
+        )}
+      >
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="flex items-center gap-2">
+              {hasAlerts ? (
+                <AlertTriangle
+                  className={cn(
+                    "h-5 w-5",
+                    highestAlertSeverity === "high"
+                      ? "text-status-negative"
+                      : "text-status-warning"
+                  )}
+                />
+              ) : (
+                <CheckCircle2 className="h-5 w-5 text-status-positive" />
+              )}
+              {t("dashboard.rebalanceStatus")}
+            </CardTitle>
+            <Link href="/rebalance">
+              <Button size="sm" variant={hasAlerts ? "default" : "outline"}>
+                <Scale className="mr-2 h-4 w-4" />
                 {t("dashboard.viewDetails")}
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {deviationAlerts.length > 0 && (
-                <p className="text-sm text-text-muted">
-                  {t("dashboard.tokensNeedRebalancing", { count: deviationAlertTokenCount.toString() })}
-                </p>
-              )}
-              {concentrationAlerts.length > 0 && (
-                <p className="text-sm text-text-muted">
-                  {t("dashboard.concentrationAlerts", {
-                    count: concentrationAlertTokenCount.toString(),
-                    threshold: concentrationThresholdLabel,
-                  })}
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2 pt-1">
-                {mergedAlertBadges.slice(0, 5).map((alert) => (
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {hasAlerts ? (
+            <>
+              <p
+                className={cn(
+                  "text-sm font-medium",
+                  highestAlertSeverity === "high"
+                    ? "text-status-negative"
+                    : "text-status-warning"
+                )}
+              >
+                {t("dashboard.actionRequired")}
+              </p>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {deviationAlerts.length > 0 ? (
+                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
+                    <p className="text-xs text-text-subtle">
+                      {t("dashboard.tokensNeedRebalancing", {
+                        count: deviationAlertTokenCount.toString(),
+                      })}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-text-primary">
+                      {deviationAlertTokenCount}
+                    </p>
+                  </div>
+                ) : null}
+                {concentrationAlerts.length > 0 ? (
+                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
+                    <p className="text-xs text-text-subtle">
+                      {t("dashboard.concentrationAlerts", {
+                        count: concentrationAlertTokenCount.toString(),
+                        threshold: concentrationThresholdLabel,
+                      })}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-text-primary">
+                      {concentrationAlertTokenCount}
+                    </p>
+                  </div>
+                ) : null}
+                {primaryAlert ? (
+                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
+                    <p className="text-xs text-text-subtle">
+                      {t("dashboard.prioritySignal")}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-text-primary">
+                      {primaryAlert.tokenSymbol}: {primaryAlert.value >= 0 ? "+" : ""}
+                      {primaryAlert.value.toFixed(1)}%
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mergedAlertBadges.slice(0, 6).map((alert) => (
                   <span
                     key={alert.tokenSymbol}
-                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
                       alert.severity === "high"
                         ? "bg-status-negative-soft text-status-negative"
                         : alert.severity === "medium"
                           ? "bg-status-warning-soft text-status-warning"
                           : "bg-status-info-soft text-status-info"
-                    }`}
+                    )}
                   >
-                    {alert.tokenSymbol}: {alert.value >= 0 ? "+" : ""}{alert.value.toFixed(1)}%
+                    {alert.tokenSymbol}: {alert.value >= 0 ? "+" : ""}
+                    {alert.value.toFixed(1)}%
                   </span>
                 ))}
-                {mergedAlertBadges.length > 5 && (
+                {mergedAlertBadges.length > 6 ? (
                   <span className="text-xs text-text-subtle">
-                    {t("common.more", { count: (mergedAlertBadges.length - 5).toString() })}
+                    {t("common.more", {
+                      count: (mergedAlertBadges.length - 6).toString(),
+                    })}
                   </span>
-                )}
+                ) : null}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Performance Metrics — using useAnalytics() */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              {t("dashboard.performance")}
-            </CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div>
-              <p className="text-xs text-text-subtle">{t("dashboard.totalInvested")}</p>
-              <p className="text-lg font-semibold text-text-primary">
-                {formatUsd(analytics.totalInvested)}
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-status-positive">
+                {t("dashboard.noRebalanceAlerts")}
               </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-subtle">{t("dashboard.currentValue")}</p>
-              <p className="text-lg font-semibold text-text-primary">
-                {formatUsd(analytics.totalValue)}
+              <p className="text-sm text-text-subtle">
+                {t("dashboard.portfolioWithinThresholds")}
               </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-subtle">{t("dashboard.simpleROI")}</p>
-              <p className={`text-lg font-semibold ${analytics.totalReturnPercent >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-                {analytics.totalReturnPercent >= 0 ? "+" : ""}{analytics.totalReturnPercent.toFixed(2)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-text-subtle">{t("dashboard.assets")}</p>
-              <p className="text-lg font-semibold text-text-primary">
-                {analytics.numberOfTokens}
-              </p>
-            </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+        <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>{t("dashboard.tokenAllocation")}</CardTitle>
+            <CardTitle className="text-sm text-text-subtle">
+              {t("dashboard.totalValue")}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {pieData.length > 0 ? (
-              <AllocationPieChart data={pieData} />
-            ) : (
-              <p className="py-8 text-center text-text-subtle">
-                {t("dashboard.addTransactionsToSee")}
+            <p className="text-3xl font-bold text-text-primary">
+              {formatValue(totalValue)}
+            </p>
+            {lastPriceUpdate ? (
+              <p
+                className={cn(
+                  "mt-2 text-sm",
+                  isPriceStale ? "text-status-warning" : "text-text-subtle"
+                )}
+              >
+                {t("dashboard.prices", {
+                  time: formatTimeAgo(new Date(lastPriceUpdate)),
+                })}
               </p>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <CardTitle className="text-sm text-text-subtle">
+              {t("dashboard.totalPL")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p
+              className={cn(
+                "text-3xl font-bold",
+                totalPL >= 0 ? "text-status-positive" : "text-status-negative"
+              )}
+            >
+              {totalPL >= 0 ? "+" : ""}
+              {formatUsd(totalPL)}
+            </p>
+            <p
+              className={cn(
+                "mt-2 text-sm font-medium",
+                analytics.totalReturnPercent >= 0
+                  ? "text-status-positive"
+                  : "text-status-negative"
+              )}
+            >
+              {analytics.totalReturnPercent >= 0 ? "+" : ""}
+              {analytics.totalReturnPercent.toFixed(2)}% {t("dashboard.simpleROI")}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm text-text-subtle">
+              {t("portfolio.change24h")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p
+              className={cn(
+                "text-3xl font-bold",
+                totals.change24h >= 0
+                  ? "text-status-positive"
+                  : "text-status-negative"
+              )}
+            >
+              {totals.change24h >= 0 ? "+" : ""}
+              {totals.change24h.toFixed(2)}%
+            </p>
+            <p
+              className={cn(
+                "mt-2 text-sm font-medium",
+                change24hUsdt >= 0
+                  ? "text-status-positive"
+                  : "text-status-negative"
+              )}
+            >
+              {change24hUsdt >= 0 ? "+" : ""}
+              {formatUsd(change24hUsdt)} USDT
+            </p>
+            <p className="mt-1 text-xs text-text-dim">
+              {t("portfolio.weightedChangeDesc")}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>{t("dashboard.portfolioHistory")}</CardTitle>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {TIME_RANGES.map((r) => (
                   <button
                     key={r.value}
                     onClick={() => setTimeRange(r.value)}
-                    className={`rounded-md px-2 py-1 text-xs font-medium transition-colors ${
+                    className={cn(
+                      "rounded-md px-2 py-1 text-xs font-medium transition-colors",
                       timeRange === r.value
                         ? "bg-accent text-bg-page shadow-sm"
                         : "text-text-subtle hover:bg-bg-hover hover:text-text-tertiary"
-                    }`}
+                    )}
                   >
                     {r.label}
                   </button>
@@ -565,107 +605,213 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("dashboard.tokenAllocation")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pieData.length > 0 ? (
+                <AllocationPieChart data={pieData} />
+              ) : (
+                <p className="py-8 text-center text-text-subtle">
+                  {t("dashboard.addTransactionsToSee")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                {t("dashboard.performance")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-text-subtle">
+                    {t("dashboard.totalInvested")}
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary">
+                    {formatUsd(analytics.totalInvested)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-subtle">
+                    {t("dashboard.simpleROI")}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-lg font-semibold",
+                      analytics.totalReturnPercent >= 0
+                        ? "text-status-positive"
+                        : "text-status-negative"
+                    )}
+                  >
+                    {analytics.totalReturnPercent >= 0 ? "+" : ""}
+                    {analytics.totalReturnPercent.toFixed(2)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-subtle">
+                    {t("dashboard.totalFees")}
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary">
+                    {formatUsd(totals.totalFeesPaid)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-text-subtle">
+                    {t("dashboard.assets")}
+                  </p>
+                  <p className="text-lg font-semibold text-text-primary">
+                    {breakdown.length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* Category Breakdown */}
-      {categoryBreakdown.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("dashboard.categoryBreakdown")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <Bar
-                data={{
-                  labels: categoryBreakdown.map((cb) => cb.category),
-                  datasets: [
-                    {
-                      label: t("dashboard.allocationPercent"),
-                      data: categoryBreakdown.map((cb) => cb.percent),
-                      backgroundColor: [
-                        "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
-                        "#ec4899", "#06b6d4", "#84cc16", "#f97316",
-                      ],
-                      borderRadius: 4,
-                    },
-                  ],
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  indexAxis: "y",
-                  plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                      backgroundColor: chartTheme.tooltipBg,
-                      titleColor: chartTheme.tooltipText,
-                      bodyColor: chartTheme.tooltipText,
-                      borderColor: chartTheme.tooltipBorder,
-                      borderWidth: 1,
-                      callbacks: {
-                        label: (item) => `${(item.raw as number).toFixed(1)}%`,
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-6",
+          categoryBreakdown.length > 0 && topHoldings.length > 0
+            ? "xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
+            : ""
+        )}
+      >
+        {categoryBreakdown.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("dashboard.categoryBreakdown")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <Bar
+                  data={{
+                    labels: categoryBreakdown.map((cb) => cb.category),
+                    datasets: [
+                      {
+                        label: t("dashboard.allocationPercent"),
+                        data: categoryBreakdown.map((cb) => cb.percent),
+                        backgroundColor: [
+                          "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
+                          "#ec4899", "#06b6d4", "#84cc16", "#f97316",
+                        ],
+                        borderRadius: 4,
+                      },
+                    ],
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: "y",
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        backgroundColor: chartTheme.tooltipBg,
+                        titleColor: chartTheme.tooltipText,
+                        bodyColor: chartTheme.tooltipText,
+                        borderColor: chartTheme.tooltipBorder,
+                        borderWidth: 1,
+                        callbacks: {
+                          label: (item) => `${(item.raw as number).toFixed(1)}%`,
+                        },
                       },
                     },
-                  },
-                  scales: {
-                    x: {
-                      grid: { color: chartTheme.gridColor },
-                      ticks: { color: chartTheme.tickColor, callback: (v) => `${v}%` },
+                    scales: {
+                      x: {
+                        grid: { color: chartTheme.gridColor },
+                        ticks: {
+                          color: chartTheme.tickColor,
+                          callback: (v) => `${v}%`,
+                        },
+                      },
+                      y: {
+                        grid: { display: false },
+                        ticks: { color: chartTheme.tickColor, font: { size: 12 } },
+                      },
                     },
-                    y: {
-                      grid: { display: false },
-                      ticks: { color: chartTheme.tickColor, font: { size: 12 } },
-                    },
-                  },
-                }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {breakdown.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("dashboard.holdings")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {breakdown.map((item) => (
-                <div
-                  key={item.holdingKey}
-                  className="flex items-center justify-between rounded-md border border-border-subtle bg-bg-input px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <div>
-                      <p className="font-medium">{item.symbol}</p>
+        {topHoldings.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle>{t("dashboard.holdings")}</CardTitle>
+                <Link href="/portfolio">
+                  <Button size="sm" variant="outline">
+                    {t("portfolio.title")}
+                  </Button>
+                </Link>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topHoldings.map((item) => (
+                  <div
+                    key={item.holdingKey}
+                    className="flex flex-col gap-3 rounded-md border border-border-subtle bg-bg-input px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div>
+                        <p className="font-medium text-text-primary">
+                          {item.symbol}
+                        </p>
+                        <p className="text-xs text-text-subtle">
+                          {formatCrypto(item.quantity)} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <p className="font-medium text-text-primary">
+                        {formatValue(item.value)}
+                      </p>
                       <p className="text-xs text-text-subtle">
-                        {formatCrypto(item.quantity)} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
+                        {item.percent.toFixed(1)}%
+                      </p>
+                      <p
+                        className={cn(
+                          "text-xs",
+                          item.unrealizedPL >= 0
+                            ? "text-status-positive"
+                            : "text-status-negative"
+                        )}
+                      >
+                        {item.unrealizedPL >= 0 ? "+" : ""}
+                        {formatUsd(item.unrealizedPL)} (
+                        {item.unrealizedPLPercent >= 0 ? "+" : ""}
+                        {item.unrealizedPLPercent.toFixed(1)}%)
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatValue(item.value)}</p>
-                    <p
-                      className={`text-xs ${
-                        item.unrealizedPL >= 0 ? "text-status-positive" : "text-status-negative"
-                      }`}
-                    >
-                      {item.unrealizedPL >= 0 ? "+" : ""}
-                      {formatUsd(item.unrealizedPL)} ({item.unrealizedPLPercent >= 0 ? "+" : ""}
-                      {item.unrealizedPLPercent.toFixed(1)}%)
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                ))}
+                {remainingHoldingsCount > 0 ? (
+                  <p className="text-xs text-text-subtle">
+                    {t("common.more", {
+                      count: remainingHoldingsCount.toString(),
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

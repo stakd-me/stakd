@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui/form-field";
 import { useAuthStore } from "@/lib/store";
 import { useTranslation } from "@/hooks/use-translation";
 import {
@@ -45,6 +46,7 @@ export function AuthScreen() {
   const [showPassphraseWarning, setShowPassphraseWarning] = useState(false);
   const [savedPassphrase, setSavedPassphrase] = useState("");
   const pendingAuthRef = useRef<{ userId: string; accessToken: string } | null>(null);
+  const requiredLabel = t("common.required");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,11 +62,11 @@ export function AuthScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usernameHash }),
       });
-      if (!saltRes.ok) throw new Error("Failed to get salt");
+      if (!saltRes.ok) throw new Error(t("auth.loginFailed"));
       const { salt: saltHex } = await saltRes.json();
       const salt = hexToBytes(typeof saltHex === "string" ? saltHex : "");
       if (!salt) {
-        throw new Error("Invalid login response");
+        throw new Error(t("auth.loginFailed"));
       }
 
       // 2. Derive keys
@@ -82,7 +84,7 @@ export function AuthScreen() {
 
       if (!loginRes.ok) {
         const data = await loginRes.json();
-        throw new Error(data.error || "Login failed");
+        throw new Error(data.error || t("auth.loginFailed"));
       }
 
       const loginData = await loginRes.json();
@@ -96,7 +98,7 @@ export function AuthScreen() {
       // 6. Load and decrypt vault
       await loadVaultFromServer();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("auth.loginFailed"));
     } finally {
       setLoading(false);
     }
@@ -107,11 +109,11 @@ export function AuthScreen() {
     setError("");
 
     if (passphrase !== confirmPassphrase) {
-      setError("Passphrases do not match");
+      setError(t("auth.passphrasesDoNotMatch"));
       return;
     }
     if (passphrase.length < 8) {
-      setError("Passphrase must be at least 8 characters");
+      setError(t("auth.passphraseMinLength"));
       return;
     }
 
@@ -137,7 +139,7 @@ export function AuthScreen() {
 
       if (!regRes.ok) {
         const data = await regRes.json();
-        throw new Error(data.error || "Registration failed");
+        throw new Error(data.error || t("auth.registrationFailed"));
       }
 
       const regData = await regRes.json();
@@ -150,7 +152,7 @@ export function AuthScreen() {
       setSavedPassphrase(passphrase);
       setShowPassphraseWarning(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : t("auth.registrationFailed"));
     } finally {
       setLoading(false);
     }
@@ -178,17 +180,18 @@ export function AuthScreen() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-text-primary">Account Created</h2>
+            <h2 className="text-2xl font-bold text-text-primary">
+              {t("auth.accountCreated")}
+            </h2>
             <p className="mt-2 text-text-subtle">
-              Your account has been created successfully.
+              {t("auth.accountCreatedDesc")}
             </p>
           </div>
 
           <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-4 text-sm text-status-warning">
-            <p className="mb-2 font-semibold">Save your passphrase now!</p>
+            <p className="mb-2 font-semibold">{t("auth.savePassphraseNow")}</p>
             <p className="mb-3 text-xs text-status-warning/80">
-              Your data is encrypted with a key derived from your passphrase.
-              We cannot recover or reset it. If you lose your passphrase, your data is lost forever.
+              {t("auth.savePassphraseDesc")}
             </p>
             <div className="flex items-center gap-2 rounded-md border border-status-warning-border bg-status-warning-soft px-3 py-2 font-mono text-sm text-status-warning">
               <span className="flex-1 select-all break-all">{savedPassphrase}</span>
@@ -198,7 +201,8 @@ export function AuthScreen() {
                   navigator.clipboard.writeText(savedPassphrase);
                 }}
                 className="shrink-0 rounded p-1 text-status-warning hover:bg-status-warning-soft hover:text-status-warning"
-                title="Copy to clipboard"
+                title={t("auth.copyPassphrase")}
+                aria-label={t("auth.copyPassphrase")}
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
@@ -209,7 +213,7 @@ export function AuthScreen() {
           </div>
 
           <Button className="w-full" onClick={handleDismissWarning}>
-            I have saved my passphrase
+            {t("auth.savedPassphrase")}
           </Button>
         </div>
       </div>
@@ -222,11 +226,12 @@ export function AuthScreen() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-text-primary">{t("nav.title")}</h1>
           <p className="mt-2 text-text-subtle">
-            {tab === "login" ? "Sign in to your portfolio" : "Create a new account"}
+            {tab === "login"
+              ? t("auth.signInDescription")
+              : t("auth.createAccountDescription")}
           </p>
         </div>
 
-        {/* Tab switcher */}
         <div className="flex rounded-lg border border-border-subtle">
           <button
             onClick={() => { setTab("login"); setError(""); }}
@@ -236,7 +241,7 @@ export function AuthScreen() {
                 : "text-text-subtle hover:text-text-primary"
             }`}
           >
-            Login
+            {t("auth.signInTab")}
           </button>
           <button
             onClick={() => { setTab("register"); setError(""); }}
@@ -246,38 +251,68 @@ export function AuthScreen() {
                 : "text-text-subtle hover:text-text-primary"
             }`}
           >
-            Register
+            {t("auth.registerTab")}
           </button>
         </div>
 
         <form onSubmit={tab === "login" ? handleLogin : handleRegister} className="space-y-4">
-          <Input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoFocus
+          <FormField
+            label={t("auth.usernameLabel")}
+            htmlFor="auth-username"
             required
-          />
-
-          <Input
-            type="password"
-            placeholder="Passphrase"
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            minLength={8}
-            required
-          />
-
-          {tab === "register" && (
+            requiredLabel={requiredLabel}
+          >
             <Input
+              id="auth-username"
+              type="text"
+              placeholder={t("auth.usernamePlaceholder")}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoFocus
+              required
+            />
+          </FormField>
+
+          <FormField
+            label={t("auth.passphraseLabel")}
+            htmlFor="auth-passphrase"
+            required
+            requiredLabel={requiredLabel}
+            error={passphrase.length > 0 && passphrase.length < 8 ? t("auth.passphraseMinLength") : undefined}
+          >
+            <Input
+              id="auth-passphrase"
               type="password"
-              placeholder="Confirm passphrase"
-              value={confirmPassphrase}
-              onChange={(e) => setConfirmPassphrase(e.target.value)}
+              placeholder={t("auth.passphrasePlaceholder")}
+              value={passphrase}
+              onChange={(e) => setPassphrase(e.target.value)}
               minLength={8}
               required
             />
+          </FormField>
+
+          {tab === "register" && (
+            <FormField
+              label={t("auth.confirmPassphraseLabel")}
+              htmlFor="auth-confirm-passphrase"
+              required
+              requiredLabel={requiredLabel}
+              error={
+                confirmPassphrase.length > 0 && confirmPassphrase !== passphrase
+                  ? t("auth.passphrasesDoNotMatch")
+                  : undefined
+              }
+            >
+              <Input
+                id="auth-confirm-passphrase"
+                type="password"
+                placeholder={t("auth.confirmPassphrasePlaceholder")}
+                value={confirmPassphrase}
+                onChange={(e) => setConfirmPassphrase(e.target.value)}
+                minLength={8}
+                required
+              />
+            </FormField>
           )}
 
           {error && <p className="text-sm text-status-negative">{error}</p>}
@@ -296,7 +331,7 @@ export function AuthScreen() {
 
           {tab === "register" && (
             <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-3 text-xs text-status-warning">
-              Save your passphrase. We cannot recover it. Your data is encrypted with a key derived from your passphrase.
+              {t("auth.savePassphraseDesc")}
             </div>
           )}
 
@@ -308,8 +343,8 @@ export function AuthScreen() {
             {loading
               ? t("common.processing")
               : tab === "login"
-                ? "Sign In"
-                : "Create Account"}
+                ? t("auth.signIn")
+                : t("auth.createAccount")}
           </Button>
         </form>
       </div>

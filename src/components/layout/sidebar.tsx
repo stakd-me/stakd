@@ -28,7 +28,7 @@ const navKeys = [
   { href: "/dashboard", labelKey: "nav.dashboard" as const, icon: LayoutDashboard },
   { href: "/portfolio", labelKey: "nav.portfolio" as const, icon: Coins },
   { href: "/rebalance", labelKey: "nav.rebalance" as const, icon: Scale },
-  { href: "/reports", labelKey: "dashboard.report" as const, icon: FileText },
+  { href: "/reports", labelKey: "nav.reports" as const, icon: FileText },
   { href: "/history", labelKey: "nav.history" as const, icon: Clock },
   { href: "/guide", labelKey: "nav.guide" as const, icon: BookOpen },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
@@ -134,7 +134,7 @@ export function Sidebar() {
             className="flex flex-1 items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-subtle transition-colors hover:bg-bg-hover hover:text-text-primary"
           >
             <LogOut className="h-4 w-4" />
-            Logout
+            {t("common.logout")}
           </button>
           <ThemeToggle />
           <LanguageToggle />
@@ -149,6 +149,8 @@ export function Sidebar() {
         onClick={() => setMobileOpen(true)}
         className="fixed left-4 top-4 z-40 rounded-md border border-border bg-bg-sidebar p-2 text-text-muted shadow-lg hover:bg-bg-hover md:hidden"
         aria-label={t("nav.openMenu")}
+        aria-expanded={mobileOpen}
+        aria-controls="mobile-sidebar"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -161,6 +163,7 @@ export function Sidebar() {
       )}
 
       <aside
+        id="mobile-sidebar"
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-56 flex-col border-r border-border-subtle bg-bg-sidebar transition-transform duration-200 md:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"

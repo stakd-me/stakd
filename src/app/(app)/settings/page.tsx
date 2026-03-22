@@ -1,13 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { Select } from "@/components/ui/select";
 import { Save, Shield, Scale, TriangleAlert } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore, useVaultStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import {
   deriveMasterKey,
@@ -54,6 +58,16 @@ const REBALANCE_SETTING_KEYS = [
 ] as const;
 
 type DangerAction = "portfolio" | "settings" | "all" | "account";
+type SettingsSection =
+  | "security"
+  | "strategy"
+  | "risk"
+  | "trading"
+  | "refresh"
+  | "danger"
+  | "about"
+  | "all";
+
 const DANGER_CONFIRM_KEYWORD = "DELETE";
 const DANGER_CONFIRM_DELAY_SECONDS = 5;
 
@@ -76,6 +90,7 @@ function hexToBytes(hex: string): Uint8Array | null {
 export default function SettingsPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
+  const requiredLabel = t("common.required");
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const clearVaultStore = useVaultStore((s) => s.clearVault);
   const vault = useVaultStore((s) => s.vault);
@@ -197,6 +212,8 @@ export default function SettingsPage() {
   const [dcaIntervalDays, setDcaIntervalDays] = useState("7");
   const [rebalanceSettingsLoaded, setRebalanceSettingsLoaded] = useState(false);
   const [rebalanceSaving, setRebalanceSaving] = useState(false);
+  const [activeSection, setActiveSection] = useState<SettingsSection>("all");
+  const [sessionKeyPersistent, setSessionKeyPersistent] = useState<boolean | null>(null);
   const hasHydratableRebalanceSettings = REBALANCE_SETTING_KEYS.some(
     (key) => vaultSettings[key] !== undefined
   );
@@ -460,604 +477,904 @@ export default function SettingsPage() {
   const passphrasesMatch = newPassphrase === confirmNewPassphrase;
   const passphraseLongEnough = newPassphrase.length >= 8;
 
+  useEffect(() => {
+    setSessionKeyPersistent(isEncKeyPersistent());
+  }, []);
+
+  const strategyFieldsCount = useMemo(() => {
+    if (rebalanceStrategy === "dca-weighted") return 3;
+    if (
+      rebalanceStrategy === "calendar" ||
+      rebalanceStrategy === "percent-of-portfolio" ||
+      rebalanceStrategy === "risk-parity"
+    ) {
+      return 2;
+    }
+    return 1;
+  }, [rebalanceStrategy]);
+
+  const tradingFieldsCount = buyOnlyMode ? 6 : 5;
+  const settingsSectionOptions = useMemo(
+    () => [
+      {
+        value: "security" as const,
+        label: t("settings.sectionSecurity"),
+        description: t("settings.sessionSecurity"),
+        count: 2,
+      },
+      {
+        value: "strategy" as const,
+        label: t("settings.sectionStrategy"),
+        description: t("settings.rebalanceStrategy"),
+        count: strategyFieldsCount,
+      },
+      {
+        value: "risk" as const,
+        label: t("settings.sectionRisk"),
+        description: t("settings.concentrationThreshold"),
+        count: 3,
+      },
+      {
+        value: "trading" as const,
+        label: t("settings.sectionTrading"),
+        description: t("settings.minTradeSize"),
+        count: tradingFieldsCount,
+      },
+      {
+        value: "refresh" as const,
+        label: t("settings.sectionRefresh"),
+        description: t("settings.autoRefresh"),
+        count: 1,
+      },
+      {
+        value: "danger" as const,
+        label: t("settings.sectionDanger"),
+        description: t("settings.exportBackup"),
+        count: 1,
+      },
+      {
+        value: "about" as const,
+        label: t("settings.sectionAbout"),
+        description: t("settings.about"),
+        count: 1,
+      },
+      {
+        value: "all" as const,
+        label: t("settings.sectionAll"),
+        description: t("settings.subtitle"),
+        count:
+          2 +
+          strategyFieldsCount +
+          3 +
+          tradingFieldsCount +
+          1 +
+          1 +
+          1,
+      },
+    ],
+    [strategyFieldsCount, t, tradingFieldsCount]
+  );
+
+  const showSecuritySection =
+    activeSection === "all" || activeSection === "security";
+  const showStrategySection =
+    activeSection === "all" || activeSection === "strategy";
+  const showRiskSection = activeSection === "all" || activeSection === "risk";
+  const showTradingSection =
+    activeSection === "all" || activeSection === "trading";
+  const showRefreshSection =
+    activeSection === "all" || activeSection === "refresh";
+  const showDangerSection =
+    activeSection === "all" || activeSection === "danger";
+  const showAboutSection =
+    activeSection === "all" || activeSection === "about";
+  const showRebalanceSaveAction =
+    activeSection === "all" ||
+    activeSection === "strategy" ||
+    activeSection === "risk" ||
+    activeSection === "trading" ||
+    activeSection === "refresh";
+  const sessionModeText =
+    sessionKeyPersistent === null
+      ? t("common.loading")
+      : sessionKeyPersistent
+        ? t("settings.sessionModeRemembered")
+        : t("settings.sessionModeSession");
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("settings.title")}</h1>
-        <p className="text-text-subtle">{t("settings.subtitle")}</p>
-      </div>
-
-      {/* Change Passphrase */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            {t("settings.changePassword")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-md space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.currentPassword")}
-              </label>
-              <Input
-                type="password"
-                value={currentPassphrase}
-                onChange={(e) => setCurrentPassphrase(e.target.value)}
-                placeholder={t("settings.currentPasswordPlaceholder")}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.newPassword")}
-              </label>
-              <Input
-                type="password"
-                value={newPassphrase}
-                onChange={(e) => setNewPassphrase(e.target.value)}
-                placeholder={t("settings.newPasswordPlaceholder")}
-              />
-              {newPassphrase.length > 0 && !passphraseLongEnough && (
-                <p className="mt-1 text-xs text-status-negative">
-                  {t("settings.passwordMinLength")}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.confirmNewPassword")}
-              </label>
-              <Input
-                type="password"
-                value={confirmNewPassphrase}
-                onChange={(e) => setConfirmNewPassphrase(e.target.value)}
-                placeholder={t("settings.confirmPasswordPlaceholder")}
-              />
-              {confirmNewPassphrase.length > 0 && !passphrasesMatch && (
-                <p className="mt-1 text-xs text-status-negative">
-                  {t("settings.passwordsDoNotMatch")}
-                </p>
-              )}
-            </div>
-            <Button
-              onClick={handlePassphraseChange}
-              disabled={
-                passphraseChanging ||
-                !passphrasesMatch ||
-                !passphraseLongEnough ||
-                currentPassphrase.length === 0
-              }
-            >
-              {passphraseChanging
-                ? t("settings.changingPassword")
-                : t("settings.changePassword")}
-            </Button>
-
-            {passphraseError && (
-              <p className="text-sm text-status-negative">
-                {passphraseError}
-              </p>
-            )}
-            {passphraseSuccess && (
-              <p className="text-sm text-status-positive">
-                {t("settings.passwordChanged")}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Rebalance Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Scale className="h-5 w-5" />
-            {t("settings.rebalanceSettings")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-md space-y-4">
-            <p className="text-sm text-text-subtle">
-              {t("settings.rebalanceDesc")}
-            </p>
-
-            {/* Strategy Selector */}
-            <div className="border-b border-border pb-4">
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.rebalanceStrategy")}
-              </label>
-              <select
-                value={rebalanceStrategy}
-                onChange={(e) => setRebalanceStrategy(e.target.value)}
-                className="w-64 rounded-md border border-border bg-bg-input px-3 py-2 text-sm text-text-primary"
-              >
-                <option value="threshold">{t("settings.thresholdBased")}</option>
-                <option value="calendar">{t("settings.calendarBased")}</option>
-                <option value="percent-of-portfolio">{t("settings.percentOfPortfolio")}</option>
-                <option value="risk-parity">{t("settings.riskParity")}</option>
-                <option value="dca-weighted">{t("settings.dcaWeighted")}</option>
-              </select>
-              <p className="mt-1 text-xs text-text-dim">
-                {rebalanceStrategy === "threshold" && t("settings.thresholdDesc")}
-                {rebalanceStrategy === "calendar" && t("settings.calendarDesc")}
-                {rebalanceStrategy === "percent-of-portfolio" && t("settings.percentDesc")}
-                {rebalanceStrategy === "risk-parity" && t("settings.riskParityDesc")}
-                {rebalanceStrategy === "dca-weighted" && t("settings.dcaDesc")}
-              </p>
-
-              {/* Calendar-specific settings */}
-              {rebalanceStrategy === "calendar" && (
-                <div className="mt-3">
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.rebalanceInterval")}
-                  </label>
-                  <select
-                    value={rebalanceInterval}
-                    onChange={(e) => setRebalanceInterval(e.target.value)}
-                    className="w-48 rounded-md border border-border bg-bg-input px-3 py-2 text-sm text-text-primary"
-                  >
-                    <option value="weekly">{t("settings.weekly")}</option>
-                    <option value="monthly">{t("settings.monthly")}</option>
-                    <option value="quarterly">{t("settings.quarterly")}</option>
-                  </select>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.intervalDesc")}
-                  </p>
-                </div>
-              )}
-
-              {/* Percent-of-Portfolio settings */}
-              {rebalanceStrategy === "percent-of-portfolio" && (
-                <div className="mt-3">
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.portfolioChangeThreshold")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0.5}
-                    max={50}
-                    step={0.5}
-                    value={portfolioChangeThreshold}
-                    onChange={(e) => setPortfolioChangeThreshold(e.target.value)}
-                    placeholder="5"
-                    className="w-32"
-                  />
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.portfolioChangeDesc")}
-                  </p>
-                </div>
-              )}
-
-              {/* Risk-Parity settings */}
-              {rebalanceStrategy === "risk-parity" && (
-                <div className="mt-3">
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.riskParityLookbackDays")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={7}
-                    max={365}
-                    step={1}
-                    value={riskParityLookbackDays}
-                    onChange={(e) => setRiskParityLookbackDays(e.target.value)}
-                    placeholder="30"
-                    className="w-32"
-                  />
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.riskParityLookbackDesc")}
-                  </p>
-                </div>
-              )}
-
-              {/* DCA-Weighted settings */}
-              {rebalanceStrategy === "dca-weighted" && (
-                <div className="mt-3 flex gap-4">
-                  <div>
-                    <label className="mb-1.5 block text-sm text-text-subtle">
-                      {t("settings.numberOfChunks")}
-                    </label>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={20}
-                      step={1}
-                      value={dcaSplitCount}
-                      onChange={(e) => setDcaSplitCount(e.target.value)}
-                      placeholder="4"
-                      className="w-32"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1.5 block text-sm text-text-subtle">
-                      {t("settings.daysBetweenChunks")}
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={30}
-                      step={1}
-                      value={dcaIntervalDays}
-                      onChange={(e) => setDcaIntervalDays(e.target.value)}
-                      placeholder="7"
-                      className="w-32"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.holdZone")}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                max={50}
-                step={0.5}
-                value={holdZonePercent}
-                onChange={(e) => setHoldZonePercent(e.target.value)}
-                placeholder="5"
-                className="w-32"
-              />
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.holdZoneDesc")}
-              </p>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.concentrationThreshold")}
-              </label>
-              <Input
-                type="number"
-                min={MIN_CONCENTRATION_ALERT_THRESHOLD_PERCENT}
-                max={MAX_CONCENTRATION_ALERT_THRESHOLD_PERCENT}
-                step={1}
-                value={concentrationThresholdPercent}
-                onChange={(e) => setConcentrationThresholdPercent(e.target.value)}
-                placeholder={CONCENTRATION_ALERT_THRESHOLD_PERCENT.toString()}
-                className="w-32"
-              />
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.concentrationThresholdDesc")}
-              </p>
-              <label className="mt-3 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={excludeStablecoinsFromConcentration}
-                  onChange={(e) =>
-                    setExcludeStablecoinsFromConcentration(e.target.checked)
-                  }
-                  className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
-                />
-                <span>
-                  <span className="text-sm text-text-muted">
-                    {t("settings.excludeStableConcentration")}
-                  </span>
-                  <p className="text-xs text-text-dim">
-                    {t("settings.excludeStableConcentrationDesc")}
-                  </p>
-                </span>
-              </label>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.minTradeSize")}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step={10}
-                value={minTradeUsd}
-                onChange={(e) => setMinTradeUsd(e.target.value)}
-                placeholder="50"
-                className="w-32"
-              />
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.minTradeDesc")}
-              </p>
-            </div>
-
-            {/* Buy-Only Mode */}
-            <div className="border-t border-border pt-4">
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={buyOnlyMode}
-                  onChange={(e) => setBuyOnlyMode(e.target.checked)}
-                  className="h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
-                />
-                <span className="text-sm text-text-muted">{t("settings.buyOnlyMode")}</span>
-              </label>
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.buyOnlyDesc")}
-              </p>
-              {buyOnlyMode && (
-                <div className="mt-3">
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.newCashToDeploy")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={100}
-                    value={newCashUsd}
-                    onChange={(e) => setNewCashUsd(e.target.value)}
-                    placeholder="0"
-                    className="w-32"
-                  />
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.newCashDesc")}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Cash Reserve */}
-            <div className="border-t border-border pt-4">
-              <h4 className="mb-2 text-sm font-medium text-text-muted">{t("settings.cashReserve")}</h4>
-              <p className="mb-3 text-xs text-text-dim">
-                {t("settings.cashReserveDesc")}
-              </p>
-              <div className="flex gap-4">
-                <div>
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.fixedAmount")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    step={100}
-                    value={cashReserveUsd}
-                    onChange={(e) => setCashReserveUsd(e.target.value)}
-                    placeholder="0"
-                    className="w-32"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.percentage")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={50}
-                    step={1}
-                    value={cashReservePercent}
-                    onChange={(e) => setCashReservePercent(e.target.value)}
-                    placeholder="0"
-                    className="w-32"
-                  />
-                </div>
-              </div>
-              <label className="mt-3 flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={treatStablecoinsAsCashReserve}
-                  onChange={(e) =>
-                    setTreatStablecoinsAsCashReserve(e.target.checked)
-                  }
-                  className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
-                />
-                <span>
-                  <span className="text-sm text-text-muted">
-                    {t("settings.treatStableAsCashReserve")}
-                  </span>
-                  <p className="text-xs text-text-dim">
-                    {t("settings.treatStableAsCashReserveDesc")}
-                  </p>
-                </span>
-              </label>
-            </div>
-
-            {/* Dust Threshold */}
-            <div className="border-t border-border pt-4">
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.dustThreshold")}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                step={0.5}
-                value={dustThresholdUsd}
-                onChange={(e) => setDustThresholdUsd(e.target.value)}
-                placeholder="1"
-                className="w-32"
-              />
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.dustDesc")}
-              </p>
-            </div>
-
-            {/* Slippage & Fees */}
-            <div className="border-t border-border pt-4">
-              <h4 className="mb-2 text-sm font-medium text-text-muted">{t("settings.slippageFees")}</h4>
-              <p className="mb-3 text-xs text-text-dim">
-                {t("settings.slippageFeesDesc")}
-              </p>
-              <div className="flex gap-4">
-                <div>
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.slippage")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={slippagePercent}
-                    onChange={(e) => setSlippagePercent(e.target.value)}
-                    placeholder="0.5"
-                    className="w-32"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-sm text-text-subtle">
-                    {t("settings.tradingFee")}
-                  </label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    value={tradingFeePercent}
-                    onChange={(e) => setTradingFeePercent(e.target.value)}
-                    placeholder="0.1"
-                    className="w-32"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Monitoring */}
-            <div className="border-t border-border pt-4">
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.autoRefresh")}
-              </label>
-              <Input
-                type="number"
-                min={0}
-                max={60}
-                step={1}
-                value={autoRefreshMinutes}
-                onChange={(e) => setAutoRefreshMinutes(e.target.value)}
-                placeholder="15"
-                className="w-32"
-              />
-              <p className="mt-1 text-xs text-text-dim">
-                {t("settings.autoRefreshDesc")}
-              </p>
-            </div>
-
+      <PageHeader
+        title={t("settings.title")}
+        description={t("settings.subtitle")}
+        actions={
+          showRebalanceSaveAction ? (
             <Button
               onClick={handleSaveRebalanceSettings}
               disabled={rebalanceSaving}
+              size="sm"
             >
               <Save className="mr-2 h-4 w-4" />
               {rebalanceSaving
                 ? t("common.saving")
                 : t("settings.saveRebalanceSettings")}
             </Button>
-          </div>
-        </CardContent>
-      </Card>
+          ) : undefined
+        }
+      />
 
-      {/* Danger Zone */}
-      <Card className="border-status-negative-border">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-status-negative">
-            <TriangleAlert className="h-5 w-5" />
-            {t("settings.dangerZone")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="max-w-md space-y-4">
-            <p className="text-sm text-text-subtle">
-              {t("settings.dangerDesc")}
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              {t("settings.focusView")}
             </p>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportVaultBackup}
-            >
-              {t("settings.exportBackup")}
-            </Button>
-
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.dangerAction")}
-              </label>
-              <select
-                value={dangerAction}
-                onChange={(e) => setDangerAction(e.target.value as DangerAction)}
-                className="w-full rounded-md border border-border bg-bg-input px-3 py-2 text-sm text-text-primary"
+            <p className="text-xs text-text-dim">
+              {t("settings.subtitle")}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            {settingsSectionOptions.map((section) => (
+              <button
+                key={section.value}
+                type="button"
+                onClick={() => setActiveSection(section.value)}
+                className={cn(
+                  "rounded-lg border px-3 py-2 text-left transition-colors",
+                  activeSection === section.value
+                    ? "border-accent bg-accent/10"
+                    : "border-border-subtle bg-bg-card hover:bg-bg-hover"
+                )}
+                aria-pressed={activeSection === section.value}
               >
-                <option value="portfolio">{t("settings.dangerActionPortfolio")}</option>
-                <option value="settings">{t("settings.dangerActionSettings")}</option>
-                <option value="all">{t("settings.dangerActionAll")}</option>
-                <option value="account">{t("settings.dangerActionAccount")}</option>
-              </select>
-              <p className="mt-1 text-xs text-text-dim">
-                {dangerAction === "portfolio" && t("settings.dangerActionDescPortfolio")}
-                {dangerAction === "settings" && t("settings.dangerActionDescSettings")}
-                {dangerAction === "all" && t("settings.dangerActionDescAll")}
-                {dangerAction === "account" && t("settings.dangerActionDescAccount")}
-              </p>
-              <p className="mt-1 text-xs text-status-warning">
-                {t("settings.recordsToDelete", { count: selectedDangerCount })}
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.currentPassword")}
-              </label>
-              <Input
-                type="password"
-                value={dangerPassphrase}
-                onChange={(e) => setDangerPassphrase(e.target.value)}
-                placeholder={t("settings.currentPasswordPlaceholder")}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm text-text-subtle">
-                {t("settings.confirmKeyword")}
-              </label>
-              <Input
-                value={dangerKeyword}
-                onChange={(e) => setDangerKeyword(e.target.value)}
-                placeholder={t("settings.confirmKeywordPlaceholder")}
-                autoComplete="off"
-              />
-            </div>
-
-            {dangerCountdown > 0 && (
-              <p className="text-xs text-status-warning">
-                {t("settings.waitBeforeDelete", { seconds: dangerCountdown })}
-              </p>
-            )}
-
-            {dangerError && (
-              <p className="text-sm text-status-negative">{dangerError}</p>
-            )}
-
-            <Button
-              onClick={handleDangerAction}
-              disabled={!dangerCanExecute}
-              className="bg-status-negative text-bg-page hover:opacity-90"
-            >
-              {dangerRunning ? t("settings.deletingData") : t("settings.executeDelete")}
-            </Button>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="truncate text-sm font-medium text-text-primary">
+                    {section.label}
+                  </span>
+                  <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
+                    {section.count}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-text-dim">
+                  {section.description}
+                </p>
+              </button>
+            ))}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
-      {/* About */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("settings.about")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm text-text-subtle">
-            <p>
-              <strong className="text-text-primary">{t("settings.aboutDesc1")}</strong>
-            </p>
-            <p>
-              {t("settings.aboutDesc2")}
-            </p>
-            <p>
-              {t("settings.aboutDesc3")}
-            </p>
-            <p className="pt-2 text-xs text-text-dim">
-              {t("settings.version")}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {showSecuritySection && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {t("settings.changePassword")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+              <div className="max-w-xl space-y-4">
+                <FormField
+                  label={t("settings.currentPassword")}
+                  htmlFor="settings-current-passphrase"
+                  required
+                  requiredLabel={requiredLabel}
+                >
+                  <Input
+                    id="settings-current-passphrase"
+                    type="password"
+                    value={currentPassphrase}
+                    onChange={(e) => setCurrentPassphrase(e.target.value)}
+                    placeholder={t("settings.currentPasswordPlaceholder")}
+                  />
+                </FormField>
+                <FormField
+                  label={t("settings.newPassword")}
+                  htmlFor="settings-new-passphrase"
+                  required
+                  requiredLabel={requiredLabel}
+                  error={
+                    newPassphrase.length > 0 && !passphraseLongEnough
+                      ? t("settings.passwordMinLength")
+                      : undefined
+                  }
+                >
+                  <Input
+                    id="settings-new-passphrase"
+                    type="password"
+                    value={newPassphrase}
+                    onChange={(e) => setNewPassphrase(e.target.value)}
+                    placeholder={t("settings.newPasswordPlaceholder")}
+                  />
+                </FormField>
+                <FormField
+                  label={t("settings.confirmNewPassword")}
+                  htmlFor="settings-confirm-passphrase"
+                  required
+                  requiredLabel={requiredLabel}
+                  error={
+                    confirmNewPassphrase.length > 0 && !passphrasesMatch
+                      ? t("settings.passwordsDoNotMatch")
+                      : undefined
+                  }
+                >
+                  <Input
+                    id="settings-confirm-passphrase"
+                    type="password"
+                    value={confirmNewPassphrase}
+                    onChange={(e) => setConfirmNewPassphrase(e.target.value)}
+                    placeholder={t("settings.confirmPasswordPlaceholder")}
+                  />
+                </FormField>
+                <Button
+                  onClick={handlePassphraseChange}
+                  disabled={
+                    passphraseChanging ||
+                    !passphrasesMatch ||
+                    !passphraseLongEnough ||
+                    currentPassphrase.length === 0
+                  }
+                >
+                  {passphraseChanging
+                    ? t("settings.changingPassword")
+                    : t("settings.changePassword")}
+                </Button>
+
+                {passphraseError && (
+                  <p className="text-sm text-status-negative">{passphraseError}</p>
+                )}
+                {passphraseSuccess && (
+                  <p className="text-sm text-status-positive">
+                    {t("settings.passwordChanged")}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <p className="text-sm font-medium text-text-primary">
+                    {t("settings.sessionSecurity")}
+                  </p>
+                  <p className="mt-2 text-sm text-text-subtle">
+                    {t("settings.sessionModeLabel")}{" "}
+                    <span className="font-medium text-text-primary">
+                      {sessionModeText}
+                    </span>
+                  </p>
+                  <p className="mt-1 text-xs text-text-dim">
+                    {t("settings.sessionSecurityDesc")}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-4">
+                  <p className="text-sm font-medium text-text-primary">
+                    {t("settings.rememberDevice")}
+                  </p>
+                  <p className="mt-1 text-xs text-text-dim">
+                    {t("settings.rememberDeviceDesc")}
+                  </p>
+                  <p className="mt-2 text-xs text-status-warning">
+                    {t("settings.rememberDeviceRisk")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(showStrategySection ||
+        showRiskSection ||
+        showTradingSection ||
+        showRefreshSection) && (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          {showStrategySection && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Scale className="h-5 w-5" />
+                  {t("settings.sectionStrategy")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-text-subtle">
+                  {t("settings.rebalanceDesc")}
+                </p>
+
+                <FormField
+                  label={t("settings.rebalanceStrategy")}
+                  htmlFor="settings-rebalance-strategy"
+                  hint={
+                    <>
+                      {rebalanceStrategy === "threshold" &&
+                        t("settings.thresholdDesc")}
+                      {rebalanceStrategy === "calendar" &&
+                        t("settings.calendarDesc")}
+                      {rebalanceStrategy === "percent-of-portfolio" &&
+                        t("settings.percentDesc")}
+                      {rebalanceStrategy === "risk-parity" &&
+                        t("settings.riskParityDesc")}
+                      {rebalanceStrategy === "dca-weighted" &&
+                        t("settings.dcaDesc")}
+                    </>
+                  }
+                >
+                  <Select
+                    id="settings-rebalance-strategy"
+                    value={rebalanceStrategy}
+                    onChange={(e) => setRebalanceStrategy(e.target.value)}
+                    className="w-full max-w-sm"
+                  >
+                    <option value="threshold">
+                      {t("settings.thresholdBased")}
+                    </option>
+                    <option value="calendar">
+                      {t("settings.calendarBased")}
+                    </option>
+                    <option value="percent-of-portfolio">
+                      {t("settings.percentOfPortfolio")}
+                    </option>
+                    <option value="risk-parity">
+                      {t("settings.riskParity")}
+                    </option>
+                    <option value="dca-weighted">
+                      {t("settings.dcaWeighted")}
+                    </option>
+                  </Select>
+                </FormField>
+
+                {rebalanceStrategy === "calendar" && (
+                  <FormField
+                    label={t("settings.rebalanceInterval")}
+                    htmlFor="settings-rebalance-interval"
+                    hint={t("settings.intervalDesc")}
+                  >
+                    <Select
+                      id="settings-rebalance-interval"
+                      value={rebalanceInterval}
+                      onChange={(e) => setRebalanceInterval(e.target.value)}
+                      className="w-full max-w-xs"
+                    >
+                      <option value="weekly">{t("settings.weekly")}</option>
+                      <option value="monthly">{t("settings.monthly")}</option>
+                      <option value="quarterly">{t("settings.quarterly")}</option>
+                    </Select>
+                  </FormField>
+                )}
+
+                {rebalanceStrategy === "percent-of-portfolio" && (
+                  <FormField
+                    label={t("settings.portfolioChangeThreshold")}
+                    htmlFor="settings-portfolio-change-threshold"
+                    hint={t("settings.portfolioChangeDesc")}
+                  >
+                    <Input
+                      id="settings-portfolio-change-threshold"
+                      type="number"
+                      min={0.5}
+                      max={50}
+                      step={0.5}
+                      value={portfolioChangeThreshold}
+                      onChange={(e) =>
+                        setPortfolioChangeThreshold(e.target.value)
+                      }
+                      placeholder="5"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+                )}
+
+                {rebalanceStrategy === "risk-parity" && (
+                  <FormField
+                    label={t("settings.riskParityLookbackDays")}
+                    htmlFor="settings-risk-parity-lookback"
+                    hint={t("settings.riskParityLookbackDesc")}
+                  >
+                    <Input
+                      id="settings-risk-parity-lookback"
+                      type="number"
+                      min={7}
+                      max={365}
+                      step={1}
+                      value={riskParityLookbackDays}
+                      onChange={(e) =>
+                        setRiskParityLookbackDays(e.target.value)
+                      }
+                      placeholder="30"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+                )}
+
+                {rebalanceStrategy === "dca-weighted" && (
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <FormField
+                      label={t("settings.numberOfChunks")}
+                      htmlFor="settings-dca-split-count"
+                    >
+                      <Input
+                        id="settings-dca-split-count"
+                        type="number"
+                        min={2}
+                        max={20}
+                        step={1}
+                        value={dcaSplitCount}
+                        onChange={(e) => setDcaSplitCount(e.target.value)}
+                        placeholder="4"
+                        className="w-full max-w-[8rem]"
+                      />
+                    </FormField>
+                    <FormField
+                      label={t("settings.daysBetweenChunks")}
+                      htmlFor="settings-dca-interval-days"
+                    >
+                      <Input
+                        id="settings-dca-interval-days"
+                        type="number"
+                        min={1}
+                        max={30}
+                        step={1}
+                        value={dcaIntervalDays}
+                        onChange={(e) => setDcaIntervalDays(e.target.value)}
+                        placeholder="7"
+                        className="w-full max-w-[8rem]"
+                      />
+                    </FormField>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {showRiskSection && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("settings.sectionRisk")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    label={t("settings.holdZone")}
+                    htmlFor="settings-hold-zone"
+                    hint={t("settings.holdZoneDesc")}
+                  >
+                    <Input
+                      id="settings-hold-zone"
+                      type="number"
+                      min={0}
+                      max={50}
+                      step={0.5}
+                      value={holdZonePercent}
+                      onChange={(e) => setHoldZonePercent(e.target.value)}
+                      placeholder="5"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+
+                  <FormField
+                    label={t("settings.concentrationThreshold")}
+                    htmlFor="settings-concentration-threshold"
+                    hint={t("settings.concentrationThresholdDesc")}
+                  >
+                    <Input
+                      id="settings-concentration-threshold"
+                      type="number"
+                      min={MIN_CONCENTRATION_ALERT_THRESHOLD_PERCENT}
+                      max={MAX_CONCENTRATION_ALERT_THRESHOLD_PERCENT}
+                      step={1}
+                      value={concentrationThresholdPercent}
+                      onChange={(e) =>
+                        setConcentrationThresholdPercent(e.target.value)
+                      }
+                      placeholder={CONCENTRATION_ALERT_THRESHOLD_PERCENT.toString()}
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+                </div>
+
+                <label className="flex items-start gap-3 rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <input
+                    type="checkbox"
+                    checked={excludeStablecoinsFromConcentration}
+                    onChange={(e) =>
+                      setExcludeStablecoinsFromConcentration(e.target.checked)
+                    }
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-text-primary">
+                      {t("settings.excludeStableConcentration")}
+                    </span>
+                    <p className="mt-1 text-xs text-text-dim">
+                      {t("settings.excludeStableConcentrationDesc")}
+                    </p>
+                  </span>
+                </label>
+              </CardContent>
+            </Card>
+          )}
+
+          {showTradingSection && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("settings.sectionTrading")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  label={t("settings.minTradeSize")}
+                  htmlFor="settings-min-trade-size"
+                  hint={t("settings.minTradeDesc")}
+                >
+                  <Input
+                    id="settings-min-trade-size"
+                    type="number"
+                    min={0}
+                    step={10}
+                    value={minTradeUsd}
+                    onChange={(e) => setMinTradeUsd(e.target.value)}
+                    placeholder="50"
+                    className="w-full max-w-[8rem]"
+                  />
+                </FormField>
+
+                <label className="flex items-start gap-3 rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <input
+                    type="checkbox"
+                    checked={buyOnlyMode}
+                    onChange={(e) => setBuyOnlyMode(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                  />
+                  <span>
+                    <span className="text-sm font-medium text-text-primary">
+                      {t("settings.buyOnlyMode")}
+                    </span>
+                    <p className="mt-1 text-xs text-text-dim">
+                      {t("settings.buyOnlyDesc")}
+                    </p>
+                  </span>
+                </label>
+
+                {buyOnlyMode && (
+                  <FormField
+                    label={t("settings.newCashToDeploy")}
+                    htmlFor="settings-new-cash"
+                    hint={t("settings.newCashDesc")}
+                  >
+                    <Input
+                      id="settings-new-cash"
+                      type="number"
+                      min={0}
+                      step={100}
+                      value={newCashUsd}
+                      onChange={(e) => setNewCashUsd(e.target.value)}
+                      placeholder="0"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+                )}
+
+                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">
+                        {t("settings.cashReserve")}
+                      </p>
+                      <p className="mt-1 text-xs text-text-dim">
+                        {t("settings.cashReserveDesc")}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        label={t("settings.fixedAmount")}
+                        htmlFor="settings-cash-reserve-usd"
+                      >
+                        <Input
+                          id="settings-cash-reserve-usd"
+                          type="number"
+                          min={0}
+                          step={100}
+                          value={cashReserveUsd}
+                          onChange={(e) => setCashReserveUsd(e.target.value)}
+                          placeholder="0"
+                          className="w-full max-w-[8rem]"
+                        />
+                      </FormField>
+                      <FormField
+                        label={t("settings.percentage")}
+                        htmlFor="settings-cash-reserve-percent"
+                      >
+                        <Input
+                          id="settings-cash-reserve-percent"
+                          type="number"
+                          min={0}
+                          max={50}
+                          step={1}
+                          value={cashReservePercent}
+                          onChange={(e) =>
+                            setCashReservePercent(e.target.value)
+                          }
+                          placeholder="0"
+                          className="w-full max-w-[8rem]"
+                        />
+                      </FormField>
+                    </div>
+                    <label className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={treatStablecoinsAsCashReserve}
+                        onChange={(e) =>
+                          setTreatStablecoinsAsCashReserve(e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                      />
+                      <span>
+                        <span className="text-sm font-medium text-text-primary">
+                          {t("settings.treatStableAsCashReserve")}
+                        </span>
+                        <p className="mt-1 text-xs text-text-dim">
+                          {t("settings.treatStableAsCashReserveDesc")}
+                        </p>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <FormField
+                  label={t("settings.dustThreshold")}
+                  htmlFor="settings-dust-threshold"
+                  hint={t("settings.dustDesc")}
+                >
+                  <Input
+                    id="settings-dust-threshold"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={dustThresholdUsd}
+                    onChange={(e) => setDustThresholdUsd(e.target.value)}
+                    placeholder="1"
+                    className="w-full max-w-[8rem]"
+                  />
+                </FormField>
+
+                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-medium text-text-primary">
+                        {t("settings.slippageFees")}
+                      </p>
+                      <p className="mt-1 text-xs text-text-dim">
+                        {t("settings.slippageFeesDesc")}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <FormField
+                        label={t("settings.slippage")}
+                        htmlFor="settings-slippage"
+                      >
+                        <Input
+                          id="settings-slippage"
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.1}
+                          value={slippagePercent}
+                          onChange={(e) => setSlippagePercent(e.target.value)}
+                          placeholder="0.5"
+                          className="w-full max-w-[8rem]"
+                        />
+                      </FormField>
+                      <FormField
+                        label={t("settings.tradingFee")}
+                        htmlFor="settings-trading-fee"
+                      >
+                        <Input
+                          id="settings-trading-fee"
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.1}
+                          value={tradingFeePercent}
+                          onChange={(e) =>
+                            setTradingFeePercent(e.target.value)
+                          }
+                          placeholder="0.1"
+                          className="w-full max-w-[8rem]"
+                        />
+                      </FormField>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {showRefreshSection && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("settings.sectionRefresh")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  label={t("settings.autoRefresh")}
+                  htmlFor="settings-auto-refresh"
+                  hint={t("settings.autoRefreshDesc")}
+                >
+                  <Input
+                    id="settings-auto-refresh"
+                    type="number"
+                    min={0}
+                    max={60}
+                    step={1}
+                    value={autoRefreshMinutes}
+                    onChange={(e) => setAutoRefreshMinutes(e.target.value)}
+                    placeholder="15"
+                    className="w-full max-w-[8rem]"
+                  />
+                </FormField>
+
+                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
+                  <p className="text-sm font-medium text-text-primary">
+                    {t("settings.rebalanceSettings")}
+                  </p>
+                  <p className="mt-1 text-xs text-text-dim">
+                    {t("settings.rebalanceDesc")}
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleSaveRebalanceSettings}
+                  disabled={rebalanceSaving}
+                >
+                  <Save className="mr-2 h-4 w-4" />
+                  {rebalanceSaving
+                    ? t("common.saving")
+                    : t("settings.saveRebalanceSettings")}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {showDangerSection && (
+        <Card className="border-status-negative-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-status-negative">
+              <TriangleAlert className="h-5 w-5" />
+              {t("settings.dangerZone")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="max-w-xl space-y-4">
+              <p className="text-sm text-text-subtle">
+                {t("settings.dangerDesc")}
+              </p>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportVaultBackup}
+              >
+                {t("settings.exportBackup")}
+              </Button>
+
+              <FormField
+                label={t("settings.dangerAction")}
+                htmlFor="settings-danger-action"
+                hint={
+                  <>
+                    {dangerAction === "portfolio" &&
+                      t("settings.dangerActionDescPortfolio")}
+                    {dangerAction === "settings" &&
+                      t("settings.dangerActionDescSettings")}
+                    {dangerAction === "all" &&
+                      t("settings.dangerActionDescAll")}
+                    {dangerAction === "account" &&
+                      t("settings.dangerActionDescAccount")}
+                  </>
+                }
+              >
+                <Select
+                  id="settings-danger-action"
+                  value={dangerAction}
+                  onChange={(e) =>
+                    setDangerAction(e.target.value as DangerAction)
+                  }
+                  className="w-full max-w-md"
+                >
+                  <option value="portfolio">
+                    {t("settings.dangerActionPortfolio")}
+                  </option>
+                  <option value="settings">
+                    {t("settings.dangerActionSettings")}
+                  </option>
+                  <option value="all">
+                    {t("settings.dangerActionAll")}
+                  </option>
+                  <option value="account">
+                    {t("settings.dangerActionAccount")}
+                  </option>
+                </Select>
+                <p className="mt-1 text-xs text-status-warning">
+                  {t("settings.recordsToDelete", { count: selectedDangerCount })}
+                </p>
+              </FormField>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <FormField
+                  label={t("settings.currentPassword")}
+                  htmlFor="settings-danger-passphrase"
+                >
+                  <Input
+                    id="settings-danger-passphrase"
+                    type="password"
+                    value={dangerPassphrase}
+                    onChange={(e) => setDangerPassphrase(e.target.value)}
+                    placeholder={t("settings.currentPasswordPlaceholder")}
+                  />
+                </FormField>
+
+                <FormField
+                  label={t("settings.confirmKeyword")}
+                  htmlFor="settings-danger-keyword"
+                >
+                  <Input
+                    id="settings-danger-keyword"
+                    value={dangerKeyword}
+                    onChange={(e) => setDangerKeyword(e.target.value)}
+                    placeholder={t("settings.confirmKeywordPlaceholder")}
+                    autoComplete="off"
+                  />
+                </FormField>
+              </div>
+
+              {dangerCountdown > 0 && (
+                <p className="text-xs text-status-warning">
+                  {t("settings.waitBeforeDelete", {
+                    seconds: dangerCountdown,
+                  })}
+                </p>
+              )}
+
+              {dangerError && (
+                <p className="text-sm text-status-negative">{dangerError}</p>
+              )}
+
+              <Button
+                onClick={handleDangerAction}
+                disabled={!dangerCanExecute}
+                className="bg-status-negative text-bg-page hover:opacity-90"
+              >
+                {dangerRunning
+                  ? t("settings.deletingData")
+                  : t("settings.executeDelete")}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showAboutSection && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("settings.about")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 text-sm text-text-subtle">
+              <p>
+                <strong className="text-text-primary">
+                  {t("settings.aboutDesc1")}
+                </strong>
+              </p>
+              <p>{t("settings.aboutDesc2")}</p>
+              <p>{t("settings.aboutDesc3")}</p>
+              <p className="pt-2 text-xs text-text-dim">
+                {t("settings.version")}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

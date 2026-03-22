@@ -3,10 +3,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { formatUsd, formatUsdPrice, formatCrypto, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
+import { cn, formatUsd, formatUsdPrice, formatCrypto, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
 import { Plus, Search, Trash2, Minus, Pencil, X, Download, Upload, Copy, Package, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
@@ -70,6 +71,7 @@ interface CoinListItem {
 
 type TxType = "buy" | "sell" | "receive" | "send";
 type CsvRequiredColumn = "date" | "symbol" | "quantity" | "price";
+type PortfolioSection = "holdings" | "transactions" | "manual" | "all";
 
 interface ImportPreviewRow {
   rowNumber: number;
@@ -398,7 +400,38 @@ export default function PortfolioPage() {
     }));
   }, [vaultManualEntries]);
 
+  const [activeSection, setActiveSection] = useState<PortfolioSection>(() => {
+    if (rawBreakdown.length > 0) return "holdings";
+    if (vaultTransactions.length > 0) return "transactions";
+    if (vaultManualEntries.length > 0) return "manual";
+    return "all";
+  });
   const isLoading = portfolioLoading;
+  const sectionOptions = useMemo(
+    () => [
+      {
+        value: "holdings" as const,
+        label: t("portfolio.holdings"),
+        count: breakdown.length,
+      },
+      {
+        value: "transactions" as const,
+        label: t("portfolio.transactionHistory"),
+        count: transactions.length,
+      },
+      {
+        value: "manual" as const,
+        label: t("portfolio.quickAddHoldings"),
+        count: manualEntries.length,
+      },
+      {
+        value: "all" as const,
+        label: t("portfolio.viewAll"),
+        count: breakdown.length + transactions.length + manualEntries.length,
+      },
+    ],
+    [breakdown.length, manualEntries.length, t, transactions.length]
+  );
 
   const handleRefreshPrices = useCallback(async () => {
     setRefreshingPrices(true);
@@ -1256,16 +1289,28 @@ export default function PortfolioPage() {
   const manualEntryInitialPriceValid =
     meInitialPrice.trim().length === 0 ||
     (Number.isFinite(parseFloat(meInitialPrice)) && parseFloat(meInitialPrice) >= 0);
+  const showHoldingsSection =
+    activeSection === "all" || activeSection === "holdings";
+  const showTransactionsSection =
+    activeSection === "all" || activeSection === "transactions";
+  const showManualSection =
+    activeSection === "all" || activeSection === "manual";
+  const manualSectionExpanded =
+    activeSection === "manual" || showManualEntries;
+  const canSearchCurrentSection = (() => {
+    if (activeSection === "holdings") return breakdown.length > 0;
+    if (activeSection === "transactions") return transactions.length > 0;
+    if (activeSection === "manual") return manualEntries.length > 0;
+    return breakdown.length > 0 || transactions.length > 0 || manualEntries.length > 0;
+  })();
 
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t("portfolio.title")}</h1>
-            <p className="text-text-subtle">{t("portfolio.subtitle")}</p>
-          </div>
-        </div>
+        <PageHeader
+          title={t("portfolio.title")}
+          description={t("portfolio.subtitle")}
+        />
         <TokenListSkeleton />
       </div>
     );
@@ -1273,20 +1318,23 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t("portfolio.title")}</h1>
-          <p className="text-text-subtle">
-            {t("portfolio.subtitle")}
-            {lastPriceUpdate && (
-              <span className="ml-2 text-xs">
-                · Prices: {formatTimeAgo(new Date(lastPriceUpdate))}
-              </span>
-            )}
-          </p>
-          <p className="mt-1 text-xs text-text-dim">{t("portfolio.shortcutsHint")}</p>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title={t("portfolio.title")}
+        description={
+          <>
+            <p>
+              {t("portfolio.subtitle")}
+              {lastPriceUpdate && (
+                <span className="ml-2 text-xs">
+                  · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
+                </span>
+              )}
+            </p>
+            <p className="text-xs text-text-dim">{t("portfolio.shortcutsHint")}</p>
+          </>
+        }
+        actions={
+          <>
           <Button
             size="sm"
             variant="outline"
@@ -1315,10 +1363,47 @@ export default function PortfolioPage() {
               {t("portfolio.addTransaction")}
             </Button>
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {(breakdown.length > 0 || transactions.length > 0) && (
+      <Card className="p-4">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-text-primary">
+                {t("portfolio.focusView")}
+              </p>
+              <p className="text-xs text-text-dim">
+                {t("portfolio.subtitle")}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+            {sectionOptions.map((section) => (
+              <button
+                key={section.value}
+                type="button"
+                onClick={() => setActiveSection(section.value)}
+                className={cn(
+                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
+                  activeSection === section.value
+                    ? "border-accent bg-accent/10 text-text-primary"
+                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
+                )}
+                aria-pressed={activeSection === section.value}
+              >
+                <span className="min-w-0 truncate font-medium">{section.label}</span>
+                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
+                  {section.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {canSearchCurrentSection && (
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-subtle" />
           <Input
@@ -1381,33 +1466,42 @@ export default function PortfolioPage() {
         </Card>
       </div>
 
-      {/* Quick Add Holdings (Manual Entries) */}
+      {showManualSection && (
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <button
               type="button"
-              className="flex items-center gap-2"
-              onClick={() => setShowManualEntries(!showManualEntries)}
+              className={cn(
+                "flex items-center gap-2",
+                activeSection !== "all" && "cursor-default"
+              )}
+              onClick={() => {
+                if (activeSection === "all") {
+                  setShowManualEntries(!showManualEntries);
+                }
+              }}
             >
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 {t("portfolio.quickAddHoldings")}
               </CardTitle>
-              {showManualEntries ? (
-                <ChevronUp className="h-5 w-5 text-text-subtle" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-text-subtle" />
-              )}
+              {activeSection === "all" ? (
+                manualSectionExpanded ? (
+                  <ChevronUp className="h-5 w-5 text-text-subtle" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-text-subtle" />
+                )
+              ) : null}
             </button>
-            {!showManualEntries && manualEntries.length > 0 && (
+            {!manualSectionExpanded && manualEntries.length > 0 && (
               <span className="text-xs text-text-dim">
                 {t("portfolio.manualEntries", { count: manualEntries.length })}
               </span>
             )}
           </div>
         </CardHeader>
-        {showManualEntries && (
+        {manualSectionExpanded && (
           <CardContent>
             <p className="mb-4 text-sm text-text-subtle">
               {t("portfolio.enterHoldings")}
@@ -1655,8 +1749,9 @@ export default function PortfolioPage() {
           </CardContent>
         )}
       </Card>
+      )}
 
-      {/* Holdings Table */}
+      {showHoldingsSection && (
       <Card>
         <CardHeader>
           <CardTitle>{t("portfolio.holdings")}</CardTitle>
@@ -1887,8 +1982,9 @@ export default function PortfolioPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Transaction History */}
+      {showTransactionsSection && (
       <Card>
         <CardHeader>
           <CardTitle>{t("portfolio.transactionHistory")}</CardTitle>
@@ -2152,6 +2248,7 @@ export default function PortfolioPage() {
           )}
         </CardContent>
       </Card>
+      )}
 
       <ConfirmDialog
         open={deleteTarget !== null}
