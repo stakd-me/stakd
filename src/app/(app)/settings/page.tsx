@@ -5,13 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
+import { InlineHelpCard } from "@/components/ui/inline-help";
 import { PageHeader } from "@/components/ui/page-header";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { Select } from "@/components/ui/select";
 import { Save, Shield, Scale, TriangleAlert } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuthStore, useVaultStore } from "@/lib/store";
-import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api-client";
 import {
   deriveMasterKey,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/crypto/client-crypto";
 import {
   clearEncKey,
+  loadEncKey,
   isEncKeyPersistent,
   storeEncKey,
 } from "@/lib/crypto/key-store";
@@ -88,6 +90,7 @@ function hexToBytes(hex: string): Uint8Array | null {
 // ── Page component ──────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const sectionsBaseId = "settings-sections";
   const { toast } = useToast();
   const { t } = useTranslation();
   const requiredLabel = t("common.required");
@@ -214,6 +217,7 @@ export default function SettingsPage() {
   const [rebalanceSaving, setRebalanceSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SettingsSection>("all");
   const [sessionKeyPersistent, setSessionKeyPersistent] = useState<boolean | null>(null);
+  const [sessionModeSaving, setSessionModeSaving] = useState(false);
   const hasHydratableRebalanceSettings = REBALANCE_SETTING_KEYS.some(
     (key) => vaultSettings[key] !== undefined
   );
@@ -481,6 +485,53 @@ export default function SettingsPage() {
     setSessionKeyPersistent(isEncKeyPersistent());
   }, []);
 
+  const handleSessionModeChange = async (persist: boolean) => {
+    if (sessionKeyPersistent === null || sessionKeyPersistent === persist || sessionModeSaving) {
+      return;
+    }
+
+    setSessionModeSaving(true);
+    try {
+      const encKey = await loadEncKey();
+      if (!encKey) {
+        throw new Error(t("settings.sessionModeNoKey"));
+      }
+
+      const previousPersist = isEncKeyPersistent();
+      await storeEncKey(encKey, { persist });
+
+      const res = await apiFetch("/api/auth/refresh/mode", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rememberMe: persist }),
+      });
+
+      if (!res.ok) {
+        await storeEncKey(encKey, { persist: previousPersist });
+        const payload = await res
+          .json()
+          .catch(() => ({ error: t("settings.sessionModeUpdateFailed") }));
+        throw new Error(payload.error || t("settings.sessionModeUpdateFailed"));
+      }
+
+      setSessionKeyPersistent(persist);
+      toast(
+        persist
+          ? t("settings.sessionRememberEnabled")
+          : t("settings.sessionRememberDisabled"),
+        "success"
+      );
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : t("settings.sessionModeUpdateFailed");
+      toast(msg, "error");
+    } finally {
+      setSessionModeSaving(false);
+    }
+  };
+
   const strategyFieldsCount = useMemo(() => {
     if (rebalanceStrategy === "dca-weighted") return 3;
     if (
@@ -602,47 +653,17 @@ export default function SettingsPage() {
         }
       />
 
-      <Card className="p-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {t("settings.focusView")}
-            </p>
-            <p className="text-xs text-text-dim">
-              {t("settings.subtitle")}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {settingsSectionOptions.map((section) => (
-              <button
-                key={section.value}
-                type="button"
-                onClick={() => setActiveSection(section.value)}
-                className={cn(
-                  "rounded-lg border px-3 py-2 text-left transition-colors",
-                  activeSection === section.value
-                    ? "border-accent bg-accent/10"
-                    : "border-border-subtle bg-bg-card hover:bg-bg-hover"
-                )}
-                aria-pressed={activeSection === section.value}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="truncate text-sm font-medium text-text-primary">
-                    {section.label}
-                  </span>
-                  <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                    {section.count}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-text-dim">
-                  {section.description}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
+      <SectionNavigator
+        baseId={sectionsBaseId}
+        label={t("settings.focusView")}
+        description={t("settings.subtitle")}
+        value={activeSection}
+        onChange={setActiveSection}
+        options={settingsSectionOptions}
+        columnsClassName="grid-cols-2 xl:grid-cols-4"
+      />
 
+      <SectionPanel baseId={sectionsBaseId} value={activeSection}>
       {showSecuritySection && (
         <Card>
           <CardHeader>
@@ -721,10 +742,12 @@ export default function SettingsPage() {
                 </Button>
 
                 {passphraseError && (
-                  <p className="text-sm text-status-negative">{passphraseError}</p>
+                  <p className="text-sm text-status-negative" role="alert" aria-live="assertive">
+                    {passphraseError}
+                  </p>
                 )}
                 {passphraseSuccess && (
-                  <p className="text-sm text-status-positive">
+                  <p className="text-sm text-status-positive" role="status" aria-live="polite">
                     {t("settings.passwordChanged")}
                   </p>
                 )}
@@ -744,19 +767,45 @@ export default function SettingsPage() {
                   <p className="mt-1 text-xs text-text-dim">
                     {t("settings.sessionSecurityDesc")}
                   </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant={
+                        sessionKeyPersistent === false ? "default" : "outline"
+                      }
+                      onClick={() => handleSessionModeChange(false)}
+                      disabled={sessionModeSaving || sessionKeyPersistent === null}
+                    >
+                      {t("settings.sessionModeSession")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={
+                        sessionKeyPersistent === true ? "default" : "outline"
+                      }
+                      onClick={() => handleSessionModeChange(true)}
+                      disabled={sessionModeSaving || sessionKeyPersistent === null}
+                    >
+                      {t("settings.rememberDevice")}
+                    </Button>
+                  </div>
+                  <p className="mt-2 text-xs text-text-dim" role="status" aria-live="polite">
+                    {sessionModeSaving
+                      ? t("settings.updatingSessionMode")
+                      : t("settings.sessionModeChangeHint")}
+                  </p>
                 </div>
 
-                <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-4">
-                  <p className="text-sm font-medium text-text-primary">
-                    {t("settings.rememberDevice")}
-                  </p>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.rememberDeviceDesc")}
-                  </p>
-                  <p className="mt-2 text-xs text-status-warning">
-                    {t("settings.rememberDeviceRisk")}
-                  </p>
-                </div>
+                <InlineHelpCard
+                  tone={sessionKeyPersistent ? "warning" : "info"}
+                  icon={<Shield className="h-4 w-4" />}
+                  title={t("settings.rememberDevice")}
+                  description={t("settings.rememberDeviceDesc")}
+                  items={[
+                    t("settings.rememberDeviceRisk"),
+                    t("settings.logoutClearsLocalKey"),
+                  ]}
+                />
               </div>
             </div>
           </CardContent>
@@ -979,7 +1028,7 @@ export default function SettingsPage() {
                     onChange={(e) =>
                       setExcludeStablecoinsFromConcentration(e.target.checked)
                     }
-                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
                   />
                   <span>
                     <span className="text-sm font-medium text-text-primary">
@@ -1022,7 +1071,7 @@ export default function SettingsPage() {
                     type="checkbox"
                     checked={buyOnlyMode}
                     onChange={(e) => setBuyOnlyMode(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
                   />
                   <span>
                     <span className="text-sm font-medium text-text-primary">
@@ -1105,7 +1154,7 @@ export default function SettingsPage() {
                         onChange={(e) =>
                           setTreatStablecoinsAsCashReserve(e.target.checked)
                         }
-                        className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus:ring-focus-ring"
+                        className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
                       />
                       <span>
                         <span className="text-sm font-medium text-text-primary">
@@ -1375,6 +1424,7 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+      </SectionPanel>
     </div>
   );
 }

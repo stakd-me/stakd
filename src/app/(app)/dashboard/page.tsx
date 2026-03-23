@@ -2,7 +2,14 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusPill } from "@/components/ui/status-pill";
+import { StatusBanner } from "@/components/ui/status-banner";
+import { SummaryStrip } from "@/components/ui/summary-strip";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useTranslation } from "@/hooks/use-translation";
@@ -301,6 +308,11 @@ export default function DashboardPage() {
   const hasAlerts = alerts.length > 0;
   const primaryAlert = mergedAlertBadges[0] ?? null;
   const highestAlertSeverity = primaryAlert?.severity ?? "low";
+  const severityLabels: Record<DashboardAlertSeverity, string> = {
+    high: t("common.severityHigh"),
+    medium: t("common.severityMedium"),
+    low: t("common.severityLow"),
+  };
 
   // Filter history by time range
   const filteredHistory = useMemo(() => {
@@ -320,6 +332,35 @@ export default function DashboardPage() {
       color: item.color,
     }));
   }, [breakdown]);
+  const historyChartSummary = useMemo(() => {
+    if (filteredHistory.length === 0) return "";
+    const firstPoint = filteredHistory[0];
+    const lastPoint = filteredHistory[filteredHistory.length - 1];
+    return t("dashboard.historyChartSummary", {
+      count: filteredHistory.length,
+      start: new Date(firstPoint.date).toLocaleDateString(),
+      end: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.value),
+    });
+  }, [filteredHistory, t]);
+  const allocationChartSummary = useMemo(() => {
+    if (pieData.length === 0) return "";
+    const largestHolding = topHoldings[0];
+    return t("dashboard.allocationChartSummary", {
+      count: pieData.length,
+      symbol: largestHolding?.symbol ?? "-",
+      percent: largestHolding?.percent.toFixed(1) ?? "0.0",
+    });
+  }, [pieData.length, t, topHoldings]);
+  const categoryChartSummary = useMemo(() => {
+    if (categoryBreakdown.length === 0) return "";
+    const largestCategory = categoryBreakdown[0];
+    return t("dashboard.categoryChartSummary", {
+      count: categoryBreakdown.length,
+      category: largestCategory.category,
+      percent: largestCategory.percent.toFixed(1),
+    });
+  }, [categoryBreakdown, t]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -333,15 +374,9 @@ export default function DashboardPage() {
         actions={
           <>
           {lastPriceUpdate && (
-            <span
-              className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${
-                isPriceStale
-                  ? "border-status-warning-border bg-status-warning-soft text-status-warning"
-                  : "border-status-positive-border bg-status-positive-soft text-status-positive"
-              }`}
-            >
+            <StatusPill tone={isPriceStale ? "warning" : "success"}>
               {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
-            </span>
+            </StatusPill>
           )}
           <Button
             variant="outline"
@@ -356,231 +391,151 @@ export default function DashboardPage() {
         }
       />
 
-      <Card
-        className={cn(
+      <StatusBanner
+        tone={
           hasAlerts
             ? highestAlertSeverity === "high"
-              ? "border-status-negative-border"
-              : "border-status-warning-border"
-            : "border-status-positive-border"
-        )}
+              ? "danger"
+              : "warning"
+            : "success"
+        }
+        heading={t("dashboard.rebalanceStatus")}
+        icon={
+          hasAlerts ? (
+            <AlertTriangle className="h-5 w-5" />
+          ) : (
+            <CheckCircle2 className="h-5 w-5" />
+          )
+        }
+        action={
+          <Link href="/rebalance">
+            <Button size="sm" variant={hasAlerts ? "default" : "outline"}>
+              <Scale className="mr-2 h-4 w-4" />
+              {t("dashboard.viewDetails")}
+            </Button>
+          </Link>
+        }
+        description={
+          hasAlerts ? t("dashboard.actionRequired") : t("dashboard.noRebalanceAlerts")
+        }
       >
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              {hasAlerts ? (
-                <AlertTriangle
-                  className={cn(
-                    "h-5 w-5",
-                    highestAlertSeverity === "high"
-                      ? "text-status-negative"
-                      : "text-status-warning"
-                  )}
-                />
-              ) : (
-                <CheckCircle2 className="h-5 w-5 text-status-positive" />
-              )}
-              {t("dashboard.rebalanceStatus")}
-            </CardTitle>
-            <Link href="/rebalance">
-              <Button size="sm" variant={hasAlerts ? "default" : "outline"}>
-                <Scale className="mr-2 h-4 w-4" />
-                {t("dashboard.viewDetails")}
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {hasAlerts ? (
-            <>
-              <p
-                className={cn(
-                  "text-sm font-medium",
-                  highestAlertSeverity === "high"
-                    ? "text-status-negative"
-                    : "text-status-warning"
-                )}
-              >
-                {t("dashboard.actionRequired")}
-              </p>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                {deviationAlerts.length > 0 ? (
-                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                    <p className="text-xs text-text-subtle">
-                      {t("dashboard.tokensNeedRebalancing", {
+        {hasAlerts ? (
+          <>
+            <SummaryStrip
+              items={[
+                ...(deviationAlerts.length > 0
+                  ? [{
+                      key: "deviation",
+                      label: t("dashboard.tokensNeedRebalancing", {
                         count: deviationAlertTokenCount.toString(),
-                      })}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-text-primary">
-                      {deviationAlertTokenCount}
-                    </p>
-                  </div>
-                ) : null}
-                {concentrationAlerts.length > 0 ? (
-                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                    <p className="text-xs text-text-subtle">
-                      {t("dashboard.concentrationAlerts", {
+                      }),
+                      value: deviationAlertTokenCount,
+                    }]
+                  : []),
+                ...(concentrationAlerts.length > 0
+                  ? [{
+                      key: "concentration",
+                      label: t("dashboard.concentrationAlerts", {
                         count: concentrationAlertTokenCount.toString(),
                         threshold: concentrationThresholdLabel,
-                      })}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-text-primary">
-                      {concentrationAlertTokenCount}
-                    </p>
-                  </div>
-                ) : null}
-                {primaryAlert ? (
-                  <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                    <p className="text-xs text-text-subtle">
-                      {t("dashboard.prioritySignal")}
-                    </p>
-                    <p className="mt-2 text-lg font-semibold text-text-primary">
-                      {primaryAlert.tokenSymbol}: {primaryAlert.value >= 0 ? "+" : ""}
-                      {primaryAlert.value.toFixed(1)}%
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {mergedAlertBadges.slice(0, 6).map((alert) => (
-                  <span
-                    key={alert.tokenSymbol}
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                      alert.severity === "high"
-                        ? "bg-status-negative-soft text-status-negative"
-                        : alert.severity === "medium"
-                          ? "bg-status-warning-soft text-status-warning"
-                          : "bg-status-info-soft text-status-info"
-                    )}
-                  >
-                    {alert.tokenSymbol}: {alert.value >= 0 ? "+" : ""}
-                    {alert.value.toFixed(1)}%
-                  </span>
-                ))}
-                {mergedAlertBadges.length > 6 ? (
-                  <span className="text-xs text-text-subtle">
-                    {t("common.more", {
-                      count: (mergedAlertBadges.length - 6).toString(),
-                    })}
-                  </span>
-                ) : null}
-              </div>
-            </>
-          ) : (
-            <>
-              <p className="text-sm font-medium text-status-positive">
-                {t("dashboard.noRebalanceAlerts")}
-              </p>
-              <p className="text-sm text-text-subtle">
-                {t("dashboard.portfolioWithinThresholds")}
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                      }),
+                      value: concentrationAlertTokenCount,
+                    }]
+                  : []),
+                ...(primaryAlert
+                  ? [{
+                      key: "priority",
+                      label: t("dashboard.prioritySignal"),
+                      value: `${primaryAlert.tokenSymbol}: ${primaryAlert.value >= 0 ? "+" : ""}${primaryAlert.value.toFixed(1)}%`,
+                    }]
+                  : []),
+              ]}
+              columnsClassName="md:grid-cols-3"
+              className="gap-3"
+            />
+            <div className="flex flex-wrap gap-2">
+              {mergedAlertBadges.slice(0, 6).map((alert) => (
+                <StatusPill
+                  key={alert.tokenSymbol}
+                  tone={
+                    alert.severity === "high"
+                      ? "danger"
+                      : alert.severity === "medium"
+                        ? "warning"
+                        : "info"
+                  }
+                  bordered={false}
+                >
+                  {severityLabels[alert.severity]}: {alert.tokenSymbol} {alert.value >= 0 ? "+" : ""}
+                  {alert.value.toFixed(1)}%
+                </StatusPill>
+              ))}
+              {mergedAlertBadges.length > 6 ? (
+                <span className="text-xs text-text-subtle">
+                  {t("common.more", {
+                    count: (mergedAlertBadges.length - 6).toString(),
+                  })}
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-text-subtle">
+            {t("dashboard.portfolioWithinThresholds")}
+          </p>
+        )}
+      </StatusBanner>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        <Card className="xl:col-span-2">
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">
-              {t("dashboard.totalValue")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-text-primary">
-              {formatValue(totalValue)}
-            </p>
-            {lastPriceUpdate ? (
-              <p
-                className={cn(
-                  "mt-2 text-sm",
-                  isPriceStale ? "text-status-warning" : "text-text-subtle"
-                )}
-              >
-                {t("dashboard.prices", {
+        <KpiCard
+          label={t("dashboard.totalValue")}
+          value={formatValue(totalValue)}
+          valueSize="3xl"
+          secondary={
+            lastPriceUpdate
+              ? t("dashboard.prices", {
                   time: formatTimeAgo(new Date(lastPriceUpdate)),
-                })}
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
+                })
+              : undefined
+          }
+          secondaryTone={lastPriceUpdate && isPriceStale ? "warning" : "muted"}
+          className="xl:col-span-2"
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">
-              {t("dashboard.totalPL")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={cn(
-                "text-3xl font-bold",
-                totalPL >= 0 ? "text-status-positive" : "text-status-negative"
-              )}
-            >
-              {totalPL >= 0 ? "+" : ""}
-              {formatUsd(totalPL)}
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-sm font-medium",
-                analytics.totalReturnPercent >= 0
-                  ? "text-status-positive"
-                  : "text-status-negative"
-              )}
-            >
-              {analytics.totalReturnPercent >= 0 ? "+" : ""}
-              {analytics.totalReturnPercent.toFixed(2)}% {t("dashboard.simpleROI")}
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          label={t("dashboard.totalPL")}
+          value={`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}
+          valueTone={totalPL >= 0 ? "positive" : "negative"}
+          valueSize="3xl"
+          secondary={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
+          secondaryTone={analytics.totalReturnPercent >= 0 ? "positive" : "negative"}
+        />
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">
-              {t("portfolio.change24h")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p
-              className={cn(
-                "text-3xl font-bold",
-                totals.change24h >= 0
-                  ? "text-status-positive"
-                  : "text-status-negative"
-              )}
-            >
-              {totals.change24h >= 0 ? "+" : ""}
-              {totals.change24h.toFixed(2)}%
-            </p>
-            <p
-              className={cn(
-                "mt-2 text-sm font-medium",
-                change24hUsdt >= 0
-                  ? "text-status-positive"
-                  : "text-status-negative"
-              )}
-            >
-              {change24hUsdt >= 0 ? "+" : ""}
-              {formatUsd(change24hUsdt)} USDT
-            </p>
-            <p className="mt-1 text-xs text-text-dim">
-              {t("portfolio.weightedChangeDesc")}
-            </p>
-          </CardContent>
-        </Card>
+        <KpiCard
+          label={t("portfolio.change24h")}
+          value={`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}
+          valueTone={totals.change24h >= 0 ? "positive" : "negative"}
+          valueSize="3xl"
+          secondary={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}
+          secondaryTone={change24hUsdt >= 0 ? "positive" : "negative"}
+          tertiary={t("portfolio.weightedChangeDesc")}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{t("dashboard.portfolioHistory")}</CardTitle>
-              <div className="flex flex-wrap gap-1">
+          <CardSectionHeader
+            title={t("dashboard.portfolioHistory")}
+            actions={
+              <div
+                role="group"
+                aria-label={t("dashboard.timeRangeSelector")}
+                className="flex flex-wrap gap-1"
+              >
                 {TIME_RANGES.map((r) => (
                   <button
                     key={r.value}
+                    type="button"
                     onClick={() => setTimeRange(r.value)}
                     className={cn(
                       "rounded-md px-2 py-1 text-xs font-medium transition-colors",
@@ -588,20 +543,45 @@ export default function DashboardPage() {
                         ? "bg-accent text-bg-page shadow-sm"
                         : "text-text-subtle hover:bg-bg-hover hover:text-text-tertiary"
                     )}
+                    aria-pressed={timeRange === r.value}
                   >
                     {r.label}
                   </button>
                 ))}
               </div>
-            </div>
-          </CardHeader>
+            }
+          />
           <CardContent>
             {filteredHistory.length > 0 ? (
-              <PortfolioLineChart data={filteredHistory} />
+              <AccessibleChartFrame
+                title={t("dashboard.portfolioHistory")}
+                summary={historyChartSummary}
+              >
+                <PortfolioLineChart data={filteredHistory} />
+              </AccessibleChartFrame>
             ) : (
-              <p className="py-8 text-center text-text-subtle">
-                {t("dashboard.noHistoryYet")}
-              </p>
+              <EmptyState
+                title={t("dashboard.noHistoryYet")}
+                description={t("dashboard.historyEmptyHelp")}
+                icon={<TrendingUp className="h-5 w-5" />}
+                action={
+                  <>
+                    <Link href="/portfolio/add">
+                      <Button size="sm">
+                        {t("portfolio.addTransaction")}
+                      </Button>
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRefresh}
+                      disabled={refreshing}
+                    >
+                      {t("dashboard.refresh")}
+                    </Button>
+                  </>
+                }
+              />
             )}
           </CardContent>
         </Card>
@@ -611,13 +591,28 @@ export default function DashboardPage() {
             <CardHeader>
               <CardTitle>{t("dashboard.tokenAllocation")}</CardTitle>
             </CardHeader>
-            <CardContent>
-              {pieData.length > 0 ? (
+          <CardContent>
+            {pieData.length > 0 ? (
+              <AccessibleChartFrame
+                title={t("dashboard.tokenAllocation")}
+                summary={allocationChartSummary}
+              >
                 <AllocationPieChart data={pieData} />
-              ) : (
-                <p className="py-8 text-center text-text-subtle">
-                  {t("dashboard.addTransactionsToSee")}
-                </p>
+              </AccessibleChartFrame>
+            ) : (
+              <EmptyState
+                  title={t("dashboard.addTransactionsToSee")}
+                  description={t("dashboard.allocationEmptyHelp")}
+                  icon={<Scale className="h-5 w-5" />}
+                  action={
+                    <Link href="/portfolio">
+                      <Button size="sm" variant="outline">
+                        {t("portfolio.title")}
+                      </Button>
+                    </Link>
+                  }
+                  className="py-8"
+                />
               )}
             </CardContent>
           </Card>
@@ -630,48 +625,32 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-text-subtle">
-                    {t("dashboard.totalInvested")}
-                  </p>
-                  <p className="text-lg font-semibold text-text-primary">
-                    {formatUsd(analytics.totalInvested)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-subtle">
-                    {t("dashboard.simpleROI")}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-lg font-semibold",
-                      analytics.totalReturnPercent >= 0
-                        ? "text-status-positive"
-                        : "text-status-negative"
-                    )}
-                  >
-                    {analytics.totalReturnPercent >= 0 ? "+" : ""}
-                    {analytics.totalReturnPercent.toFixed(2)}%
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-subtle">
-                    {t("dashboard.totalFees")}
-                  </p>
-                  <p className="text-lg font-semibold text-text-primary">
-                    {formatUsd(totals.totalFeesPaid)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-text-subtle">
-                    {t("dashboard.assets")}
-                  </p>
-                  <p className="text-lg font-semibold text-text-primary">
-                    {breakdown.length}
-                  </p>
-                </div>
-              </div>
+              <SummaryStrip
+                items={[
+                  {
+                    key: "invested",
+                    label: t("dashboard.totalInvested"),
+                    value: formatUsd(analytics.totalInvested),
+                  },
+                  {
+                    key: "roi",
+                    label: t("dashboard.simpleROI"),
+                    value: `${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}%`,
+                    tone: analytics.totalReturnPercent >= 0 ? "positive" : "negative",
+                  },
+                  {
+                    key: "fees",
+                    label: t("dashboard.totalFees"),
+                    value: formatUsd(totals.totalFeesPaid),
+                  },
+                  {
+                    key: "assets",
+                    label: t("dashboard.assets"),
+                    value: breakdown.length,
+                  },
+                ]}
+                columnsClassName="grid-cols-2"
+              />
             </CardContent>
           </Card>
         </div>
@@ -691,71 +670,76 @@ export default function DashboardPage() {
               <CardTitle>{t("dashboard.categoryBreakdown")}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="h-64">
-                <Bar
-                  data={{
-                    labels: categoryBreakdown.map((cb) => cb.category),
-                    datasets: [
-                      {
-                        label: t("dashboard.allocationPercent"),
-                        data: categoryBreakdown.map((cb) => cb.percent),
-                        backgroundColor: [
-                          "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
-                          "#ec4899", "#06b6d4", "#84cc16", "#f97316",
-                        ],
-                        borderRadius: 4,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: "y",
-                    plugins: {
-                      legend: { display: false },
-                      tooltip: {
-                        backgroundColor: chartTheme.tooltipBg,
-                        titleColor: chartTheme.tooltipText,
-                        bodyColor: chartTheme.tooltipText,
-                        borderColor: chartTheme.tooltipBorder,
-                        borderWidth: 1,
-                        callbacks: {
-                          label: (item) => `${(item.raw as number).toFixed(1)}%`,
+              <AccessibleChartFrame
+                title={t("dashboard.categoryBreakdown")}
+                summary={categoryChartSummary}
+              >
+                <div className="h-64">
+                  <Bar
+                    data={{
+                      labels: categoryBreakdown.map((cb) => cb.category),
+                      datasets: [
+                        {
+                          label: t("dashboard.allocationPercent"),
+                          data: categoryBreakdown.map((cb) => cb.percent),
+                          backgroundColor: [
+                            "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
+                            "#ec4899", "#06b6d4", "#84cc16", "#f97316",
+                          ],
+                          borderRadius: 4,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      indexAxis: "y",
+                      plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                          backgroundColor: chartTheme.tooltipBg,
+                          titleColor: chartTheme.tooltipText,
+                          bodyColor: chartTheme.tooltipText,
+                          borderColor: chartTheme.tooltipBorder,
+                          borderWidth: 1,
+                          callbacks: {
+                            label: (item) => `${(item.raw as number).toFixed(1)}%`,
+                          },
                         },
                       },
-                    },
-                    scales: {
-                      x: {
-                        grid: { color: chartTheme.gridColor },
-                        ticks: {
-                          color: chartTheme.tickColor,
-                          callback: (v) => `${v}%`,
+                      scales: {
+                        x: {
+                          grid: { color: chartTheme.gridColor },
+                          ticks: {
+                            color: chartTheme.tickColor,
+                            callback: (v) => `${v}%`,
+                          },
+                        },
+                        y: {
+                          grid: { display: false },
+                          ticks: { color: chartTheme.tickColor, font: { size: 12 } },
                         },
                       },
-                      y: {
-                        grid: { display: false },
-                        ticks: { color: chartTheme.tickColor, font: { size: 12 } },
-                      },
-                    },
-                  }}
-                />
-              </div>
+                    }}
+                  />
+                </div>
+              </AccessibleChartFrame>
             </CardContent>
           </Card>
         )}
 
         {topHoldings.length > 0 && (
           <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle>{t("dashboard.holdings")}</CardTitle>
+            <CardSectionHeader
+              title={t("dashboard.holdings")}
+              actions={
                 <Link href="/portfolio">
                   <Button size="sm" variant="outline">
                     {t("portfolio.title")}
                   </Button>
                 </Link>
-              </div>
-            </CardHeader>
+              }
+            />
             <CardContent>
               <div className="space-y-3">
                 {topHoldings.map((item) => (

@@ -1,43 +1,25 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineHelpCard } from "@/components/ui/inline-help";
 import { PageHeader } from "@/components/ui/page-header";
-import { cn, formatUsd, formatTimeAgo } from "@/lib/utils";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { StatusPill } from "@/components/ui/status-pill";
+import { StatusBanner } from "@/components/ui/status-banner";
+import { SummaryStrip } from "@/components/ui/summary-strip";
+import { formatUsd, formatTimeAgo } from "@/lib/utils";
 import {
-  Plus,
-  AlertTriangle,
-  ShieldAlert,
   Clock,
-  ChevronDown,
-  ChevronUp,
-  Play,
-  CheckCircle2,
-  XCircle,
-  Download,
-  RefreshCw,
-  Activity,
   FileText,
+  RefreshCw,
 } from "lucide-react";
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
-
-ChartJS.register(BarElement, CategoryScale, LinearScale, ChartTooltip, ChartLegend);
 import { Skeleton, CardSkeleton } from "@/components/ui/skeleton";
-import { ErrorState } from "@/components/ui/error-state";
 import { useToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslation } from "@/hooks/use-translation";
-import { useChartTheme } from "@/hooks/use-chart-theme";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import { useRiskParityVolatility } from "@/hooks/use-risk-parity-volatility";
@@ -68,23 +50,26 @@ import type {
   AutocompleteSuggestion,
   TokenGroup,
   RebalanceSession,
+  RecordedTradeDraft,
   TokenCategory,
   CategoryBreakdown,
   RebalanceLog,
   ConfirmState,
 } from "@/components/rebalance/types";
-import {
-  getDeviationColor,
-  getDeviationBg,
-  getActionBadge,
-  getSeverityBadge,
-  getAlertTypeLabel,
-} from "@/components/rebalance/helpers";
 import { TargetAllocationSection } from "@/components/rebalance/target-allocation-section";
-import { TokenGroupsSection } from "@/components/rebalance/token-groups-section";
-import { AssetCategoriesSection } from "@/components/rebalance/asset-categories-section";
 import { WhatIfCalculatorSection } from "@/components/rebalance/what-if-calculator-section";
 import { PastSessionsSection } from "@/components/rebalance/past-sessions-section";
+import { UntargetedTokensSection } from "@/components/rebalance/untargeted-tokens-section";
+import { RiskParityTargetsSection } from "@/components/rebalance/risk-parity-targets-section";
+import { AlertsSection } from "@/components/rebalance/alerts-section";
+import { SummarySection } from "@/components/rebalance/summary-section";
+import { CurrentVsTargetSection } from "@/components/rebalance/current-vs-target-section";
+import { ExecutionPlanSection } from "@/components/rebalance/execution-plan-section";
+import { ActiveSessionsSection } from "@/components/rebalance/active-sessions-section";
+import { RebalanceConfigurationSection } from "@/components/rebalance/rebalance-configuration-section";
+import { TargetVsCurrentChartSection } from "@/components/rebalance/target-vs-current-chart-section";
+import { DcaScheduleSection } from "@/components/rebalance/dca-schedule-section";
+import { RebalanceHistorySection } from "@/components/rebalance/rebalance-history-section";
 
 // ── Helper: compute execution steps from suggestions ──────────────
 
@@ -348,9 +333,9 @@ type RebalancePhase = "setup" | "analysis" | "execution" | "all";
 // ── Page Component ──────────────────────────────────────────────
 
 export default function RebalancePage() {
+  const phasesBaseId = "rebalance-phases";
   const { toast } = useToast();
   const { t } = useTranslation();
-  const chartTheme = useChartTheme();
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [targets, setTargets] = useState<TargetRow[]>([]);
   const [isSeeded, setIsSeeded] = useState(false);
@@ -369,18 +354,10 @@ export default function RebalancePage() {
 
   // Post-execution recording flow
   const [recordingSessionId, setRecordingSessionId] = useState<string | number | null>(null);
-  const [recordingTrades, setRecordingTrades] = useState<{
-    tokenSymbol: string;
-    action: string;
-    amountUsd: number;
-    quantity: string;
-  }[]>([]);
+  const [recordingTrades, setRecordingTrades] = useState<RecordedTradeDraft[]>([]);
 
   // Delete confirmation
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
-
-  // Rebalance history expand
-  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   // Mutation pending states
   const [savePending, setSavePending] = useState(false);
@@ -1344,7 +1321,7 @@ export default function RebalancePage() {
   );
 
   const handleRecordTransactions = useCallback(
-    async (trades: { tokenSymbol: string; action: string; amountUsd: number; quantity: string }[]) => {
+    async (trades: RecordedTradeDraft[]) => {
       setRecordTransactionsPending(true);
       try {
         const recordedAtIso = new Date().toISOString();
@@ -1406,6 +1383,45 @@ export default function RebalancePage() {
       }
     },
     [ensurePrices, recordingSessionId, toast, t, vault]
+  );
+
+  const handleStartRecordingSession = useCallback((session: RebalanceSession) => {
+    setRecordingSessionId(session.id);
+    setRecordingTrades(
+      session.trades.map((trade) => ({
+        tokenSymbol: trade.tokenSymbol,
+        action: trade.action,
+        amountUsd: trade.amountUsd,
+        quantity: "",
+      }))
+    );
+  }, []);
+
+  const handleUpdateRecordingTrade = useCallback(
+    (index: number, quantity: string) => {
+      setRecordingTrades((current) =>
+        current.map((trade, tradeIndex) =>
+          tradeIndex === index ? { ...trade, quantity } : trade
+        )
+      );
+    },
+    []
+  );
+
+  const handleSaveRecordedTrades = useCallback(() => {
+    void handleRecordTransactions(recordingTrades);
+  }, [handleRecordTransactions, recordingTrades]);
+
+  const handleCancelRecordingSession = useCallback(
+    (sessionId: string | number) => {
+      setRecordingSessionId(null);
+      setRecordingTrades([]);
+      void handleCompleteSession({
+        id: sessionId,
+        status: "completed",
+      });
+    },
+    [handleCompleteSession]
   );
 
   // ── Auto-generate handler ──────────────────────────────────
@@ -1619,6 +1635,11 @@ export default function RebalancePage() {
     (a) => a.type === "concentration_token"
   );
   const hasConcentrationRisk = concentrationAlerts.length > 0;
+  const severityLabels = {
+    high: t("common.severityHigh"),
+    medium: t("common.severityMedium"),
+    low: t("common.severityLow"),
+  } as const;
 
   const targetedSuggestions = (suggestionsData?.targets ?? []).filter(
     (s) => !s.isUntargeted
@@ -1643,6 +1664,11 @@ export default function RebalancePage() {
   const untargetedSuggestions = (suggestionsData?.targets ?? []).filter(
     (s) => s.isUntargeted
   );
+  const targetedSymbolsUpper = useMemo(
+    () =>
+      new Set(targets.map((target) => target.tokenSymbol.trim().toUpperCase())),
+    [targets]
+  );
 
   const suggestionsLoading = pricesLoading;
 
@@ -1658,6 +1684,15 @@ export default function RebalancePage() {
     Target: s.targetPercent,
     Current: s.currentPercent,
   }));
+  const targetVsCurrentChartSummary = useMemo(() => {
+    if (targetedSuggestionsSorted.length === 0) return "";
+    const largestDeviation = targetedSuggestionsSorted[0];
+    return t("rebalance.deviationChartSummary", {
+      count: targetedSuggestionsSorted.length,
+      symbol: largestDeviation.tokenSymbol,
+      deviation: Math.abs(largestDeviation.deviation).toFixed(1),
+    });
+  }, [t, targetedSuggestionsSorted]);
 
   useEffect(() => {
     if (phaseInitialized) return;
@@ -1799,17 +1834,17 @@ export default function RebalancePage() {
       {suggestionsData && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-subtle">
           {suggestionsData?.buyOnlyMode && (
-            <span className="rounded-full bg-status-info-soft px-2.5 py-0.5 text-xs font-medium text-status-info border border-status-info-border">
+            <StatusPill tone="info">
               {t("rebalance.buyOnlyMode")}
-            </span>
+            </StatusPill>
           )}
           {suggestionsData?.rebalanceStrategy && suggestionsData.rebalanceStrategy !== "threshold" && (
-            <span className="rounded-full border border-status-info-border bg-status-info-soft px-2.5 py-0.5 text-xs font-medium text-status-info">
+            <StatusPill tone="info">
               {suggestionsData.rebalanceStrategy === "calendar" && t("rebalance.strategyCalendar")}
               {suggestionsData.rebalanceStrategy === "percent-of-portfolio" && t("rebalance.strategyPercentOfPortfolio")}
               {suggestionsData.rebalanceStrategy === "risk-parity" && t("rebalance.strategyRiskParity")}
               {suggestionsData.rebalanceStrategy === "dca-weighted" && t("rebalance.strategyDcaWeighted")}
-            </span>
+            </StatusPill>
           )}
           {suggestionsData.lastRebalanceTime && (
             <span>{t("rebalance.lastRebalance")}: {formatTimeAgo(new Date(suggestionsData.lastRebalanceTime))}</span>
@@ -1818,9 +1853,9 @@ export default function RebalancePage() {
             const ageMs = Date.now() - new Date(suggestionsData.oldestPriceUpdate).getTime();
             const isStale = ageMs > 30 * 60 * 1000;
             return isStale ? (
-              <span className="rounded-full bg-status-warning-soft px-2.5 py-0.5 text-xs font-medium text-status-warning border border-status-warning-border">
+              <StatusPill tone="warning">
                 {t("rebalance.prices")}: {formatTimeAgo(new Date(suggestionsData.oldestPriceUpdate))}
-              </span>
+              </StatusPill>
             ) : (
               <span className="text-text-dim">
                 {t("rebalance.prices")}: {formatTimeAgo(new Date(suggestionsData.oldestPriceUpdate))}
@@ -1828,75 +1863,79 @@ export default function RebalancePage() {
             );
           })()}
           {(suggestionsData.autoRefreshMinutes ?? 0) > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-status-positive-soft px-2.5 py-0.5 text-xs font-medium text-status-positive border border-status-positive-border">
-              <RefreshCw className="h-3 w-3" />
+            <StatusPill tone="success" icon={<RefreshCw className="h-3 w-3" />}>
               {t("rebalance.autoRefresh")}: {t("rebalance.every")} {suggestionsData.autoRefreshMinutes}m
-            </span>
+            </StatusPill>
           )}
           <span className="text-text-dim">({t("rebalance.configureInSettings")})</span>
         </div>
       )}
 
-      <Card className="p-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {t("rebalance.focusView")}
-            </p>
-            <p className="text-xs text-text-dim">
-              {t("rebalance.subtitle")}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {phaseOptions.map((phase) => (
-              <button
-                key={phase.value}
-                type="button"
-                onClick={() => {
-                  setActivePhase(phase.value);
-                  setPhaseInitialized(true);
-                }}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                  activePhase === phase.value
-                    ? "border-accent bg-accent/10 text-text-primary"
-                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
-                )}
-                aria-pressed={activePhase === phase.value}
-              >
-                <span className="min-w-0 truncate font-medium">{phase.label}</span>
-                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                  {phase.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
+      <SectionNavigator
+        baseId={phasesBaseId}
+        label={t("rebalance.focusView")}
+        description={t("rebalance.subtitle")}
+        value={activePhase}
+        onChange={(value) => {
+          setActivePhase(value);
+          setPhaseInitialized(true);
+        }}
+        options={phaseOptions}
+        columnsClassName="grid-cols-2 xl:grid-cols-4"
+      />
+
+      <SectionPanel baseId={phasesBaseId} value={activePhase}>
+      <InlineHelpCard
+        icon={<FileText className="h-4 w-4" />}
+        title={t("rebalance.inlineHelpTitle")}
+        description={t("rebalance.inlineHelpDescription")}
+        items={[
+          t("rebalance.inlineHelpSetup"),
+          t("rebalance.inlineHelpAnalysis"),
+          t("rebalance.inlineHelpExecution"),
+        ]}
+        action={
+          <Link href="/rebalance/guide#find-strategy">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-auto px-0 py-0 text-current hover:bg-transparent"
+            >
+              {t("rebalance.openGuide")}
+            </Button>
+          </Link>
+        }
+      />
 
       {suggestionsData && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-xs text-text-subtle">{t("rebalance.totalTrades")}</p>
-              <p className="mt-1 text-2xl font-bold text-text-primary">{actionableSuggestions.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-xs text-text-subtle">{t("rebalance.portfolioDrift")}</p>
-              <p className={`mt-1 text-2xl font-bold ${maxDeviation <= holdZonePercent ? "text-status-positive" : maxDeviation <= holdZonePercent * 2 ? "text-status-warning" : "text-status-negative"}`}>
-                {maxDeviation.toFixed(1)}%
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="py-4">
-              <p className="text-xs text-text-subtle">{t("rebalance.totalVolume")}</p>
-              <p className="mt-1 text-2xl font-bold text-text-primary">{formatUsd(totalSuggestedVolume)}</p>
-            </CardContent>
-          </Card>
-        </div>
+        <SummaryStrip
+          items={[
+            {
+              key: "trades",
+              label: t("rebalance.totalTrades"),
+              value: actionableSuggestions.length,
+            },
+            {
+              key: "drift",
+              label: t("rebalance.portfolioDrift"),
+              value: `${maxDeviation.toFixed(1)}%`,
+              tone:
+                maxDeviation <= holdZonePercent
+                  ? "positive"
+                  : maxDeviation <= holdZonePercent * 2
+                    ? "warning"
+                    : "negative",
+            },
+            {
+              key: "volume",
+              label: t("rebalance.totalVolume"),
+              value: formatUsd(totalSuggestedVolume),
+            },
+          ]}
+          columnsClassName="sm:grid-cols-3"
+          size="compact"
+          align="center"
+        />
       )}
 
       {/* ── 3. Target Allocation ─────────────────────────────── */}
@@ -1926,116 +1965,57 @@ export default function RebalancePage() {
 
       {/* ── 4. Untargeted Tokens ────────────────────────────── */}
       {showSetupPhase && untargetedSuggestions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-text-muted">
-              {t("rebalance.untargetedTokens")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-text-subtle">
-              {t("rebalance.untargetedDescription")}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-text-subtle">
-                    <th className="pb-3 pr-4">{t("rebalance.token")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
-                    <th className="pb-3 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {untargetedSuggestions.map((s) => (
-                    <tr
-                      key={s.tokenSymbol}
-                      className="border-b border-border-subtle"
-                    >
-                      <td className="py-3 pr-4 font-medium text-text-muted">
-                        {s.tokenSymbol}
-                        <span className="ml-2 rounded bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
-                          {t("rebalance.untargeted")}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-right text-text-muted">
-                        {s.currentPercent.toFixed(1)}%
-                      </td>
-                      <td className="py-3 pr-4 text-right text-text-muted">
-                        {formatUsd(s.currentValue)}
-                      </td>
-                      <td className="py-3 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => addTargetFromUntargeted(s)}
-                          disabled={targets.some(
-                            (t) => t.tokenSymbol.toUpperCase() === s.tokenSymbol.toUpperCase()
-                          )}
-                          className="text-xs"
-                        >
-                          <Plus className="mr-1 h-3 w-3" />
-                          {t("rebalance.addTarget")}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <UntargetedTokensSection
+          suggestions={untargetedSuggestions}
+          isTargeted={(tokenSymbol) =>
+            targetedSymbolsUpper.has(tokenSymbol.trim().toUpperCase())
+          }
+          onAddTarget={addTargetFromUntargeted}
+        />
       )}
 
       {/* ── 5. Configuration Blocks ─────────────────────────── */}
       {showSetupPhase && (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <TokenGroupsSection
-            groups={groups}
-            onCreateGroup={handleCreateGroup}
-            createPending={groupCreatePending}
-            onUpdateGroup={handleUpdateGroup}
-            updatePending={groupUpdatePending}
-            onTrackGroup={handleTrackGroup}
-            trackPendingGroupId={groupTrackPendingId}
-            onConfirmDelete={(id, label) =>
-              setConfirmState({ type: "group", id, label })
-            }
-            deletePending={groupDeletePending}
-          />
-
-          <AssetCategoriesSection
-            categories={categories}
-            categoryBreakdown={categoryBreakdown}
-            symbolOptions={tokenSymbolOptions}
-            onSetCategory={handleSetCategory}
-            setCategoryPending={categorySetPending}
-            onConfirmDelete={(tokenSymbol, label) =>
-              setConfirmState({ type: "category", id: tokenSymbol, label })
-            }
-            deletePending={categoryDeletePending}
-          />
-        </div>
+        <RebalanceConfigurationSection
+          tokenGroupsProps={{
+            groups,
+            onCreateGroup: handleCreateGroup,
+            onUpdateGroup: handleUpdateGroup,
+            onTrackGroup: handleTrackGroup,
+            trackPendingGroupId: groupTrackPendingId,
+            createPending: groupCreatePending,
+            updatePending: groupUpdatePending,
+            onConfirmDelete: (id, label) =>
+              setConfirmState({ type: "group", id, label }),
+            deletePending: groupDeletePending,
+          }}
+          assetCategoriesProps={{
+            categories,
+            categoryBreakdown,
+            symbolOptions: tokenSymbolOptions,
+            onSetCategory: handleSetCategory,
+            setCategoryPending: categorySetPending,
+            onConfirmDelete: (tokenSymbol, label) =>
+              setConfirmState({ type: "category", id: tokenSymbol, label }),
+            deletePending: categoryDeletePending,
+          }}
+        />
       )}
 
       {/* ── Calendar-Blocked Notice ─────────────────────────── */}
       {showAnalysisPhase && suggestionsData?.calendarBlocked && (
-        <Card>
-          <CardContent className="py-6">
-            <div className="flex items-center gap-3 text-status-warning">
-              <Clock className="h-6 w-6" />
-              <div>
-                <p className="font-medium">{t("rebalance.waitingForNext")}</p>
-                <p className="text-sm text-text-subtle">
-                  {t("rebalance.calendarActive")}{" "}
-                  <span className="font-medium text-text-primary">
-                    {suggestionsData.nextRebalanceDate || t("rebalance.notSet")}
-                  </span>
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StatusBanner
+          tone="warning"
+          heading={t("rebalance.waitingForNext")}
+          icon={<Clock className="h-5 w-5" />}
+        >
+          <p className="text-sm text-text-subtle">
+            {t("rebalance.calendarActive")}{" "}
+            <span className="font-medium text-text-primary">
+              {suggestionsData.nextRebalanceDate || t("rebalance.notSet")}
+            </span>
+          </p>
+        </StatusBanner>
       )}
 
       {/* ── Risk-Parity Targets Info ──────────────────────────── */}
@@ -2044,714 +2024,90 @@ export default function RebalancePage() {
           (target) => !target.hasVolatilityData
         );
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm text-status-info">
-                {t("rebalance.riskParityTargets")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-3 text-sm text-text-subtle">
-                {t("rebalance.riskParityDescription")}
-              </p>
-              {usesFallback && (
-                <p className="mb-3 rounded-md border border-status-warning-border bg-status-warning-soft px-3 py-2 text-xs text-status-warning">
-                  {t("rebalance.riskParityFallback")}
-                </p>
-              )}
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-text-subtle">
-                      <th className="pb-2 pr-4">{t("rebalance.token")}</th>
-                      <th className="pb-2 pr-4 text-right">{t("rebalance.volatility")}</th>
-                      <th className="pb-2 text-right">{t("rebalance.computedTarget")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {suggestionsData.riskParityTargets.map((rpt) => (
-                      <tr key={rpt.tokenSymbol} className="border-b border-border-subtle">
-                        <td className="py-2 pr-4 font-medium text-text-primary">{rpt.tokenSymbol}</td>
-                        <td className="py-2 pr-4 text-right text-text-muted">
-                          {rpt.hasVolatilityData
-                            ? `${rpt.volatility.toFixed(1)}%`
-                            : t("rebalance.volatilityUnavailable")}
-                        </td>
-                        <td className="py-2 text-right font-medium text-status-info">
-                          {rpt.computedTargetPercent.toFixed(1)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <RiskParityTargetsSection
+            targets={suggestionsData.riskParityTargets}
+            usesFallback={usesFallback}
+          />
         );
       })()}
 
-      {/* ── 3. Alerts (moved near top) ───────────────────────── */}
-      {showAnalysisPhase && allAlerts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-status-warning" />
-              {t("rebalance.alerts")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {alertsError ? (
-              <ErrorState
-                message={t("rebalance.failedLoadAlerts")}
-                onRetry={() => {}}
-              />
-            ) : (
-              <div className="space-y-2">
-                {concentrationAlerts.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-status-negative">
-                      <ShieldAlert className="h-4 w-4" />
-                      {t("rebalance.concentrationRisk")} ({concentrationThresholdLabel}%)
-                    </h4>
-                    {concentrationAlerts.map((alert, i) => (
-                      <div
-                        key={`conc-${i}`}
-                        className="mb-2 flex items-center justify-between rounded-md bg-status-negative-soft px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="inline-block rounded-full border border-status-negative-border bg-status-negative-soft px-2 py-0.5 text-xs font-medium uppercase text-status-negative">
-                            {alert.severity}
-                          </span>
-                          <span className="font-medium text-text-primary">
-                            {alert.tokenSymbol}
-                          </span>
-                          <span className="text-xs text-text-subtle">
-                            ({getAlertTypeLabel(alert.type)})
-                          </span>
-                        </div>
-                        <div className="text-sm">
-                          <span className="font-medium text-status-negative">
-                            {alert.currentPercent.toFixed(1)}% {t("rebalance.ofPortfolio")}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+      {showAnalysisPhase && suggestionsData ? (
+        <AlertsSection
+          alertsError={Boolean(alertsError)}
+          concentrationAlerts={concentrationAlerts}
+          deviationAlerts={deviationAlerts}
+          concentrationThresholdLabel={concentrationThresholdLabel}
+          severityLabels={severityLabels}
+        />
+      ) : null}
 
-                {deviationAlerts.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 text-sm font-semibold text-status-warning">
-                      {t("rebalance.deviationAlerts")}
-                    </h4>
-                    {deviationAlerts.map((alert) => (
-                      <div
-                        key={alert.tokenSymbol}
-                        className="mb-2 flex items-center justify-between rounded-md bg-bg-card px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getSeverityBadge(alert.severity)}`}
-                          >
-                            {alert.severity}
-                          </span>
-                          <span className="font-medium text-text-primary">
-                            {alert.tokenSymbol}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm">
-                          <span className="text-text-subtle">
-                            {t("rebalance.targetLabel")}: {alert.targetPercent.toFixed(1)}%
-                          </span>
-                          <span className="text-text-subtle">
-                            {t("rebalance.currentLabel")}: {alert.currentPercent.toFixed(1)}%
-                          </span>
-                          <span
-                            className={`font-medium ${getDeviationColor(alert.deviation)}`}
-                          >
-                            {alert.deviation >= 0 ? "+" : ""}
-                            {alert.deviation.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── 4. Well-Balanced / Rebalance Summary ─────────────── */}
-      {showAnalysisPhase && suggestionsData?.summary?.isWellBalanced && (
-        <Card>
-          <CardContent className="py-6">
-            <div
-              className={`flex items-center gap-3 ${
-                hasConcentrationRisk
-                  ? "text-status-warning"
-                  : "text-status-positive"
-              }`}
-            >
-              {hasConcentrationRisk ? (
-                <ShieldAlert className="h-6 w-6" />
-              ) : (
-                <CheckCircle2 className="h-6 w-6" />
-              )}
-              <div>
-                <p className="font-medium">
-                  {hasConcentrationRisk
-                    ? t("rebalance.onTargetButConcentration")
-                    : t("rebalance.wellBalanced")}
-                </p>
-                <p className="text-sm text-text-subtle">
-                  {hasConcentrationRisk
-                    ? t("rebalance.concentrationThresholdExceeded", {
-                        threshold: concentrationThresholdLabel,
-                      })
-                    : t("rebalance.portfolioDriftBelow", {
-                        drift: suggestionsData.summary.portfolioDrift.toFixed(1),
-                        threshold: suggestionsData.summary.driftThresholdPercent,
-                      })}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {showAnalysisPhase && suggestionsData?.summary && !suggestionsData.summary.isWellBalanced && targetedSuggestions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              {t("rebalance.summary")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
-              <div className="rounded-md bg-bg-card px-3 py-2 text-center">
-                <p className="text-xs text-text-subtle">{t("rebalance.totalTrades")}</p>
-                <p className="text-lg font-bold text-text-primary">{suggestionsData.summary.tradeCount}</p>
-                <p className="text-xs text-text-dim">{suggestionsData.summary.sellCount} {t("rebalance.sells")}, {suggestionsData.summary.buyCount} {t("rebalance.buys")}</p>
-              </div>
-              <div className="rounded-md bg-bg-card px-3 py-2 text-center">
-                <p className="text-xs text-text-subtle">{t("rebalance.totalVolume")}</p>
-                <p className="text-lg font-bold text-text-primary">{formatUsd(suggestionsData.summary.totalVolume)}</p>
-              </div>
-              <div className="rounded-md bg-bg-card px-3 py-2 text-center">
-                <p className="text-xs text-text-subtle">{t("rebalance.estFees")}</p>
-                <p className="text-lg font-bold text-text-primary">{formatUsd(suggestionsData.summary.totalEstimatedFees)}</p>
-              </div>
-              <div className="rounded-md bg-bg-card px-3 py-2 text-center">
-                <p className="text-xs text-text-subtle">{t("rebalance.portfolioDrift")}</p>
-                <p className={`text-lg font-bold ${
-                  suggestionsData.summary.portfolioDrift < 5
-                    ? "text-status-positive"
-                    : suggestionsData.summary.portfolioDrift < 10
-                      ? "text-status-warning"
-                      : "text-status-negative"
-                }`}>
-                  {suggestionsData.summary.portfolioDrift.toFixed(1)}%
-                </p>
-              </div>
-              <div className="rounded-md bg-bg-card px-3 py-2 text-center">
-                <p className="text-xs text-text-subtle">{t("rebalance.efficiency")}</p>
-                <p className={`text-lg font-bold ${
-                  suggestionsData.summary.portfolioEfficiency >= 95
-                    ? "text-status-positive"
-                    : suggestionsData.summary.portfolioEfficiency >= 90
-                      ? "text-status-warning"
-                      : "text-status-negative"
-                }`}>
-                  {suggestionsData.summary.portfolioEfficiency.toFixed(1)}%
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {showAnalysisPhase && suggestionsData?.summary ? (
+        <SummarySection
+          summary={suggestionsData.summary}
+          hasConcentrationRisk={hasConcentrationRisk}
+          concentrationThresholdLabel={concentrationThresholdLabel}
+          hasTargetedSuggestions={targetedSuggestions.length > 0}
+        />
+      ) : null}
 
       {/* ── 5. Chart ─────────────────────────────────────────── */}
-      {showAnalysisPhase && chartData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("rebalance.targetVsCurrent")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-                <Bar
-                  data={{
-                    labels: chartData.map((d) => d.name),
-                    datasets: [
-                      {
-                        label: t("rebalance.targetLabel"),
-                        data: chartData.map((d) => d.Target),
-                        backgroundColor: "#3b82f6",
-                        borderRadius: 4,
-                      },
-                      {
-                        label: t("rebalance.currentLabel"),
-                        data: chartData.map((d) => d.Current),
-                        backgroundColor: "#8b5cf6",
-                        borderRadius: 4,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        labels: { color: chartTheme.tickColor },
-                      },
-                      tooltip: {
-                        backgroundColor: chartTheme.tooltipBg,
-                        titleColor: chartTheme.tooltipText,
-                        bodyColor: chartTheme.tooltipText,
-                        borderColor: chartTheme.tooltipBorder,
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        callbacks: {
-                          label: (item) =>
-                            `${item.dataset.label}: ${(item.raw as number).toFixed(1)}%`,
-                        },
-                      },
-                    },
-                    scales: {
-                      x: {
-                        grid: { color: chartTheme.gridColor },
-                        ticks: { color: chartTheme.tickColor, font: { size: 12 } },
-                      },
-                      y: {
-                        grid: { color: chartTheme.gridColor },
-                        ticks: {
-                          color: chartTheme.tickColor,
-                          font: { size: 12 },
-                          callback: (value) => `${value}%`,
-                        },
-                      },
-                    },
-                  }}
-                />
-              </div>
-          </CardContent>
-        </Card>
-      )}
+      {showAnalysisPhase ? (
+        <TargetVsCurrentChartSection
+          chartData={chartData}
+          summary={targetVsCurrentChartSummary}
+        />
+      ) : null}
 
       {/* ── 6. Current vs Target Table ───────────────────────── */}
       {showAnalysisPhase && suggestionsData && targetedSuggestions.length > 0 && !suggestionsData.summary?.isWellBalanced && (
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{t("rebalance.currentVsTarget")}</CardTitle>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportReport}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  {t("rebalance.exportReport")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportCsv}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  {t("rebalance.exportCsv")}
-                </Button>
-                <span className="text-sm text-text-subtle">
-                  {t("rebalance.totalPortfolio")}: {formatUsd(suggestionsData.totalValue)}
-                </span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {suggestionsLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-10 w-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-text-subtle">
-                      <th className="pb-3 pr-4">{t("rebalance.token")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("rebalance.targetPercent")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("rebalance.deviation")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
-                      <th className="pb-3 pr-4 text-center">{t("rebalance.action")}</th>
-                      <th className="pb-3 pr-4 text-right">{t("rebalance.quantity")}</th>
-                      <th className="pb-3 text-right">{t("rebalance.amount")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {targetedSuggestionsSorted.map((s) => {
-                      return (
-                        <tr
-                          key={s.tokenSymbol}
-                          className={`border-b border-border-subtle ${getDeviationBg(s.deviation)}`}
-                        >
-                          <td className="py-3 pr-4 font-medium text-text-primary">
-                            {s.tokenSymbol}
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {s.targetPercent.toFixed(1)}%
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {s.currentPercent.toFixed(1)}%
-                          </td>
-                          <td
-                            className={`py-3 pr-4 text-right font-medium ${getDeviationColor(s.deviation)}`}
-                          >
-                            {s.deviation >= 0 ? "+" : ""}
-                            {s.deviation.toFixed(1)}%
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {formatUsd(s.currentValue)}
-                          </td>
-                          <td className="py-3 pr-4 text-center">
-                            <span
-                              className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(s.action)}`}
-                            >
-                              {s.action}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            {formatSuggestionTradeQuantity(s)}
-                          </td>
-                          <td className="py-3 text-right">
-                            {s.action !== "hold" ? formatUsd(s.amount) : "-"}
-                            {s.action !== "hold" && (s.estimatedSlippage > 0 || s.estimatedFee > 0) && (
-                              <div className="text-xs text-text-dim mt-0.5">
-                                {t("rebalance.fees")}: {formatUsd(s.estimatedFee)} | {t("rebalance.slip")}: {formatUsd(s.estimatedSlippage)}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <CurrentVsTargetSection
+          totalValue={suggestionsData.totalValue}
+          suggestionsLoading={suggestionsLoading}
+          suggestions={targetedSuggestionsSorted}
+          onExportReport={handleExportReport}
+          onExportCsv={handleExportCsv}
+          formatSuggestionTradeQuantity={formatSuggestionTradeQuantity}
+        />
       )}
 
       {/* ── 7. Execution Plan ────────────────────────────────── */}
       {showExecutionPhase && suggestionsData?.executionSteps && suggestionsData.executionSteps.length > 0 && !suggestionsData.summary?.isWellBalanced && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Play className="h-5 w-5" />
-              {t("rebalance.executionPlan")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-text-subtle">
-              {t("rebalance.executionPlanDescription")}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-text-subtle">
-                    <th className="pb-3 pr-4">{t("rebalance.step")}</th>
-                    <th className="pb-3 pr-4">{t("rebalance.action")}</th>
-                    <th className="pb-3 pr-4">{t("rebalance.token")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.amount")}</th>
-                    <th className="pb-3 pr-4 text-right">{t("rebalance.feesSlip")}</th>
-                    <th className="pb-3 text-right">{t("rebalance.cashAfter")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {suggestionsData.executionSteps.map((step) => (
-                    <tr key={step.step} className="border-b border-border-subtle">
-                      <td className="py-3 pr-4 text-text-subtle">#{step.step}</td>
-                      <td className="py-3 pr-4">
-                        <span className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(step.action)}`}>
-                          {step.action}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 font-medium text-text-primary">{step.tokenSymbol}</td>
-                      <td className="py-3 pr-4 text-right">{formatUsd(step.amount)}</td>
-                      <td className="py-3 pr-4 text-right text-text-subtle">
-                        {formatUsd(step.estimatedSlippage + step.estimatedFee)}
-                      </td>
-                      <td className={`py-3 text-right font-medium ${step.runningCashAfter >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-                        {formatUsd(step.runningCashAfter)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <ExecutionPlanSection steps={suggestionsData.executionSteps} />
       )}
 
       {/* ── DCA Schedule ─────────────────────────────────────── */}
-      {showAnalysisPhase && suggestionsData?.dcaChunks && suggestionsData.dcaChunks.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-status-info" />
-              {t("rebalance.dcaSchedule")} ({suggestionsData.dcaTotalChunks} {t("rebalance.chunks")}, {t("rebalance.every")} {suggestionsData.dcaIntervalDays} {t("rebalance.days")})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="mb-3 text-sm text-text-subtle">
-              {t("rebalance.dcaDescription", { chunks: suggestionsData.dcaTotalChunks ?? 0 })}
-            </p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-left text-text-subtle">
-                    <th className="pb-2 pr-4">{t("rebalance.chunk")}</th>
-                    <th className="pb-2 pr-4">{t("rebalance.date")}</th>
-                    <th className="pb-2">{t("rebalance.tradesLabel")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {suggestionsData.dcaChunks.map((chunk) => (
-                    <tr key={chunk.chunkIndex} className="border-b border-border-subtle">
-                      <td className="py-2 pr-4 text-text-muted">#{chunk.chunkIndex}</td>
-                      <td className="py-2 pr-4 text-text-primary">{chunk.scheduledDate}</td>
-                      <td className="py-2">
-                        <div className="flex flex-wrap gap-2">
-                          {chunk.trades.map((trade) => (
-                            <span
-                              key={trade.tokenSymbol}
-                              className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${
-                                trade.action === "buy"
-                                  ? "bg-status-positive-soft text-status-positive"
-                                  : "bg-status-negative-soft text-status-negative"
-                              }`}
-                            >
-                              {trade.action.toUpperCase()} {trade.tokenSymbol} {formatUsd(trade.amount)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {showAnalysisPhase &&
+      suggestionsData?.dcaChunks &&
+      suggestionsData.dcaChunks.length > 0 ? (
+        <DcaScheduleSection
+          chunks={suggestionsData.dcaChunks}
+          totalChunks={suggestionsData.dcaTotalChunks ?? 0}
+          intervalDays={suggestionsData.dcaIntervalDays ?? 0}
+        />
+      ) : null}
 
-      {/* ── 8. Start Execution / Active Sessions ─────────────── */}
-      {showExecutionPhase && hasActionableSuggestions && activeSessions.length === 0 && !suggestionsData?.summary?.isWellBalanced && (
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-text-subtle">
-              {t("rebalance.readyToExecute")}
-            </p>
-            <Button
-              size="sm"
-              onClick={handleStartSession}
-              disabled={startSessionPending}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              {startSessionPending ? t("rebalance.starting") : t("rebalance.startExecution")}
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {showExecutionPhase && activeSessions.map((session) => {
-        const completedCount = session.trades.filter((t) => t.status === "completed").length;
-        const progress = session.trades.length > 0 ? (completedCount / session.trades.length) * 100 : 0;
-        return (
-          <Card key={session.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5 text-status-info" />
-                  {t("rebalance.activeSession")}
-                </CardTitle>
-                <span className="text-sm text-text-subtle">
-                  {completedCount}/{session.trades.length} {t("rebalance.tradesLabel")}
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 h-2 w-full rounded-full bg-bg-muted">
-                <div
-                  className="h-2 rounded-full bg-status-info transition-all"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="space-y-2">
-                {session.trades.map((trade) => (
-                  <div
-                    key={trade.id}
-                    className="flex items-center justify-between rounded-md bg-bg-card px-4 py-2"
-                  >
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleTrade(session.id, trade.id)}
-                        className="text-text-subtle hover:text-text-primary"
-                        aria-label={`Toggle ${trade.tokenSymbol} trade as ${trade.status === "completed" ? "pending" : "completed"}`}
-                      >
-                        {trade.status === "completed" ? (
-                          <CheckCircle2 className="h-5 w-5 text-status-positive" />
-                        ) : (
-                          <div className="h-5 w-5 rounded-full border-2 border-border" />
-                        )}
-                      </button>
-                      <span className={trade.status === "completed" ? "text-text-dim line-through" : "text-text-primary"}>
-                        {trade.action.toUpperCase()} {trade.tokenSymbol}
-                      </span>
-                    </div>
-                    <span className="text-sm text-text-subtle">
-                      {formatUsd(trade.amountUsd)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleCompleteSession({ id: session.id, status: "completed" })}
-                  disabled={completeSessionPending}
-                >
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  {t("rebalance.complete")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleCompleteSession({ id: session.id, status: "cancelled" })}
-                  disabled={completeSessionPending}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  {t("rebalance.cancel")}
-                </Button>
-              </div>
-
-              {session.trades.every((t) => t.status === "completed") &&
-                recordingSessionId !== session.id && (
-                  <div className="mt-4 rounded-md border border-status-info-border bg-status-info-soft p-3">
-                    <p className="text-sm text-status-info">
-                      {t("rebalance.allTradesCompleted")}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setRecordingSessionId(session.id);
-                          setRecordingTrades(
-                            session.trades.map((t) => ({
-                              tokenSymbol: t.tokenSymbol,
-                              action: t.action,
-                              amountUsd: t.amountUsd,
-                              quantity: "",
-                            }))
-                          );
-                        }}
-                      >
-                        {t("rebalance.recordTransactions")}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          handleCompleteSession({
-                            id: session.id,
-                            status: "completed",
-                          })
-                        }
-                      >
-                        {t("rebalance.skip")}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-              {recordingSessionId === session.id && (
-                <div className="mt-4 space-y-3 rounded-md border border-border bg-bg-card p-3">
-                  <h5 className="text-sm font-medium text-text-muted">
-                    {t("rebalance.recordExecutedTrades")}
-                  </h5>
-                  <p className="text-xs text-text-dim">
-                    {t("rebalance.enterQuantities")}
-                  </p>
-                  {recordingTrades.map((trade, idx) => (
-                    <div key={idx} className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3">
-                      <span
-                        className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${
-                          trade.action === "buy"
-                            ? "border-status-positive-border bg-status-positive-soft text-status-positive"
-                            : "border-status-negative-border bg-status-negative-soft text-status-negative"
-                        }`}
-                      >
-                        {trade.action.toUpperCase()}
-                      </span>
-                      <span className="w-20 text-sm font-medium text-text-primary">
-                        {trade.tokenSymbol}
-                      </span>
-                      <span className="text-sm text-text-subtle">
-                        {formatUsd(trade.amountUsd)}
-                      </span>
-                      <Input
-                        type="number"
-                        placeholder={t("rebalance.quantity")}
-                        value={trade.quantity}
-                        onChange={(e) => {
-                          const updated = [...recordingTrades];
-                          updated[idx] = { ...updated[idx], quantity: e.target.value };
-                          setRecordingTrades(updated);
-                        }}
-                        className="w-full sm:w-32"
-                        min={0}
-                        step="any"
-                      />
-                    </div>
-                  ))}
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        handleRecordTransactions(recordingTrades);
-                      }}
-                      disabled={
-                        recordTransactionsPending ||
-                        recordingTrades.every((t) => !t.quantity || parseFloat(t.quantity) <= 0)
-                      }
-                    >
-                      {recordTransactionsPending ? t("rebalance.recording") : t("rebalance.saveAllTransactions")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setRecordingSessionId(null);
-                        setRecordingTrades([]);
-                        handleCompleteSession({
-                          id: session.id,
-                          status: "completed",
-                        });
-                      }}
-                    >
-                      {t("rebalance.cancel")}
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+      {showExecutionPhase ? (
+        <ActiveSessionsSection
+          showStartExecutionCallout={
+            hasActionableSuggestions &&
+            activeSessions.length === 0 &&
+            !suggestionsData?.summary?.isWellBalanced
+          }
+          startSessionPending={startSessionPending}
+          activeSessions={activeSessions}
+          completeSessionPending={completeSessionPending}
+          recordingSessionId={recordingSessionId}
+          recordingTrades={recordingTrades}
+          recordTransactionsPending={recordTransactionsPending}
+          onStartSession={handleStartSession}
+          onToggleTrade={handleToggleTrade}
+          onCompleteSession={handleCompleteSession}
+          onStartRecording={handleStartRecordingSession}
+          onUpdateRecordingTrade={handleUpdateRecordingTrade}
+          onSaveRecordedTrades={handleSaveRecordedTrades}
+          onCancelRecording={handleCancelRecordingSession}
+        />
+      ) : null}
 
       {/* ── 9. Past Sessions ─────────────────────────────────── */}
       {showExecutionPhase && (
@@ -2770,81 +2126,29 @@ export default function RebalancePage() {
       )}
 
       {/* ── 15. Rebalance History ────────────────────────────── */}
-      {showAnalysisPhase && logs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2"
-              onClick={() => setHistoryExpanded(!historyExpanded)}
-              aria-expanded={historyExpanded}
-            >
-              <Clock className="h-5 w-5" />
-              <CardTitle>{t("rebalance.history")}</CardTitle>
-              <span className="ml-auto flex items-center gap-2">
-                <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-subtle">
-                  {logs.length}
-                </span>
-                {historyExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-text-subtle" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-text-subtle" />
-                )}
-              </span>
-            </button>
-          </CardHeader>
-          {historyExpanded && (
-            <CardContent>
-              <div className="space-y-3">
-                {logs.slice(0, 10).map((log) => (
-                  <div
-                    key={log.id}
-                    className="rounded-md bg-bg-card px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-text-subtle">
-                        {new Date(log.loggedAt).toLocaleString()}
-                      </span>
-                      <span className="font-medium text-text-primary">
-                        {formatUsd(log.totalValueUsd)}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {log.deviationsSnapshot.map((d) => (
-                        <span
-                          key={d.tokenSymbol}
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                            Math.abs(d.deviation) > 5
-                              ? "bg-status-negative-soft text-status-negative"
-                              : Math.abs(d.deviation) > 1
-                                ? "bg-status-warning-soft text-status-warning"
-                                : "bg-status-positive-soft text-status-positive"
-                          }`}
-                        >
-                          {d.tokenSymbol}: {d.deviation >= 0 ? "+" : ""}
-                          {d.deviation.toFixed(1)}%
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          )}
-        </Card>
-      )}
+      {showAnalysisPhase ? <RebalanceHistorySection logs={logs} /> : null}
 
       {/* ── 16. Empty state ──────────────────────────────────── */}
       {(!suggestionsData || suggestionsData.targets.length === 0) &&
         targets.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="text-text-subtle">
-                {t("rebalance.emptyState")}
-              </p>
-            </CardContent>
-          </Card>
+          <EmptyState
+            title={t("rebalance.emptyState")}
+            description={t("rebalance.emptyStateHelp")}
+            action={
+              <Button
+                size="sm"
+                onClick={() => {
+                  setActivePhase("setup");
+                  setPhaseInitialized(true);
+                }}
+              >
+                {t("rebalance.phaseSetup")}
+              </Button>
+            }
+            className="py-12"
+          />
         )}
+      </SectionPanel>
 
       {/* ── Confirm Dialog ───────────────────────────────────── */}
       <ConfirmDialog

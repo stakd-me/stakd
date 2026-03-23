@@ -134,6 +134,13 @@ export interface RebalanceTrade {
   status: string;
 }
 
+export interface RecordedTradeDraft {
+  tokenSymbol: string;
+  action: string;
+  amountUsd: number;
+  quantity: string;
+}
+
 export interface WhatIfResult {
   tokenSymbol: string;
   currentPercent: number;

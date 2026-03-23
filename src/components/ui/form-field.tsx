@@ -35,7 +35,9 @@ export function FormField({
       </label>
       {children}
       {error ? (
-        <p className="text-xs text-status-negative">{error}</p>
+        <p className="text-xs text-status-negative" role="alert" aria-live="polite">
+          {error}
+        </p>
       ) : hint ? (
         <p className="text-xs text-text-dim">{hint}</p>
       ) : null}

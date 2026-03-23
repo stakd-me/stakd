@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useCallback } from "react";
+import { type ReactNode, useEffect, useRef, useCallback, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 
@@ -29,6 +29,8 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
+  const descriptionId = useId();
 
   // Focus trap + ESC close
   const handleKeyDown = useCallback(
@@ -75,6 +77,8 @@ export function ConfirmDialog({
       );
       if (focusable && focusable.length > 0) {
         focusable[0].focus();
+      } else {
+        dialogRef.current?.focus();
       }
     });
 
@@ -100,8 +104,9 @@ export function ConfirmDialog({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby={description ? "confirm-dialog-desc" : undefined}
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        tabIndex={-1}
         className="relative mx-4 w-full max-w-md rounded-lg border border-border bg-bg-sidebar p-6 shadow-xl animate-fade-in-scale"
       >
         <div className="flex items-start gap-4">
@@ -111,11 +116,11 @@ export function ConfirmDialog({
             </div>
           )}
           <div className="flex-1">
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-text-primary">
+            <h3 id={titleId} className="text-lg font-semibold text-text-primary">
               {title}
             </h3>
             {description && (
-              <p id="confirm-dialog-desc" className="mt-1 text-sm text-text-subtle">
+              <p id={descriptionId} className="mt-1 text-sm text-text-subtle">
                 {description}
               </p>
             )}

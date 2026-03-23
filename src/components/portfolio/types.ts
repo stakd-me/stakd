@@ -1,0 +1,64 @@
+export interface BreakdownItem {
+  holdingKey: string;
+  symbol: string;
+  tokenName: string;
+  coingeckoId: string | null;
+  value: number;
+  percent: number;
+  color: string;
+  quantity: number;
+  avgCost: number;
+  currentPrice: number;
+  unrealizedPL: number;
+  unrealizedPLPercent: number;
+  realizedPL: number;
+  totalFees: number;
+  firstBuyDate: string | null;
+}
+
+export interface PortfolioTransaction {
+  id: string;
+  tokenSymbol: string;
+  tokenName: string;
+  type: string;
+  quantity: string;
+  pricePerUnit: string;
+  totalCost: string;
+  fee: string;
+  coingeckoId: string | null;
+  note: string | null;
+  transactedAt: string;
+}
+
+export interface ManualEntry {
+  id: string;
+  tokenSymbol: string;
+  tokenName: string;
+  coingeckoId: string | null;
+  quantity: number;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortfolioCoinListItem {
+  id: string;
+  symbol: string;
+  name: string;
+  binance: boolean;
+}
+
+export type PortfolioTxType = "buy" | "sell" | "receive" | "send";
+
+export interface ImportPreviewRow {
+  rowNumber: number;
+  dateIso: string;
+  type: PortfolioTxType;
+  symbol: string;
+  name: string;
+  quantity: number;
+  pricePerUnit: number;
+  fee: number;
+  note: string | null;
+  coingeckoId: string | null;
+}

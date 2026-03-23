@@ -82,6 +82,7 @@ export function Sidebar() {
         <button
           onClick={() => setMobileOpen(false)}
           className="rounded-md p-1 text-text-subtle hover:bg-bg-hover hover:text-text-primary md:hidden"
+          aria-label={t("nav.closeMenu")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -164,6 +165,9 @@ export function Sidebar() {
 
       <aside
         id="mobile-sidebar"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("nav.title")}
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-56 flex-col border-r border-border-subtle bg-bg-sidebar transition-transform duration-200 md:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"

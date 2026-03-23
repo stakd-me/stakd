@@ -1,14 +1,26 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { HoldingsSection } from "@/components/portfolio/holdings-section";
+import { ImportReviewModal } from "@/components/portfolio/import-review-modal";
+import { ManualEntriesSection } from "@/components/portfolio/manual-entries-section";
+import { TransactionsSection } from "@/components/portfolio/transactions-section";
+import type {
+  BreakdownItem,
+  ImportPreviewRow,
+  ManualEntry,
+  PortfolioCoinListItem as CoinListItem,
+  PortfolioTransaction as Transaction,
+  PortfolioTxType,
+} from "@/components/portfolio/types";
 import { PageHeader } from "@/components/ui/page-header";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { cn, formatUsd, formatUsdPrice, formatCrypto, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
-import { Plus, Search, Trash2, Minus, Pencil, X, Download, Upload, Copy, Package, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { cn, formatUsd, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
+import { Plus, Search, Download, Upload, Package, RefreshCw } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -19,72 +31,9 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
 
-interface BreakdownItem {
-  holdingKey: string;
-  symbol: string;
-  tokenName: string;
-  coingeckoId: string | null;
-  value: number;
-  percent: number;
-  color: string;
-  quantity: number;
-  avgCost: number;
-  currentPrice: number;
-  unrealizedPL: number;
-  unrealizedPLPercent: number;
-  realizedPL: number;
-  totalFees: number;
-  firstBuyDate: string | null;
-}
-
-interface Transaction {
-  id: string;
-  tokenSymbol: string;
-  tokenName: string;
-  type: string;
-  quantity: string;
-  pricePerUnit: string;
-  totalCost: string;
-  fee: string;
-  coingeckoId: string | null;
-  note: string | null;
-  transactedAt: string;
-}
-
-interface ManualEntry {
-  id: string;
-  tokenSymbol: string;
-  tokenName: string;
-  coingeckoId: string | null;
-  quantity: number;
-  note: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CoinListItem {
-  id: string;
-  symbol: string;
-  name: string;
-  binance: boolean;
-}
-
-type TxType = "buy" | "sell" | "receive" | "send";
+type TxType = PortfolioTxType;
 type CsvRequiredColumn = "date" | "symbol" | "quantity" | "price";
 type PortfolioSection = "holdings" | "transactions" | "manual" | "all";
-
-interface ImportPreviewRow {
-  rowNumber: number;
-  dateIso: string;
-  type: TxType;
-  symbol: string;
-  name: string;
-  quantity: number;
-  pricePerUnit: number;
-  fee: number;
-  note: string | null;
-  coingeckoId: string | null;
-}
 
 const CSV_HEADER_ALIASES: Record<string, string[]> = {
   date: ["date", "transactedat", "timestamp", "datetime"],
@@ -244,6 +193,7 @@ function getHeldDuration(
 }
 
 export default function PortfolioPage() {
+  const sectionsBaseId = "portfolio-sections";
   const { toast } = useToast();
   const { t } = useTranslation();
   const { ensurePrices } = usePrices();
@@ -264,6 +214,8 @@ export default function PortfolioPage() {
   const [search, setSearch] = useState("");
   const [refreshingPrices, setRefreshingPrices] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const importDialogRef = useRef<HTMLDivElement>(null);
+  const previousImportFocusRef = useRef<HTMLElement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsPerPage, setTransactionsPerPage] = useState<number>(
@@ -292,6 +244,7 @@ export default function PortfolioPage() {
 
   // Import modal state
   const [showImportModal, setShowImportModal] = useState(false);
+  const [importFileName, setImportFileName] = useState("");
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
   const [importValidationErrors, setImportValidationErrors] = useState<string[]>([]);
   const [importError, setImportError] = useState<string | null>(null);
@@ -841,6 +794,7 @@ export default function PortfolioPage() {
   };
 
   const resetImportState = useCallback(() => {
+    setImportFileName("");
     setImportPreview([]);
     setImportValidationErrors([]);
     setImportError(null);
@@ -858,6 +812,7 @@ export default function PortfolioPage() {
   }, []);
 
   const parseCsvFile = (file: File) => {
+    setImportFileName(file.name);
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -1284,6 +1239,51 @@ export default function PortfolioPage() {
     submittingInline,
   ]);
 
+  useEffect(() => {
+    if (!showImportModal) return;
+
+    previousImportFocusRef.current = document.activeElement as HTMLElement;
+
+    const handleImportModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab" || !importDialogRef.current) return;
+
+      const focusable = importDialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleImportModalKeyDown);
+    requestAnimationFrame(() => {
+      const focusable = importDialogRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable && focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        importDialogRef.current?.focus();
+      }
+    });
+
+    return () => {
+      document.removeEventListener("keydown", handleImportModalKeyDown);
+      previousImportFocusRef.current?.focus();
+    };
+  }, [showImportModal]);
+
   const manualEntryQuantityValid =
     Number.isFinite(parseFloat(meQuantity)) && parseFloat(meQuantity) > 0;
   const manualEntryInitialPriceValid =
@@ -1303,6 +1303,244 @@ export default function PortfolioPage() {
     if (activeSection === "manual") return manualEntries.length > 0;
     return breakdown.length > 0 || transactions.length > 0 || manualEntries.length > 0;
   })();
+  const importReadyCount = importPreview.length;
+  const importIssueCount = importValidationErrors.length;
+  const importHasReviewState =
+    importFileName.length > 0 ||
+    importReadyCount > 0 ||
+    importIssueCount > 0 ||
+    importError !== null;
+  const importIsReady =
+    importReadyCount > 0 && importIssueCount === 0 && importError === null;
+
+  const getHeldDurationBadge = (firstBuyDate: string | null) => {
+    if (!firstBuyDate) return "-";
+    const heldDuration = getHeldDuration(firstBuyDate);
+    if (!heldDuration) return "-";
+
+    return (
+      <span
+        className={cn(
+          "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+          heldDuration.days >= 365
+            ? "bg-status-positive-soft text-status-positive"
+            : "bg-status-warning-soft text-status-warning"
+        )}
+      >
+        {heldDuration.label}
+      </span>
+    );
+  };
+
+  const getTransactionTypeBadgeClass = (type: string) => {
+    if (type === "buy") {
+      return "bg-status-positive-soft text-status-positive";
+    }
+    if (type === "sell") {
+      return "bg-status-negative-soft text-status-negative";
+    }
+    if (type === "receive") {
+      return "bg-status-info-soft text-status-info";
+    }
+    return "bg-status-caution-soft text-status-caution";
+  };
+
+  const renderHoldingInlineForm = (item: BreakdownItem) => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {(["buy", "sell", "receive", "send"] as const).map((typ) => (
+          <button
+            key={typ}
+            type="button"
+            onClick={() => setTxType(typ)}
+            className={`rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors ${getTxTypeToggleClass(
+              typ,
+              txType === typ
+            )}`}
+          >
+            {typ.charAt(0).toUpperCase() + typ.slice(1)}
+          </button>
+        ))}
+        <span className="text-sm font-medium text-text-muted">
+          {item.symbol}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("portfolio.quantity")} *
+          </label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            placeholder="0.00"
+            value={inlineQty}
+            onChange={(e) => setInlineQty(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("portfolio.pricePerUnit")}
+          </label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            placeholder="0.00"
+            value={inlinePrice}
+            onChange={(e) => setInlinePrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("common.date")}
+          </label>
+          <Input
+            type="datetime-local"
+            value={inlineDate}
+            onChange={(e) => setInlineDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("common.note") + " (" + t("common.optional") + ")"}
+          </label>
+          <Input
+            placeholder={t("common.note") + "..."}
+            value={inlineNote}
+            onChange={(e) => setInlineNote(e.target.value)}
+          />
+        </div>
+      </div>
+      {inlineQty && inlinePrice && (
+        <div className="text-xs text-text-subtle">
+          {t("common.total") + ":"}{" "}
+          {formatUsd(parseFloat(inlineQty || "0") * parseFloat(inlinePrice || "0"))}
+        </div>
+      )}
+      {inlineError && (
+        <div className="text-xs text-status-negative" role="alert" aria-live="assertive">
+          {inlineError}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={closeInlineForm}
+        >
+          {t("common.cancel")}
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => handleInlineSubmit(item)}
+          disabled={submittingInline}
+          className={getTxTypeActionButtonClass(txType)}
+        >
+          {submittingInline
+            ? t("common.saving")
+            : `${txType.charAt(0).toUpperCase() + txType.slice(1)} ${item.symbol}`}
+        </Button>
+      </div>
+    </div>
+  );
+
+  const renderTransactionEditForm = (tx: Transaction) => (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {(["buy", "sell", "receive", "send"] as const).map((typ) => (
+          <button
+            key={typ}
+            type="button"
+            onClick={() => setEditType(typ)}
+            className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${getTxTypeToggleClass(
+              typ,
+              editType === typ
+            )}`}
+          >
+            {typ.charAt(0).toUpperCase() + typ.slice(1)}
+          </button>
+        ))}
+        <span className="ml-1 self-center text-sm font-medium text-text-muted">
+          {tx.tokenSymbol}
+        </span>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("portfolio.quantity")} *
+          </label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={editQty}
+            onChange={(e) => setEditQty(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("portfolio.pricePerUnit")}
+          </label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={editPrice}
+            onChange={(e) => setEditPrice(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("common.date")}
+          </label>
+          <Input
+            type="datetime-local"
+            value={editDate}
+            onChange={(e) => setEditDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
+            {t("common.note") + " (" + t("common.optional") + ")"}
+          </label>
+          <Input
+            value={editNote}
+            onChange={(e) => setEditNote(e.target.value)}
+            placeholder={t("common.note") + "..."}
+          />
+        </div>
+      </div>
+      {editQty && editPrice && (
+        <div className="text-xs text-text-subtle">
+          {t("common.total") + ":"}{" "}
+          {formatUsd(parseFloat(editQty || "0") * parseFloat(editPrice || "0"))}
+        </div>
+      )}
+      {editError && (
+        <div className="text-xs text-status-negative" role="alert" aria-live="assertive">
+          {editError}
+        </div>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setEditingTx(null)}
+        >
+          {t("common.cancel")}
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleEditSubmit}
+          disabled={submittingEdit}
+        >
+          {submittingEdit ? t("common.saving") : t("portfolio.saveChanges")}
+        </Button>
+      </div>
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -1367,41 +1605,86 @@ export default function PortfolioPage() {
         }
       />
 
+      <SectionNavigator
+        baseId={sectionsBaseId}
+        label={t("portfolio.focusView")}
+        description={t("portfolio.subtitle")}
+        value={activeSection}
+        onChange={setActiveSection}
+        options={sectionOptions}
+        columnsClassName="grid-cols-2 xl:grid-cols-4"
+      />
+
       <Card className="p-4">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-text-primary">
-                {t("portfolio.focusView")}
-              </p>
-              <p className="text-xs text-text-dim">
-                {t("portfolio.subtitle")}
-              </p>
-            </div>
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-text-primary">
+              {t("portfolio.actionCenter")}
+            </p>
+            <p className="text-xs text-text-dim">
+              {t("portfolio.actionCenterDesc")}
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {sectionOptions.map((section) => (
-              <button
-                key={section.value}
-                type="button"
-                onClick={() => setActiveSection(section.value)}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                  activeSection === section.value
-                    ? "border-accent bg-accent/10 text-text-primary"
-                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
-                )}
-                aria-pressed={activeSection === section.value}
-              >
-                <span className="min-w-0 truncate font-medium">{section.label}</span>
-                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                  {section.count}
-                </span>
-              </button>
-            ))}
+
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <Link
+              href="/portfolio/add"
+              className="rounded-xl border border-border-subtle bg-bg-card p-4 transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+            >
+              <div className="mb-3 inline-flex rounded-lg bg-status-positive-soft p-2 text-status-positive">
+                <Plus className="h-4 w-4" />
+              </div>
+              <p className="text-sm font-semibold text-text-primary">
+                {t("portfolio.actionAddTitle")}
+              </p>
+              <p className="mt-1 text-sm text-text-subtle">
+                {t("portfolio.actionAddDesc")}
+              </p>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => openImportModal(true)}
+              className="rounded-xl border border-border-subtle bg-bg-card p-4 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+            >
+              <div className="mb-3 inline-flex rounded-lg bg-status-info-soft p-2 text-status-info">
+                <Upload className="h-4 w-4" />
+              </div>
+              <p className="text-sm font-semibold text-text-primary">
+                {t("portfolio.actionImportTitle")}
+              </p>
+              <p className="mt-1 text-sm text-text-subtle">
+                {t("portfolio.actionImportDesc")}
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSection("manual");
+                setShowManualEntries(true);
+              }}
+              className="rounded-xl border border-border-subtle bg-bg-card p-4 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+            >
+              <div className="mb-3 inline-flex rounded-lg bg-status-caution-soft p-2 text-status-caution">
+                <Package className="h-4 w-4" />
+              </div>
+              <p className="text-sm font-semibold text-text-primary">
+                {t("portfolio.actionQuickAddTitle")}
+              </p>
+              <p className="mt-1 text-sm text-text-subtle">
+                {t("portfolio.actionQuickAddDesc")}
+              </p>
+            </button>
           </div>
+
+          <p className="text-xs text-text-dim">
+            {t("portfolio.actionCenterHint")}
+          </p>
         </div>
       </Card>
+
+      <SectionPanel baseId={sectionsBaseId} value={activeSection}>
 
       {canSearchCurrentSection && (
         <div className="relative">
@@ -1465,790 +1748,133 @@ export default function PortfolioPage() {
           </CardContent>
         </Card>
       </div>
-
       {showManualSection && (
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className={cn(
-                "flex items-center gap-2",
-                activeSection !== "all" && "cursor-default"
-              )}
-              onClick={() => {
-                if (activeSection === "all") {
-                  setShowManualEntries(!showManualEntries);
-                }
-              }}
-            >
-              <CardTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                {t("portfolio.quickAddHoldings")}
-              </CardTitle>
-              {activeSection === "all" ? (
-                manualSectionExpanded ? (
-                  <ChevronUp className="h-5 w-5 text-text-subtle" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-text-subtle" />
-                )
-              ) : null}
-            </button>
-            {!manualSectionExpanded && manualEntries.length > 0 && (
-              <span className="text-xs text-text-dim">
-                {t("portfolio.manualEntries", { count: manualEntries.length })}
-              </span>
-            )}
-          </div>
-        </CardHeader>
-        {manualSectionExpanded && (
-          <CardContent>
-            <p className="mb-4 text-sm text-text-subtle">
-              {t("portfolio.enterHoldings")}
-            </p>
-
-            {/* Add entry form */}
-            <div className="mb-4 space-y-3 rounded-lg border border-border bg-bg-card p-4">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
-                <div className="relative">
-                  <label className="mb-1 block text-xs text-text-subtle">{t("portfolio.symbol")}</label>
-                  <Input
-                    placeholder={t("portfolioAdd.tokenSymbolPlaceholder")}
-                    value={meSymbol}
-                    onChange={(e) => {
-                      setMeSymbol(e.target.value.toUpperCase());
-                      setShowManualSymbolSuggestions(true);
-                    }}
-                    onFocus={() => setShowManualSymbolSuggestions(true)}
-                    onBlur={() => {
-                      window.setTimeout(() => setShowManualSymbolSuggestions(false), 120);
-                    }}
-                    autoComplete="off"
-                  />
-                  {showManualSymbolSuggestions &&
-                    manualSymbolSuggestions.length > 0 && (
-                      <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-72 overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
-                        {manualSymbolSuggestions.map((coin) => (
-                          <button
-                            key={coin.id}
-                            type="button"
-                            className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-bg-hover"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => selectManualSymbolSuggestion(coin)}
-                          >
-                            <div className="flex min-w-0 items-center">
-                              <span className="font-semibold text-text-primary">
-                                {coin.symbol.toUpperCase()}
-                              </span>
-                              <span className="ml-2 truncate text-text-subtle">
-                                {coin.name}
-                              </span>
-                            </div>
-                            {coin.binance && (
-                              <span className="ml-2 shrink-0 rounded bg-status-info-soft px-1.5 py-0.5 text-[10px] text-status-info">
-                                Binance
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-subtle">{t("portfolio.name")}</label>
-                  <Input
-                    placeholder={t("portfolioAdd.tokenNamePlaceholder")}
-                    value={meName}
-                    onChange={(e) => setMeName(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-subtle">{t("portfolio.coingeckoId")}</label>
-                  <Input
-                    placeholder={t("portfolioAdd.coingeckoIdPlaceholder")}
-                    value={meCoingeckoId}
-                    onChange={(e) => setMeCoingeckoId(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-subtle">{t("portfolio.quantity")}</label>
-                  <Input
-                    type="number"
-                    placeholder="0.5"
-                    min={0}
-                    step="any"
-                    value={meQuantity}
-                    onChange={(e) => setMeQuantity(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-subtle">{t("portfolio.manualInitialPrice")}</label>
-                  <Input
-                    type="number"
-                    placeholder={t("portfolio.manualInitialPricePlaceholder")}
-                    min={0}
-                    step="any"
-                    value={meInitialPrice}
-                    onChange={(e) => setMeInitialPrice(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-text-subtle">{t("common.note")}</label>
-                  <Input
-                    placeholder={t("common.optional")}
-                    value={meNote}
-                    onChange={(e) => setMeNote(e.target.value)}
-                  />
-                </div>
-              </div>
-              <p className="text-xs text-text-dim">
-                {t("portfolio.manualInitialPriceHint")}
-              </p>
-              <Button
-                size="sm"
-                onClick={() => {
-                  if (!meSymbol || !meName || !meQuantity) {
-                    toast(t("portfolio.requiredFields"), "error");
-                    return;
-                  }
-                  if (!manualEntryQuantityValid) {
-                    toast(t("portfolio.validationQuantityPositive"), "error");
-                    return;
-                  }
-                  if (!manualEntryInitialPriceValid) {
-                    toast(t("portfolio.validationPriceNonNegative"), "error");
-                    return;
-                  }
-                  handleAddManualEntry({
-                    tokenSymbol: meSymbol,
-                    tokenName: meName,
-                    coingeckoId: meCoingeckoId,
-                    quantity: meQuantity,
-                    initialPrice: meInitialPrice,
-                    note: meNote,
-                  });
-                }}
-                disabled={
-                  addingManualEntry ||
-                  !meSymbol.trim() ||
-                  !meName.trim() ||
-                  !manualEntryQuantityValid ||
-                  !manualEntryInitialPriceValid
-                }
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                {addingManualEntry ? t("portfolio.adding") : t("portfolio.addManualEntry")}
-              </Button>
-            </div>
-
-            {/* Existing entries list */}
-            {manualEntries.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-text-muted">{t("portfolio.currentManualEntries")}</h4>
-                {filteredManualEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="flex items-center justify-between rounded-md bg-bg-card px-4 py-2.5"
-                  >
-                    {editingEntryId === entry.id ? (
-                      <div className="flex flex-1 items-center gap-3">
-                        <span className="w-16 font-medium text-text-primary">{entry.tokenSymbol}</span>
-                        <Input
-                          type="number"
-                          value={editEntryQty}
-                          onChange={(e) => setEditEntryQty(e.target.value)}
-                          className="w-32"
-                          min={0}
-                          step="any"
-                        />
-                        <Input
-                          value={editEntryNote}
-                          onChange={(e) => setEditEntryNote(e.target.value)}
-                          placeholder={t("common.note")}
-                          className="w-40"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleUpdateManualEntry({
-                              id: entry.id,
-                              quantity: editEntryQty,
-                              note: editEntryNote,
-                            })
-                          }
-                          disabled={
-                            updatingManualEntry ||
-                            !Number.isFinite(parseFloat(editEntryQty)) ||
-                            parseFloat(editEntryQty) <= 0
-                          }
-                        >
-                          {t("common.save")}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setEditingEntryId(null)}
-                        >
-                          {t("common.cancel")}
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center gap-4">
-                          <span className="font-medium text-text-primary">{entry.tokenSymbol}</span>
-                          <span className="text-sm text-text-muted">{entry.tokenName}</span>
-                          <span className="font-mono text-sm text-text-tertiary">
-                            {formatCrypto(entry.quantity)}
-                          </span>
-                          {entry.coingeckoId && (
-                            <span className="text-xs text-text-dim">{entry.coingeckoId}</span>
-                          )}
-                          {entry.note && (
-                            <span className="text-xs text-text-dim italic">{entry.note}</span>
-                          )}
-                          <span className="inline-flex rounded-full bg-status-info-soft px-2 py-0.5 text-xs text-status-info">
-                            {t("portfolio.manual")}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-text-subtle hover:text-text-primary"
-                            onClick={() => {
-                              setEditingEntryId(entry.id);
-                              setEditEntryQty(entry.quantity.toString());
-                              setEditEntryNote(entry.note || "");
-                            }}
-                            aria-label={`${t("common.edit")} ${entry.tokenSymbol}`}
-                            title={`${t("common.edit")} ${entry.tokenSymbol}`}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-text-subtle hover:text-status-negative"
-                            onClick={() => setDeleteManualTarget(entry)}
-                            disabled={deletingManualEntry}
-                            aria-label={`${t("common.delete")} ${entry.tokenSymbol}`}
-                            title={`${t("common.delete")} ${entry.tokenSymbol}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-                {search.trim() && filteredManualEntries.length === 0 && (
-                  <p className="text-sm text-text-subtle">{t("portfolio.noMatch")}</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        )}
-      </Card>
+        <ManualEntriesSection
+          isAllSectionsView={activeSection === "all"}
+          manualSectionExpanded={manualSectionExpanded}
+          manualEntriesCount={manualEntries.length}
+          manualEntries={manualEntries}
+          filteredManualEntries={filteredManualEntries}
+          search={search}
+          meSymbol={meSymbol}
+          meName={meName}
+          meCoingeckoId={meCoingeckoId}
+          meQuantity={meQuantity}
+          meInitialPrice={meInitialPrice}
+          meNote={meNote}
+          showManualSymbolSuggestions={showManualSymbolSuggestions}
+          manualSymbolSuggestions={manualSymbolSuggestions}
+          manualEntryQuantityValid={manualEntryQuantityValid}
+          manualEntryInitialPriceValid={manualEntryInitialPriceValid}
+          addingManualEntry={addingManualEntry}
+          editingEntryId={editingEntryId}
+          editEntryQty={editEntryQty}
+          editEntryNote={editEntryNote}
+          updatingManualEntry={updatingManualEntry}
+          deletingManualEntry={deletingManualEntry}
+          onToggleExpanded={() => setShowManualEntries((value) => !value)}
+          onSetMeSymbol={setMeSymbol}
+          onSetShowManualSymbolSuggestions={setShowManualSymbolSuggestions}
+          onSelectManualSymbolSuggestion={selectManualSymbolSuggestion}
+          onSetMeName={setMeName}
+          onSetMeCoingeckoId={setMeCoingeckoId}
+          onSetMeQuantity={setMeQuantity}
+          onSetMeInitialPrice={setMeInitialPrice}
+          onSetMeNote={setMeNote}
+          onAddEntry={() => {
+            if (!meSymbol || !meName || !meQuantity) {
+              toast(t("portfolio.requiredFields"), "error");
+              return;
+            }
+            if (!manualEntryQuantityValid) {
+              toast(t("portfolio.validationQuantityPositive"), "error");
+              return;
+            }
+            if (!manualEntryInitialPriceValid) {
+              toast(t("portfolio.validationPriceNonNegative"), "error");
+              return;
+            }
+            handleAddManualEntry({
+              tokenSymbol: meSymbol,
+              tokenName: meName,
+              coingeckoId: meCoingeckoId,
+              quantity: meQuantity,
+              initialPrice: meInitialPrice,
+              note: meNote,
+            });
+          }}
+          onStartEditEntry={(entry) => {
+            setEditingEntryId(entry.id);
+            setEditEntryQty(entry.quantity.toString());
+            setEditEntryNote(entry.note || "");
+          }}
+          onSetEditEntryQty={setEditEntryQty}
+          onSetEditEntryNote={setEditEntryNote}
+          onSaveEditEntry={(entry) =>
+            handleUpdateManualEntry({
+              id: entry.id,
+              quantity: editEntryQty,
+              note: editEntryNote,
+            })
+          }
+          onCancelEditEntry={() => setEditingEntryId(null)}
+          onDeleteEntry={(entry) => setDeleteManualTarget(entry)}
+        />
       )}
 
       {showHoldingsSection && (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("portfolio.holdings")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {breakdown.length === 0 ? (
-            <p className="py-6 text-center text-text-subtle">
-              {t("portfolio.noHoldings")}
-            </p>
-          ) : filteredBreakdown.length === 0 ? (
-            <p className="py-6 text-center text-text-subtle">
-              {t("portfolio.noMatch")}
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-text-subtle">
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.token")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.qty")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.avgCost")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.price")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.value")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.unrealizedPL")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.realizedPL")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.fees")}</th>
-                    <th className="pb-3 pr-4 text-center font-medium">{t("portfolio.held")}</th>
-                    <th className="pb-3 text-center font-medium">{t("portfolio.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {filteredBreakdown.map((item) => {
-                    const holdingKey = getHoldingKey(item);
-                    return (
-                    <Fragment key={holdingKey}>
-                      <tr className="text-text-tertiary">
-                        <td className="py-3 pr-4 font-medium">{item.symbol}</td>
-                        <td className="py-3 pr-4 text-right font-mono">
-                          {formatCrypto(item.quantity)}
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {formatUsdPrice(item.avgCost)}
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {formatUsdPrice(item.currentPrice)}
-                        </td>
-                        <td className="py-3 pr-4 text-right font-medium">
-                          {formatUsd(item.value)}
-                        </td>
-                        <td className={`py-3 pr-4 text-right ${item.unrealizedPL >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-                          {item.unrealizedPL >= 0 ? "+" : ""}{formatUsd(item.unrealizedPL)}
-                          <span className="ml-1 text-xs">
-                            ({item.unrealizedPLPercent >= 0 ? "+" : ""}{item.unrealizedPLPercent.toFixed(1)}%)
-                          </span>
-                        </td>
-                        <td className={`py-3 pr-4 text-right ${item.realizedPL >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-                          {item.realizedPL >= 0 ? "+" : ""}{formatUsd(item.realizedPL)}
-                        </td>
-                        <td className="py-3 pr-4 text-right text-status-caution">
-                          {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
-                        </td>
-                        <td className="py-3 pr-4 text-center">
-                          {(() => {
-                            if (!item.firstBuyDate) return "-";
-                            const heldDuration = getHeldDuration(item.firstBuyDate);
-                            if (!heldDuration) return "-";
-                            return (
-                              <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${heldDuration.days >= 365 ? "bg-status-positive-soft text-status-positive" : "bg-status-warning-soft text-status-warning"}`}>
-                                {heldDuration.label}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="py-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-status-positive hover:text-status-positive hover:bg-status-positive-soft"
-                              onClick={() =>
-                                expandedHoldingKey === holdingKey && txType === "buy"
-                                  ? closeInlineForm()
-                                  : openInlineForm(item, "buy")
-                              }
-                              title={t("portfolio.addBuy")}
-                              aria-label={`${t("portfolio.addBuy")} ${item.symbol}`}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-status-negative hover:text-status-negative hover:bg-status-negative-soft"
-                              onClick={() =>
-                                expandedHoldingKey === holdingKey && txType === "sell"
-                                  ? closeInlineForm()
-                                  : openInlineForm(item, "sell")
-                              }
-                              title={t("portfolio.addSell")}
-                              aria-label={`${t("portfolio.addSell")} ${item.symbol}`}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-text-subtle hover:text-text-tertiary"
-                              onClick={() => handleRepeatLast(item)}
-                              title={t("portfolio.repeatLast")}
-                              aria-label={`${t("portfolio.repeatLast")} ${item.symbol}`}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Inline form row */}
-                      {expandedHoldingKey === holdingKey && (
-                        <tr className="bg-bg-card">
-                          <td colSpan={10} className="px-4 py-4">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                {(["buy", "sell", "receive", "send"] as const).map((typ) => (
-                                  <button
-                                    key={typ}
-                                    type="button"
-                                    onClick={() => setTxType(typ)}
-                                    className={`rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors ${getTxTypeToggleClass(
-                                      typ,
-                                      txType === typ
-                                    )}`}
-                                  >
-                                    {typ.charAt(0).toUpperCase() + typ.slice(1)}
-                                  </button>
-                                ))}
-                                <span className="text-sm font-medium text-text-muted">
-                                  {item.symbol}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("portfolio.quantity")} *
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={inlineQty}
-                                    onChange={(e) => setInlineQty(e.target.value)}
-                                    autoFocus
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("portfolio.pricePerUnit")}
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    placeholder="0.00"
-                                    value={inlinePrice}
-                                    onChange={(e) => setInlinePrice(e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("common.date")}
-                                  </label>
-                                  <Input
-                                    type="datetime-local"
-                                    value={inlineDate}
-                                    onChange={(e) => setInlineDate(e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("common.note") + " (" + t("common.optional") + ")"}
-                                  </label>
-                                  <Input
-                                    placeholder={t("common.note") + "..."}
-                                    value={inlineNote}
-                                    onChange={(e) => setInlineNote(e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                              {inlineQty && inlinePrice && (
-                                <div className="text-xs text-text-subtle">
-                                  {t("common.total") + ":"} {formatUsd(parseFloat(inlineQty || "0") * parseFloat(inlinePrice || "0"))}
-                                </div>
-                              )}
-                              {inlineError && (
-                                <div className="text-xs text-status-negative">
-                                  {inlineError}
-                                </div>
-                              )}
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={closeInlineForm}
-                                >
-                                  {t("common.cancel")}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleInlineSubmit(item)}
-                                  disabled={submittingInline}
-                                  className={getTxTypeActionButtonClass(txType)}
-                                >
-                                  {submittingInline
-                                    ? t("common.saving")
-                                    : `${txType.charAt(0).toUpperCase() + txType.slice(1)} ${item.symbol}`}
-                                </Button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  )})}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <HoldingsSection
+          breakdown={breakdown}
+          filteredBreakdown={filteredBreakdown}
+          expandedHoldingKey={expandedHoldingKey}
+          txType={txType}
+          getHoldingKey={getHoldingKey}
+          getHeldDurationBadge={getHeldDurationBadge}
+          renderHoldingInlineForm={renderHoldingInlineForm}
+          onOpenInlineForm={openInlineForm}
+          onCloseInlineForm={closeInlineForm}
+          onRepeatLast={handleRepeatLast}
+          onOpenManualSection={() => {
+            setActiveSection("manual");
+            setShowManualEntries(true);
+          }}
+        />
       )}
 
       {showTransactionsSection && (
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("portfolio.transactionHistory")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <p className="py-6 text-center text-text-subtle">
-              {t("portfolio.noTransactions")}
-            </p>
-          ) : filteredTransactions.length === 0 ? (
-            <p className="py-6 text-center text-text-subtle">
-              {t("portfolio.noTransactionsMatch")}
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border text-text-subtle">
-                    <th className="pb-3 pr-4 font-medium">{t("common.date")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.type")}</th>
-                    <th className="pb-3 pr-4 font-medium">{t("portfolio.token")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.qty")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("portfolio.price")}</th>
-                    <th className="pb-3 pr-4 text-right font-medium">{t("common.total")}</th>
-                    <th className="pb-3 text-right font-medium">{t("portfolio.actions")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {paginatedTransactions.map((tx) => (
-                    <Fragment key={tx.id}>
-                      <tr className="text-text-tertiary">
-                        <td className="py-3 pr-4 text-text-subtle">
-                          {new Date(tx.transactedAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 pr-4">
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                              tx.type === "buy"
-                                ? "bg-status-positive-soft text-status-positive"
-                                : tx.type === "sell"
-                                  ? "bg-status-negative-soft text-status-negative"
-                                  : tx.type === "receive"
-                                    ? "bg-status-info-soft text-status-info"
-                                    : "bg-status-caution-soft text-status-caution"
-                            }`}
-                          >
-                            {tx.type.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          <p className="font-medium">{tx.tokenSymbol}</p>
-                          <p className="text-xs text-text-subtle">{tx.tokenName}</p>
-                        </td>
-                        <td className="py-3 pr-4 text-right font-mono">
-                          {formatCrypto(tx.quantity)}
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {formatUsdPrice(parseFloat(tx.pricePerUnit))}
-                        </td>
-                        <td className="py-3 pr-4 text-right">
-                          {formatUsd(parseFloat(tx.totalCost))}
-                        </td>
-                        <td className="py-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-text-subtle hover:text-text-tertiary"
-                              onClick={() =>
-                                editingTx?.id === tx.id
-                                  ? setEditingTx(null)
-                                  : openEditForm(tx)
-                              }
-                              title={
-                                editingTx?.id === tx.id
-                                  ? t("common.close")
-                                  : t("portfolio.editTransaction")
-                              }
-                              aria-label={
-                                editingTx?.id === tx.id
-                                  ? t("common.close")
-                                  : `${t("portfolio.editTransaction")} ${tx.tokenSymbol}`
-                              }
-                            >
-                              {editingTx?.id === tx.id ? (
-                                <X className="h-4 w-4" />
-                              ) : (
-                                <Pencil className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-status-negative hover:text-status-negative"
-                              onClick={() => setDeleteTarget(tx)}
-                              disabled={deletingTx}
-                              title={t("portfolio.deleteTransaction")}
-                              aria-label={`${t("portfolio.deleteTransaction")} ${tx.tokenSymbol}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-
-                      {/* Inline edit form */}
-                      {editingTx?.id === tx.id && (
-                        <tr className="bg-bg-card">
-                          <td colSpan={7} className="px-4 py-4">
-                            <div className="space-y-3">
-                              <div className="flex gap-2">
-                                {(["buy", "sell", "receive", "send"] as const).map((typ) => (
-                                  <button
-                                    key={typ}
-                                    type="button"
-                                    onClick={() => setEditType(typ)}
-                                    className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${getTxTypeToggleClass(
-                                      typ,
-                                      editType === typ
-                                    )}`}
-                                  >
-                                    {typ.charAt(0).toUpperCase() + typ.slice(1)}
-                                  </button>
-                                ))}
-                                <span className="ml-1 self-center text-sm font-medium text-text-muted">
-                                  {tx.tokenSymbol}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("portfolio.quantity")} *
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={editQty}
-                                    onChange={(e) => setEditQty(e.target.value)}
-                                    autoFocus
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("portfolio.pricePerUnit")}
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    step="any"
-                                    min="0"
-                                    value={editPrice}
-                                    onChange={(e) => setEditPrice(e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("common.date")}
-                                  </label>
-                                  <Input
-                                    type="datetime-local"
-                                    value={editDate}
-                                    onChange={(e) => setEditDate(e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-xs text-text-subtle">
-                                    {t("common.note") + " (" + t("common.optional") + ")"}
-                                  </label>
-                                  <Input
-                                    value={editNote}
-                                    onChange={(e) => setEditNote(e.target.value)}
-                                    placeholder={t("common.note") + "..."}
-                                  />
-                                </div>
-                              </div>
-                              {editQty && editPrice && (
-                                <div className="text-xs text-text-subtle">
-                                  {t("common.total") + ":"} {formatUsd(parseFloat(editQty || "0") * parseFloat(editPrice || "0"))}
-                                </div>
-                              )}
-                              {editError && (
-                                <div className="text-xs text-status-negative">
-                                  {editError}
-                                </div>
-                              )}
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setEditingTx(null)}
-                                >
-                                  {t("common.cancel")}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={handleEditSubmit}
-                                  disabled={submittingEdit}
-                                >
-                                  {submittingEdit ? t("common.saving") : t("portfolio.saveChanges")}
-                                </Button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                </tbody>
-              </table>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-text-subtle">
-                  {t("portfolio.transactionRange", {
-                    from: transactionRange.from,
-                    to: transactionRange.to,
-                    total: transactionRange.total,
-                  })}
-                </p>
-                <div className="flex items-center gap-2">
-                  <label htmlFor="transactions-per-page" className="text-xs text-text-subtle">
-                    {t("portfolio.rowsPerPage")}
-                  </label>
-                  <Select
-                    id="transactions-per-page"
-                    value={String(transactionsPerPage)}
-                    onChange={(e) => setTransactionsPerPage(Number(e.target.value))}
-                    className="h-8 w-20 px-2 py-1 text-xs"
-                  >
-                    {TRANSACTION_PAGE_SIZE_OPTIONS.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setTransactionsPage((prev) => Math.max(1, prev - 1))}
-                    disabled={transactionsPage <= 1}
-                  >
-                    {t("portfolio.prevPage")}
-                  </Button>
-                  <span className="text-xs text-text-subtle">
-                    {t("portfolio.pageOf", {
-                      page: transactionsPage,
-                      total: totalTransactionPages,
-                    })}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1))
-                    }
-                    disabled={transactionsPage >= totalTransactionPages}
-                  >
-                    {t("portfolio.nextPage")}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <TransactionsSection
+          transactions={transactions}
+          filteredTransactions={filteredTransactions}
+          paginatedTransactions={paginatedTransactions}
+          editingTransactionId={editingTx?.id ?? null}
+          deletingTransaction={deletingTx}
+          transactionsPerPage={transactionsPerPage}
+          transactionsPage={transactionsPage}
+          totalTransactionPages={totalTransactionPages}
+          transactionRange={transactionRange}
+          renderTransactionEditForm={renderTransactionEditForm}
+          getTransactionTypeBadgeClass={getTransactionTypeBadgeClass}
+          onToggleEdit={(tx) => {
+            if (editingTx?.id === tx.id) {
+              setEditingTx(null);
+              return;
+            }
+            openEditForm(tx);
+          }}
+          onDelete={(tx) => setDeleteTarget(tx)}
+          onSetTransactionsPerPage={setTransactionsPerPage}
+          onPreviousPage={() =>
+            setTransactionsPage((prev) => Math.max(1, prev - 1))
+          }
+          onNextPage={() =>
+            setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1))
+          }
+          onOpenImportModal={() => openImportModal(true)}
+          pageSizeOptions={TRANSACTION_PAGE_SIZE_OPTIONS}
+        />
       )}
+
+      </SectionPanel>
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -2276,113 +1902,22 @@ export default function PortfolioPage() {
         variant="danger"
       />
 
-      {/* Import CSV Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <Card className="mx-4 w-full max-w-2xl">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>{t("portfolio.importTitle")}</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeImportModal}
-                  aria-label={t("common.close")}
-                  title={t("common.close")}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-sm text-text-subtle">
-                    {t("portfolio.importDesc")}
-                  </label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        parseCsvFile(file);
-                      }
-                    }}
-                    className="block w-full text-sm text-text-subtle file:mr-4 file:rounded-md file:border-0 file:bg-bg-muted file:px-4 file:py-2 file:text-sm file:font-medium file:text-text-tertiary hover:file:bg-bg-hover"
-                  />
-                </div>
-                {importPreview.length > 0 && (
-                  <div>
-                    <p className="mb-2 text-sm text-text-subtle">
-                      {t("portfolio.preview", { count: importPreview.length })}
-                    </p>
-                    <div className="max-h-48 overflow-auto rounded border border-border">
-                      <table className="w-full text-xs">
-                        <thead>
-                          <tr className="border-b border-border text-text-subtle">
-                            <th className="px-2 py-1 text-left">#</th>
-                            <th className="px-2 py-1 text-left">{t("common.date")}</th>
-                            <th className="px-2 py-1 text-left">{t("portfolio.type")}</th>
-                            <th className="px-2 py-1 text-left">{t("portfolio.symbol")}</th>
-                            <th className="px-2 py-1 text-left">{t("portfolio.quantity")}</th>
-                            <th className="px-2 py-1 text-left">{t("portfolio.price")}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {importPreview.slice(0, 5).map((row, i) => (
-                            <tr key={i} className="border-b border-border-subtle">
-                              <td className="px-2 py-1 text-text-muted">{row.rowNumber}</td>
-                              <td className="px-2 py-1 text-text-muted">{row.dateIso.split("T")[0]}</td>
-                              <td className="px-2 py-1 text-text-muted">{row.type}</td>
-                              <td className="px-2 py-1 text-text-muted">{row.symbol}</td>
-                              <td className="px-2 py-1 text-text-muted">{row.quantity}</td>
-                              <td className="px-2 py-1 text-text-muted">{row.pricePerUnit}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      {importPreview.length > 5 && (
-                        <p className="px-2 py-1 text-xs text-text-dim">
-                          {t("portfolio.moreRows", { count: importPreview.length - 5 })}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-                {importError && (
-                  <p className="text-sm text-status-negative">{importError}</p>
-                )}
-                {importValidationErrors.length > 0 && (
-                  <ul className="list-disc space-y-1 pl-5 text-xs text-status-negative">
-                    {importValidationErrors.slice(0, 5).map((issue, idx) => (
-                      <li key={`${issue}-${idx}`}>{issue}</li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" onClick={closeImportModal}>
-                    {t("common.cancel")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleImportSubmit}
-                    disabled={
-                      importing ||
-                      importPreview.length === 0 ||
-                      importValidationErrors.length > 0
-                    }
-                  >
-                    {importing
-                      ? t("portfolio.importing")
-                      : t("portfolio.importCount", { count: importPreview.length })}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <ImportReviewModal
+        open={showImportModal}
+        dialogRef={importDialogRef}
+        importing={importing}
+        importFileName={importFileName}
+        importHasReviewState={importHasReviewState}
+        importReadyCount={importReadyCount}
+        importIssueCount={importIssueCount}
+        importPreview={importPreview}
+        importValidationErrors={importValidationErrors}
+        importError={importError}
+        importIsReady={importIsReady}
+        onClose={closeImportModal}
+        onFileSelect={parseCsvFile}
+        onSubmit={handleImportSubmit}
+      />
     </div>
   );
 }

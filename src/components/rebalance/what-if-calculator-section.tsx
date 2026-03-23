@@ -229,12 +229,13 @@ export function WhatIfCalculatorSection({
             {whatIfResults && (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-sm">
+                  <caption className="sr-only">{t("rebalance.whatIfCalc")}</caption>
                   <thead>
                     <tr className="border-b border-border text-left text-text-subtle">
-                      <th className="pb-2 pr-4">{t("rebalance.tokenCol")}</th>
-                      <th className="pb-2 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                      <th className="pb-2 pr-4 text-right">{t("rebalance.simulatedPercent")}</th>
-                      <th className="pb-2 text-right">{t("rebalance.change")}</th>
+                      <th scope="col" className="pb-2 pr-4">{t("rebalance.tokenCol")}</th>
+                      <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.currentPercent")}</th>
+                      <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.simulatedPercent")}</th>
+                      <th scope="col" className="pb-2 text-right">{t("rebalance.change")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -243,9 +244,9 @@ export function WhatIfCalculatorSection({
                         key={r.tokenSymbol}
                         className="border-b border-border-subtle"
                       >
-                        <td className="py-2 pr-4 font-medium text-text-primary">
+                        <th scope="row" className="py-2 pr-4 text-left font-medium text-text-primary">
                           {r.tokenSymbol}
-                        </td>
+                        </th>
                         <td className="py-2 pr-4 text-right">
                           {r.currentPercent.toFixed(1)}%
                         </td>

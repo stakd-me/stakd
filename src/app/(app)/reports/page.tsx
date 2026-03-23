@@ -2,8 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineHelpCard } from "@/components/ui/inline-help";
 import { PageHeader } from "@/components/ui/page-header";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { StatusPill } from "@/components/ui/status-pill";
+import { SummaryStrip } from "@/components/ui/summary-strip";
+import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { PortfolioLineChart } from "@/components/charts/portfolio-line";
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useVaultStore } from "@/lib/store";
@@ -47,14 +54,16 @@ function triggerDownload(filename: string, content: string, mimeType: string): v
   URL.revokeObjectURL(url);
 }
 
-function getDataQualityClass(level: PortfolioPeriodReport["dataQuality"]["level"]): string {
+function getDataQualityTone(
+  level: PortfolioPeriodReport["dataQuality"]["level"]
+): "success" | "caution" | "danger" {
   if (level === "exact") {
-    return "border-status-positive-border bg-status-positive-soft text-status-positive";
+    return "success";
   }
   if (level === "estimated") {
-    return "border-status-caution-border bg-status-caution-soft text-status-caution";
+    return "caution";
   }
-  return "border-status-negative-border bg-status-negative-soft text-status-negative";
+  return "danger";
 }
 
 function toCsv(report: PortfolioPeriodReport): string {
@@ -136,6 +145,7 @@ function toCsv(report: PortfolioPeriodReport): string {
 }
 
 export default function ReportsPage() {
+  const sectionsBaseId = "reports-sections";
   const [period, setPeriod] = useState<ReportPeriod>("monthly");
   const [activeSection, setActiveSection] = useState<ReportsSection>("overview");
   const { format: formatValue } = useCurrency();
@@ -228,6 +238,17 @@ export default function ReportsPage() {
     ],
     [report.topHoldings.length, t]
   );
+  const timelineChartSummary = useMemo(() => {
+    if (reportTimeline.length === 0) return "";
+    const firstPoint = reportTimeline[0];
+    const lastPoint = reportTimeline[reportTimeline.length - 1];
+    return t("reports.timelineChartSummary", {
+      count: reportTimeline.length,
+      start: new Date(firstPoint.date).toLocaleDateString(),
+      end: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.value),
+    });
+  }, [reportTimeline, t]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -240,51 +261,49 @@ export default function ReportsPage() {
         description={t("reports.subtitle")}
         actions={
           <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              triggerDownload(
-                `portfolio-report-${report.period}-${report.window.label}.json`,
-                JSON.stringify(report, null, 2),
-                "application/json"
-              )
-            }
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {t("reports.exportJson")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              triggerDownload(
-                `portfolio-report-${report.period}-${report.window.label}.csv`,
-                toCsv(report),
-                "text/csv;charset=utf-8"
-              )
-            }
-          >
-            <Download className="mr-2 h-4 w-4" />
-            {t("reports.exportCsv")}
-          </Button>
-          <Link href="/guide#reports">
-            <Button variant="outline" size="sm">
-              <BookOpen className="mr-2 h-4 w-4" />
-              {t("reports.usageGuide")}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                triggerDownload(
+                  `portfolio-report-${report.period}-${report.window.label}.json`,
+                  JSON.stringify(report, null, 2),
+                  "application/json"
+                )
+              }
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("reports.exportJson")}
             </Button>
-          </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                triggerDownload(
+                  `portfolio-report-${report.period}-${report.window.label}.csv`,
+                  toCsv(report),
+                  "text/csv;charset=utf-8"
+                )
+              }
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {t("reports.exportCsv")}
+            </Button>
           </>
         }
       />
 
-      <div className="flex flex-wrap gap-2">
+      <div
+        role="group"
+        aria-label={t("reports.periodSelector")}
+        className="flex flex-wrap gap-2"
+      >
         {PERIOD_OPTIONS.map((option) => (
           <button
             key={option}
             type="button"
             onClick={() => setPeriod(option)}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page ${
               period === option
                 ? "border-border-subtle bg-bg-hover text-text-primary"
                 : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
@@ -296,149 +315,122 @@ export default function ReportsPage() {
         ))}
       </div>
 
-      <Card className="p-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {t("reports.focusView")}
-            </p>
-            <p className="text-xs text-text-dim">
-              {report.window.label}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-5">
-            {sectionOptions.map((section) => (
-              <button
-                key={section.value}
-                type="button"
-                onClick={() => setActiveSection(section.value)}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                  activeSection === section.value
-                    ? "border-accent bg-accent/10 text-text-primary"
-                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
-                )}
-                aria-pressed={activeSection === section.value}
-              >
-                <span className="min-w-0 truncate font-medium">
-                  {section.label}
-                </span>
-                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                  {section.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
+      <SectionNavigator
+        baseId={sectionsBaseId}
+        label={t("reports.focusView")}
+        description={report.window.label}
+        value={activeSection}
+        onChange={setActiveSection}
+        options={sectionOptions}
+        columnsClassName="grid-cols-2 xl:grid-cols-5"
+      />
+
+      <SectionPanel baseId={sectionsBaseId} value={activeSection}>
+      <InlineHelpCard
+        icon={<BookOpen className="h-4 w-4" />}
+        title={t("reports.inlineHelpTitle")}
+        description={t("reports.inlineHelpDescription")}
+        items={[
+          t("reports.inlineHelpOverview"),
+          t("reports.inlineHelpReconciliation"),
+          t("reports.inlineHelpActivity"),
+        ]}
+        action={
+          <Link href="/guide#reports">
+            <Button variant="ghost" size="sm" className="h-auto px-0 py-0 text-current hover:bg-transparent">
+              {t("reports.openGuide")}
+            </Button>
+          </Link>
+        }
+      />
 
       {showOverviewSection && (
         <>
           <Card>
-            <CardHeader>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle>{report.window.label}</CardTitle>
-                  <p className="text-sm text-text-subtle">
-                    {t("reports.returnModifiedDietz")}, {t("reports.periodPL")}, {t("reports.reconciliation")}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${getDataQualityClass(
-                    report.dataQuality.level
-                  )}`}
+            <CardSectionHeader
+              title={report.window.label}
+              subtitle={`${t("reports.returnModifiedDietz")}, ${t("reports.periodPL")}, ${t("reports.reconciliation")}`}
+              actions={
+                <StatusPill
+                  tone={getDataQualityTone(report.dataQuality.level)}
+                  className="py-1 font-semibold"
                 >
                   {t("reports.dataQuality")}: {dataQualityLabels[report.dataQuality.level]}
-                </span>
-              </div>
-            </CardHeader>
+                </StatusPill>
+              }
+            />
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.endValue")}</p>
-                  <p className="mt-2 text-2xl font-bold text-text-primary">
-                    {formatValue(report.summary.endValueUsd)}
-                  </p>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("reports.startValue")}: {formatValue(report.summary.startValueUsd)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.periodPL")}</p>
-                  <p
-                    className={cn(
-                      "mt-2 text-2xl font-bold",
-                      report.summary.pnlUsd >= 0
-                        ? "text-status-positive"
-                        : "text-status-negative"
-                    )}
-                  >
-                    {getSignedCurrency(report.summary.pnlUsd)}
-                  </p>
-                  {showPreviousComparison ? (
-                    <p className="mt-1 text-xs text-text-dim">
-                      {t("reports.previousPnlDelta")}: {getSignedCurrency(pnlDelta)}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.returnModifiedDietz")}</p>
-                  <p
-                    className={cn(
-                      "mt-2 text-2xl font-bold",
-                      report.summary.returnPercent >= 0
-                        ? "text-status-positive"
-                        : "text-status-negative"
-                    )}
-                  >
-                    {getSignedPercent(report.summary.returnPercent)}
-                  </p>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("reports.simple")}: {getSignedPercent(report.summary.simpleReturnPercent)}
-                  </p>
-                  {showPreviousComparison ? (
-                    <p className="mt-1 text-xs text-text-dim">
-                      {t("reports.deltaVsPreviousToDate")}: {getSignedPercent(returnDelta)}
-                    </p>
-                  ) : null}
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.maxDrawdown")}</p>
-                  <p className="mt-2 text-2xl font-bold text-status-negative">
-                    -{report.summary.maxDrawdownPercent.toFixed(2)}%
-                  </p>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("reports.volatility")}: {report.summary.annualizedVolatilityPercent.toFixed(2)}%
-                  </p>
-                </div>
-              </div>
+              <SummaryStrip
+                items={[
+                  {
+                    key: "end-value",
+                    label: t("reports.endValue"),
+                    value: formatValue(report.summary.endValueUsd),
+                    hint: `${t("reports.startValue")}: ${formatValue(report.summary.startValueUsd)}`,
+                    valueClassName: "text-2xl font-bold",
+                  },
+                  {
+                    key: "period-pl",
+                    label: t("reports.periodPL"),
+                    value: getSignedCurrency(report.summary.pnlUsd),
+                    hint: showPreviousComparison
+                      ? `${t("reports.previousPnlDelta")}: ${getSignedCurrency(pnlDelta)}`
+                      : undefined,
+                    tone: report.summary.pnlUsd >= 0 ? "positive" : "negative",
+                    valueClassName: "text-2xl font-bold",
+                  },
+                  {
+                    key: "return",
+                    label: t("reports.returnModifiedDietz"),
+                    value: getSignedPercent(report.summary.returnPercent),
+                    hint: (
+                      <>
+                        <p>{t("reports.simple")}: {getSignedPercent(report.summary.simpleReturnPercent)}</p>
+                        {showPreviousComparison ? (
+                          <p>{t("reports.deltaVsPreviousToDate")}: {getSignedPercent(returnDelta)}</p>
+                        ) : null}
+                      </>
+                    ),
+                    tone: report.summary.returnPercent >= 0 ? "positive" : "negative",
+                    valueClassName: "text-2xl font-bold",
+                  },
+                  {
+                    key: "drawdown",
+                    label: t("reports.maxDrawdown"),
+                    value: `-${report.summary.maxDrawdownPercent.toFixed(2)}%`,
+                    hint: `${t("reports.volatility")}: ${report.summary.annualizedVolatilityPercent.toFixed(2)}%`,
+                    tone: "negative",
+                    valueClassName: "text-2xl font-bold",
+                  },
+                ]}
+                columnsClassName="md:grid-cols-2 xl:grid-cols-4"
+              />
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.capitalNetFlow")}</p>
-                  <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {getSignedCurrency(report.summary.capitalNetFlowUsd)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.externalNetFlow")}</p>
-                  <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {getSignedCurrency(report.summary.externalNetFlowUsd)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.tradingTurnover")}</p>
-                  <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {formatValue(report.summary.tradingTurnoverUsd)}
-                  </p>
-                </div>
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-xs text-text-subtle">{t("reports.totalFees")}</p>
-                  <p className="mt-2 text-lg font-semibold text-text-primary">
-                    {formatUsd(report.activity.totalFeesUsd)}
-                  </p>
-                </div>
-              </div>
+              <SummaryStrip
+                items={[
+                  {
+                    key: "capital-flow",
+                    label: t("reports.capitalNetFlow"),
+                    value: getSignedCurrency(report.summary.capitalNetFlowUsd),
+                  },
+                  {
+                    key: "external-flow",
+                    label: t("reports.externalNetFlow"),
+                    value: getSignedCurrency(report.summary.externalNetFlowUsd),
+                  },
+                  {
+                    key: "turnover",
+                    label: t("reports.tradingTurnover"),
+                    value: formatValue(report.summary.tradingTurnoverUsd),
+                  },
+                  {
+                    key: "fees",
+                    label: t("reports.totalFees"),
+                    value: formatUsd(report.activity.totalFeesUsd),
+                  },
+                ]}
+                columnsClassName="md:grid-cols-2 xl:grid-cols-4"
+              />
 
               <div className={`rounded-lg border px-4 py-3 text-sm ${reconciliationClass}`}>
                 <p className="font-medium">{t("reports.reconciliation")}</p>
@@ -473,11 +465,25 @@ export default function ReportsPage() {
             </CardHeader>
             <CardContent>
               {reportTimeline.length > 1 ? (
-                <PortfolioLineChart data={reportTimeline} />
+                <AccessibleChartFrame
+                  title={t("reports.portfolioValueTimeline")}
+                  summary={timelineChartSummary}
+                >
+                  <PortfolioLineChart data={reportTimeline} />
+                </AccessibleChartFrame>
               ) : (
-                <p className="py-8 text-center text-text-subtle">
-                  {t("reports.timelineEmpty")}
-                </p>
+                <EmptyState
+                  title={t("reports.timelineEmpty")}
+                  description={t("reports.timelineEmptyDesc")}
+                  action={
+                    <Link href="/portfolio">
+                      <Button size="sm" variant="outline">
+                        {t("portfolio.title")}
+                      </Button>
+                    </Link>
+                  }
+                  className="py-8"
+                />
               )}
             </CardContent>
           </Card>
@@ -497,56 +503,55 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.activity")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.transactions")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {report.activity.transactionCount}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.totalFees")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {formatUsd(report.activity.totalFeesUsd)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.estimatedAmountTransactions")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {report.activity.estimatedAmountTransactionCount}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.unknownAmountTransactions")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {report.activity.unknownAmountTransactionCount}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.buyVolume")}</p>
-                    <p className="font-semibold text-status-positive">
-                      {formatUsd(report.activity.buyVolumeUsd)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.sellVolume")}</p>
-                    <p className="font-semibold text-status-negative">
-                      {formatUsd(report.activity.sellVolumeUsd)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.receiveVolume")}</p>
-                    <p className="font-semibold text-text-primary">
-                      {formatUsd(report.activity.receiveVolumeUsd)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.sendVolume")}</p>
-                    <p className="font-semibold text-text-primary">
-                      {formatUsd(report.activity.sendVolumeUsd)}
-                    </p>
-                  </div>
-                </div>
+                <SummaryStrip
+                  items={[
+                    {
+                      key: "transactions",
+                      label: t("reports.transactions"),
+                      value: report.activity.transactionCount,
+                    },
+                    {
+                      key: "fees",
+                      label: t("reports.totalFees"),
+                      value: formatUsd(report.activity.totalFeesUsd),
+                    },
+                    {
+                      key: "estimated",
+                      label: t("reports.estimatedAmountTransactions"),
+                      value: report.activity.estimatedAmountTransactionCount,
+                    },
+                    {
+                      key: "unknown",
+                      label: t("reports.unknownAmountTransactions"),
+                      value: report.activity.unknownAmountTransactionCount,
+                    },
+                    {
+                      key: "buy",
+                      label: t("reports.buyVolume"),
+                      value: formatUsd(report.activity.buyVolumeUsd),
+                      tone: "positive",
+                    },
+                    {
+                      key: "sell",
+                      label: t("reports.sellVolume"),
+                      value: formatUsd(report.activity.sellVolumeUsd),
+                      tone: "negative",
+                    },
+                    {
+                      key: "receive",
+                      label: t("reports.receiveVolume"),
+                      value: formatUsd(report.activity.receiveVolumeUsd),
+                    },
+                    {
+                      key: "send",
+                      label: t("reports.sendVolume"),
+                      value: formatUsd(report.activity.sendVolumeUsd),
+                    },
+                  ]}
+                  columnsClassName="sm:grid-cols-2"
+                  size="compact"
+                  className="gap-3"
+                />
               </CardContent>
             </Card>
           )}
@@ -557,34 +562,35 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.riskSnapshot")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.activeAssets")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {report.risk.activeAssets}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.topConcentration")}</p>
-                    <p className="text-lg font-semibold text-text-primary">
-                      {report.risk.topConcentrationSymbol
+                <SummaryStrip
+                  items={[
+                    {
+                      key: "active-assets",
+                      label: t("reports.activeAssets"),
+                      value: report.risk.activeAssets,
+                    },
+                    {
+                      key: "top-concentration",
+                      label: t("reports.topConcentration"),
+                      value: report.risk.topConcentrationSymbol
                         ? `${report.risk.topConcentrationSymbol} ${report.risk.topConcentrationPercent.toFixed(2)}%`
-                        : t("reports.notAvailable")}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.herfindahlIndex")}</p>
-                    <p className="font-semibold text-text-primary">
-                      {report.risk.herfindahlIndex.toFixed(4)}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.diversificationScore")}</p>
-                    <p className="font-semibold text-text-primary">
-                      {report.risk.diversificationScore.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
+                        : t("reports.notAvailable"),
+                    },
+                    {
+                      key: "herfindahl",
+                      label: t("reports.herfindahlIndex"),
+                      value: report.risk.herfindahlIndex.toFixed(4),
+                    },
+                    {
+                      key: "diversification",
+                      label: t("reports.diversificationScore"),
+                      value: report.risk.diversificationScore.toFixed(2),
+                    },
+                  ]}
+                  columnsClassName="sm:grid-cols-2"
+                  size="compact"
+                  className="gap-3"
+                />
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
                     <p className="text-text-subtle">{t("reports.bestPerformer")}</p>
@@ -629,82 +635,170 @@ export default function ReportsPage() {
 
       {showHoldingsSection && (
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{t("reports.topHoldings")}</CardTitle>
+          <CardSectionHeader
+            title={t("reports.topHoldings")}
+            actions={
               <Link href="/portfolio">
                 <Button size="sm" variant="outline">
                   {t("portfolio.title")}
                 </Button>
               </Link>
-            </div>
-          </CardHeader>
+            }
+          />
           <CardContent>
             {report.topHoldings.length === 0 ? (
-              <p className="text-text-subtle">{t("reports.noActiveHoldings")}</p>
+              <EmptyState
+                title={t("reports.noActiveHoldings")}
+                description={t("reports.noActiveHoldingsDesc")}
+                action={
+                  <Link href="/portfolio">
+                    <Button size="sm" variant="outline">
+                      {t("portfolio.title")}
+                    </Button>
+                  </Link>
+                }
+                className="py-8"
+              />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border-subtle text-text-subtle">
-                      <th className="px-2 py-2 font-medium">{t("reports.token")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.value")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.weight")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.held")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.unrealizedPL")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.unrealizedPLPerDay")}</th>
-                      <th className="px-2 py-2 font-medium">{t("reports.return")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.topHoldings.map((holding) => (
-                      <tr
-                        key={holding.symbol}
-                        className="border-b border-border-subtle/60 text-text-primary"
-                      >
-                        <td className="px-2 py-2 font-medium">{holding.symbol}</td>
-                        <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
-                        <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
-                        <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
-                        <td
-                          className={cn(
-                            "px-2 py-2",
-                            holding.unrealizedPLUsd >= 0
-                              ? "text-status-positive"
-                              : "text-status-negative"
-                          )}
-                        >
-                          {getSignedCurrency(holding.unrealizedPLUsd)}
-                        </td>
-                        <td
-                          className={cn(
-                            "px-2 py-2",
-                            holding.unrealizedPnlPerHeldDayUsd >= 0
-                              ? "text-status-positive"
-                              : "text-status-negative"
-                          )}
-                        >
-                          {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
-                        </td>
-                        <td
-                          className={cn(
-                            "px-2 py-2",
-                            holding.unrealizedPLPercent >= 0
-                              ? "text-status-positive"
-                              : "text-status-negative"
-                          )}
-                        >
-                          {getSignedPercent(holding.unrealizedPLPercent)}
-                        </td>
+              <>
+                <div className="space-y-3 md:hidden">
+                  {report.topHoldings.map((holding) => (
+                    <div
+                      key={holding.symbol}
+                      className="rounded-lg border border-border-subtle bg-bg-card p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-text-primary">
+                            {holding.symbol}
+                          </p>
+                          <p className="text-xs text-text-subtle">
+                            {t("reports.held")}: {holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-text-primary">
+                            {formatUsd(holding.valueUsd)}
+                          </p>
+                          <p className="text-xs text-text-subtle">
+                            {holding.percent.toFixed(2)}%
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-text-subtle">
+                            {t("reports.unrealizedPL")}
+                          </p>
+                          <p
+                            className={cn(
+                              holding.unrealizedPLUsd >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedCurrency(holding.unrealizedPLUsd)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-text-subtle">
+                            {t("reports.return")}
+                          </p>
+                          <p
+                            className={cn(
+                              holding.unrealizedPLPercent >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedPercent(holding.unrealizedPLPercent)}
+                          </p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-xs text-text-subtle">
+                            {t("reports.unrealizedPLPerDay")}
+                          </p>
+                          <p
+                            className={cn(
+                              holding.unrealizedPnlPerHeldDayUsd >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="min-w-full text-left text-sm">
+                    <caption className="sr-only">{t("reports.topHoldings")}</caption>
+                    <thead>
+                      <tr className="border-b border-border-subtle text-text-subtle">
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.token")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.value")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.weight")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.held")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.unrealizedPL")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.unrealizedPLPerDay")}</th>
+                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.return")}</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {report.topHoldings.map((holding) => (
+                        <tr
+                          key={holding.symbol}
+                          className="border-b border-border-subtle/60 text-text-primary"
+                        >
+                          <th scope="row" className="px-2 py-2 text-left font-medium">{holding.symbol}</th>
+                          <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
+                          <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
+                          <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
+                          <td
+                            className={cn(
+                              "px-2 py-2",
+                              holding.unrealizedPLUsd >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedCurrency(holding.unrealizedPLUsd)}
+                          </td>
+                          <td
+                            className={cn(
+                              "px-2 py-2",
+                              holding.unrealizedPnlPerHeldDayUsd >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
+                          </td>
+                          <td
+                            className={cn(
+                              "px-2 py-2",
+                              holding.unrealizedPLPercent >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {getSignedPercent(holding.unrealizedPLPercent)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
       )}
+      </SectionPanel>
     </div>
   );
 }

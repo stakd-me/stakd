@@ -572,7 +572,7 @@ export function TargetAllocationSection({
             )}
 
             {saveError && (
-              <p className="text-sm text-status-negative">
+              <p className="text-sm text-status-negative" role="alert" aria-live="assertive">
                 {saveErrorMessage || t("rebalance.failedSave")}
               </p>
             )}

@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { KpiCard } from "@/components/ui/kpi-card";
+import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { PortfolioLineChart } from "@/components/charts/portfolio-line";
 import { cn, formatUsd } from "@/lib/utils";
 import { ChartSkeleton, Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +18,7 @@ import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import type { VaultTransaction } from "@/lib/crypto/vault-types";
 import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
+import Link from "next/link";
 import {
   Chart as ChartJS,
   LineElement,
@@ -99,6 +106,7 @@ function computeRealizedPLTimeline(transactions: VaultTransaction[]): {
 }
 
 export default function HistoryPage() {
+  const sectionsBaseId = "history-sections";
   const [activeSection, setActiveSection] = useState<HistorySection>("overview");
   const { t } = useTranslation();
   const chartTheme = useChartTheme();
@@ -164,6 +172,26 @@ export default function HistoryPage() {
       count: chartData.length + plData.timeline.length + snapshots.length,
     },
   ];
+  const valueChartSummary = useMemo(() => {
+    if (chartData.length === 0) return "";
+    const firstPoint = chartData[0];
+    const lastPoint = chartData[chartData.length - 1];
+    return t("history.valueChartSummary", {
+      count: chartData.length,
+      start: new Date(firstPoint.date).toLocaleDateString(),
+      end: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.value),
+    });
+  }, [chartData, t]);
+  const realizedChartSummary = useMemo(() => {
+    if (plData.timeline.length === 0) return "";
+    const lastPoint = plData.timeline[plData.timeline.length - 1];
+    return t("history.realizedChartSummary", {
+      count: plData.timeline.length,
+      date: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.cumulativePL),
+    });
+  }, [plData.timeline, t]);
 
   if (isLoading) {
     return (
@@ -192,108 +220,67 @@ export default function HistoryPage() {
         description={t("history.subtitle")}
       />
 
-      <Card className="p-4">
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {t("history.focusView")}
-            </p>
-            <p className="text-xs text-text-dim">
-              {t("history.subtitle")}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {sectionOptions.map((section) => (
-              <button
-                key={section.value}
-                type="button"
-                onClick={() => setActiveSection(section.value)}
-                className={cn(
-                  "flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors",
-                  activeSection === section.value
-                    ? "border-accent bg-accent/10 text-text-primary"
-                    : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
-                )}
-                aria-pressed={activeSection === section.value}
-              >
-                <span className="min-w-0 truncate font-medium">{section.label}</span>
-                <span className="ml-3 rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                  {section.count}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
+      <SectionNavigator
+        baseId={sectionsBaseId}
+        label={t("history.focusView")}
+        description={t("history.subtitle")}
+        value={activeSection}
+        onChange={setActiveSection}
+        options={sectionOptions}
+        columnsClassName="grid-cols-2 xl:grid-cols-4"
+      />
 
+      <SectionPanel baseId={sectionsBaseId} value={activeSection}>
       {showOverviewSection && (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-text-subtle">
-                  {t("history.snapshots")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-text-primary">
-                  {snapshots.length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-text-subtle">
-                  {t("dashboard.totalValue")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-text-primary">
-                  {latestSnapshot ? formatUsd(latestSnapshot.totalValueUsd) : "-"}
-                </p>
-                {latestSnapshot ? (
-                  <p className="mt-1 text-xs text-text-dim">
-                    {new Date(latestSnapshot.snapshotAt).toLocaleString()}
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-text-subtle">
-                  {t("history.realizedPLTimeline")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p
-                  className={cn(
-                    "text-2xl font-bold",
-                    plData.totalRealizedPL >= 0
-                      ? "text-status-positive"
-                      : "text-status-negative"
-                  )}
-                >
-                  {plData.totalRealizedPL >= 0 ? "+" : ""}
-                  {formatUsd(plData.totalRealizedPL)}
-                </p>
-                <p className="mt-1 text-xs text-text-dim">
-                  {plData.timeline.length}
-                </p>
-              </CardContent>
-            </Card>
+            <KpiCard
+              label={t("history.snapshots")}
+              value={snapshots.length}
+              valueSize="2xl"
+            />
+            <KpiCard
+              label={t("dashboard.totalValue")}
+              value={latestSnapshot ? formatUsd(latestSnapshot.totalValueUsd) : "-"}
+              valueSize="2xl"
+              tertiary={
+                latestSnapshot
+                  ? new Date(latestSnapshot.snapshotAt).toLocaleString()
+                  : undefined
+              }
+            />
+            <KpiCard
+              label={t("history.realizedPLTimeline")}
+              value={`${plData.totalRealizedPL >= 0 ? "+" : ""}${formatUsd(plData.totalRealizedPL)}`}
+              valueTone={plData.totalRealizedPL >= 0 ? "positive" : "negative"}
+              valueSize="2xl"
+              tertiary={plData.timeline.length}
+            />
           </div>
 
           <Card>
-            <CardHeader>
-              <CardTitle>{t("history.valueOverTime")}</CardTitle>
-            </CardHeader>
+            <CardSectionHeader title={t("history.valueOverTime")} />
             <CardContent>
               {chartData.length > 0 ? (
-                <PortfolioLineChart data={chartData} />
+                <AccessibleChartFrame
+                  title={t("history.valueOverTime")}
+                  summary={valueChartSummary}
+                >
+                  <PortfolioLineChart data={chartData} />
+                </AccessibleChartFrame>
               ) : (
-                <p className="py-8 text-center text-text-subtle">
-                  {t("history.noHistoryYet")}
-                </p>
+                <EmptyState
+                  title={t("history.noHistoryYet")}
+                  description={t("history.noHistoryHelp")}
+                  action={
+                    <Link href="/portfolio/add">
+                      <Button size="sm" variant="outline">
+                        {t("portfolio.addTransaction")}
+                      </Button>
+                    </Link>
+                  }
+                  className="py-8"
+                />
               )}
             </CardContent>
           </Card>
@@ -302,9 +289,9 @@ export default function HistoryPage() {
 
       {showRealizedSection && (
         <Card>
-          <CardHeader>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>{t("history.realizedPLTimeline")}</CardTitle>
+          <CardSectionHeader
+            title={t("history.realizedPLTimeline")}
+            actions={
               <span
                 className={cn(
                   "text-lg font-bold",
@@ -316,81 +303,95 @@ export default function HistoryPage() {
                 {plData.totalRealizedPL >= 0 ? "+" : ""}
                 {formatUsd(plData.totalRealizedPL)}
               </span>
-            </div>
-          </CardHeader>
+            }
+          />
           <CardContent>
             {plData.timeline.length > 0 ? (
-              <div className="h-64">
-                <Line
-                  data={{
-                    labels: plData.timeline.map((p) => {
-                      const d = new Date(p.date);
-                      return `${d.getMonth() + 1}/${d.getDate()}`;
-                    }),
-                    datasets: [
-                      {
-                        data: plData.timeline.map((p) => p.cumulativePL),
-                        borderColor:
-                          plData.totalRealizedPL >= 0 ? "#22c55e" : "#ef4444",
-                        borderWidth: 2,
-                        fill: true,
-                        backgroundColor:
-                          plData.totalRealizedPL >= 0
-                            ? "rgba(34, 197, 94, 0.1)"
-                            : "rgba(239, 68, 68, 0.1)",
-                        tension: 0.3,
-                        pointRadius: 0,
-                        pointHitRadius: 10,
-                      },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      tooltip: {
-                        backgroundColor: chartTheme.tooltipBg,
-                        titleColor: chartTheme.tooltipText,
-                        bodyColor: chartTheme.tooltipText,
-                        borderColor: chartTheme.tooltipBorder,
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        callbacks: {
-                          title: (items) => {
-                            const idx = items[0].dataIndex;
-                            const p = plData.timeline[idx];
-                            return `${new Date(p.date).toLocaleDateString()} — ${p.symbol}`;
+              <AccessibleChartFrame
+                title={t("history.realizedPLTimeline")}
+                summary={realizedChartSummary}
+              >
+                <div className="h-64">
+                  <Line
+                    data={{
+                      labels: plData.timeline.map((p) => {
+                        const d = new Date(p.date);
+                        return `${d.getMonth() + 1}/${d.getDate()}`;
+                      }),
+                      datasets: [
+                        {
+                          data: plData.timeline.map((p) => p.cumulativePL),
+                          borderColor:
+                            plData.totalRealizedPL >= 0 ? "#22c55e" : "#ef4444",
+                          borderWidth: 2,
+                          fill: true,
+                          backgroundColor:
+                            plData.totalRealizedPL >= 0
+                              ? "rgba(34, 197, 94, 0.1)"
+                              : "rgba(239, 68, 68, 0.1)",
+                          tension: 0.3,
+                          pointRadius: 0,
+                          pointHitRadius: 10,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        tooltip: {
+                          backgroundColor: chartTheme.tooltipBg,
+                          titleColor: chartTheme.tooltipText,
+                          bodyColor: chartTheme.tooltipText,
+                          borderColor: chartTheme.tooltipBorder,
+                          borderWidth: 1,
+                          cornerRadius: 8,
+                          callbacks: {
+                            title: (items) => {
+                              const idx = items[0].dataIndex;
+                              const p = plData.timeline[idx];
+                              return `${new Date(p.date).toLocaleDateString()} — ${p.symbol}`;
+                            },
+                            label: (item) =>
+                              `Cumulative P&L: ${formatUsd(item.raw as number)}`,
                           },
-                          label: (item) =>
-                            `Cumulative P&L: ${formatUsd(item.raw as number)}`,
                         },
                       },
-                    },
-                    scales: {
-                      x: {
-                        grid: { color: chartTheme.gridColor },
-                        ticks: {
-                          color: chartTheme.tickColor,
-                          font: { size: 12 },
-                          maxTicksLimit: 8,
+                      scales: {
+                        x: {
+                          grid: { color: chartTheme.gridColor },
+                          ticks: {
+                            color: chartTheme.tickColor,
+                            font: { size: 12 },
+                            maxTicksLimit: 8,
+                          },
+                        },
+                        y: {
+                          grid: { color: chartTheme.gridColor },
+                          ticks: {
+                            color: chartTheme.tickColor,
+                            font: { size: 12 },
+                            callback: (value) => `$${value}`,
+                          },
                         },
                       },
-                      y: {
-                        grid: { color: chartTheme.gridColor },
-                        ticks: {
-                          color: chartTheme.tickColor,
-                          font: { size: 12 },
-                          callback: (value) => `$${value}`,
-                        },
-                      },
-                    },
-                  }}
-                />
-              </div>
+                    }}
+                  />
+                </div>
+              </AccessibleChartFrame>
             ) : (
-              <p className="py-8 text-center text-text-subtle">
-                {t("history.noRealizedPLYet")}
-              </p>
+              <EmptyState
+                title={t("history.noRealizedPLYet")}
+                description={t("history.noRealizedPLHelp")}
+                action={
+                  <Link href="/portfolio/add">
+                    <Button size="sm" variant="outline">
+                      {t("portfolio.addTransaction")}
+                    </Button>
+                  </Link>
+                }
+                className="py-8"
+              />
             )}
           </CardContent>
         </Card>
@@ -424,13 +425,23 @@ export default function HistoryPage() {
                 ) : null}
               </div>
             ) : (
-              <p className="py-8 text-center text-text-subtle">
-                {t("history.noHistoryYet")}
-              </p>
+              <EmptyState
+                title={t("history.noHistoryYet")}
+                description={t("history.noSnapshotsHelp")}
+                action={
+                  <Link href="/dashboard">
+                    <Button size="sm" variant="outline">
+                      {t("dashboard.title")}
+                    </Button>
+                  </Link>
+                }
+                className="py-8"
+              />
             )}
           </CardContent>
         </Card>
       )}
+      </SectionPanel>
     </div>
   );
 }
