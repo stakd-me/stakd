@@ -22,7 +22,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LanguageToggle } from "@/components/layout/language-toggle";
 import { clearEncKey } from "@/lib/crypto/key-store";
 import { usePrices } from "@/hooks/use-prices";
-import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
+import { getRebalanceAlertTokenCount } from "@/lib/services/rebalance-alerts";
 
 const navKeys = [
   { href: "/dashboard", labelKey: "nav.dashboard" as const, icon: LayoutDashboard },
@@ -43,25 +43,9 @@ export function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t } = useTranslation();
 
-  // Compute rebalance alert count client-side
+  // Keep the sidebar badge aligned with the dashboard/rebalance alert logic.
   const alertCount = useMemo(() => {
-    const targets = vault.rebalanceTargets;
-    if (targets.length === 0) return 0;
-
-    const summary = getPortfolioSummary(vault, priceMap);
-    if (summary.totalValueUsd === 0) return 0;
-
-    const holdZone = parseFloat(vault.settings.holdZonePercent || "5");
-    let count = 0;
-    for (const target of targets) {
-      const actual = summary.tokenAllocations.find(
-        (a) => a.symbol.toUpperCase() === target.tokenSymbol.toUpperCase()
-      );
-      const actualPercent = actual?.percent ?? 0;
-      const deviation = actualPercent - target.targetPercent;
-      if (Math.abs(deviation) > holdZone) count++;
-    }
-    return count;
+    return getRebalanceAlertTokenCount(vault, priceMap);
   }, [vault, priceMap]);
 
   const handleLogout = async () => {
