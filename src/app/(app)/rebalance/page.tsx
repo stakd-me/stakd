@@ -137,10 +137,8 @@ export default function RebalancePage() {
           {rb.suggestionsData.lastRebalanceTime && (
             <span>{t("rebalance.lastRebalance")}: {formatTimeAgo(new Date(rb.suggestionsData.lastRebalanceTime))}</span>
           )}
-          {rb.suggestionsData.oldestPriceUpdate && (() => {
-            const ageMs = Date.now() - new Date(rb.suggestionsData.oldestPriceUpdate).getTime();
-            const isStale = ageMs > 30 * 60 * 1000;
-            return isStale ? (
+          {rb.suggestionsData.oldestPriceUpdate && (
+            rb.isPriceStale ? (
               <StatusPill tone="warning">
                 {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
               </StatusPill>
@@ -148,8 +146,8 @@ export default function RebalancePage() {
               <span className="text-text-dim">
                 {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
               </span>
-            );
-          })()}
+            )
+          )}
           {(rb.suggestionsData.autoRefreshMinutes ?? 0) > 0 && (
             <StatusPill tone="success" icon={<RefreshCw className="h-3 w-3" />}>
               {t("rebalance.autoRefresh")}: {t("rebalance.every")} {rb.suggestionsData.autoRefreshMinutes}m
