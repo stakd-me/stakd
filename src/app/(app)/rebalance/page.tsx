@@ -35,8 +35,9 @@ import {
 import {
   buildStrategyContext,
   dispatchStrategy,
+  resolveCurrentValue,
 } from "@/lib/services/rebalance-strategies";
-import type { StrategyOutput } from "@/lib/services/rebalance-strategies";
+import type { StrategyContext, StrategyOutput } from "@/lib/services/rebalance-strategies";
 import { getSymbolValues } from "@/lib/services/portfolio-calculator";
 import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
 import { resolveCanonicalCoinGeckoIdBySymbol } from "@/lib/pricing/binance-symbol-resolver";
@@ -165,6 +166,7 @@ function computeSummary(
 function computeAlerts(
   targets: { tokenSymbol: string; targetPercent: number }[],
   symbolValues: Record<string, number>,
+  strategyContext: StrategyContext | null,
   totalValue: number,
   holdZonePercent: number,
   concentrationThresholdPercent: number,
@@ -195,7 +197,9 @@ function computeAlerts(
 
   for (const t of uniqueTargets) {
     const symbol = t.tokenSymbol.toUpperCase();
-    const currentValue = symbolValues[symbol] || 0;
+    const currentValue = strategyContext
+      ? resolveCurrentValue(symbol, strategyContext)
+      : (symbolValues[symbol] || 0);
     const currentPercent = (currentValue / totalValue) * 100;
     const deviation = currentPercent - t.targetPercent;
 
@@ -776,6 +780,7 @@ export default function RebalancePage() {
         targetPercent: t.targetPercent,
       })),
       alertSymbolValues,
+      strategyContext,
       alertTotalValue,
       holdZonePercent,
       concentrationThresholdPercent,
@@ -995,7 +1000,9 @@ export default function RebalancePage() {
     try {
       const deviations = vault.rebalanceTargets.map((tgt) => {
         const sym = tgt.tokenSymbol.toUpperCase();
-        const val = symbolValues[sym] || 0;
+        const val = strategyContext
+          ? resolveCurrentValue(sym, strategyContext)
+          : (symbolValues[sym] || 0);
         const pct = totalValue > 0 ? (val / totalValue) * 100 : 0;
         return {
           tokenSymbol: sym,
@@ -1030,7 +1037,7 @@ export default function RebalancePage() {
     } finally {
       setLogPending(false);
     }
-  }, [vault.rebalanceTargets, symbolValues, totalValue, toast, t]);
+  }, [strategyContext, symbolValues, totalValue, vault.rebalanceTargets, toast, t]);
 
   const handleRefreshPrices = useCallback(async () => {
     setRefreshingPrices(true);
@@ -1058,20 +1065,28 @@ export default function RebalancePage() {
     async (data: { name: string; symbols: string[] }) => {
       setGroupCreatePending(true);
       try {
+        const normalizedName = data.name.trim();
+        const normalizedSymbols = Array.from(
+          new Set(data.symbols.map((symbol) => symbol.trim().toUpperCase()).filter(Boolean))
+        );
+        if (!normalizedName || normalizedSymbols.length === 0) {
+          return;
+        }
+
         useVaultStore.getState().updateVault((prev) => ({
           ...prev,
           tokenGroups: [
             ...prev.tokenGroups,
             {
               id: crypto.randomUUID(),
-              name: data.name,
-              symbols: data.symbols,
+              name: normalizedName,
+              symbols: normalizedSymbols,
               createdAt: new Date().toISOString(),
             },
           ],
         }));
         try {
-          await ensureGroupSymbolsTracked(data.symbols);
+          await ensureGroupSymbolsTracked(normalizedSymbols);
         } catch {
           toast(t("rebalance.groupTrackFailed"), "info");
         }

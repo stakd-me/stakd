@@ -27,6 +27,7 @@ export interface StrategyContext {
   groupValues: Record<string, number>;
   groupNameUpperToName: Record<string, string>;
   groupMembers: Record<string, string[]>;
+  aggregateValues: Record<string, number>;
   symbolCoingeckoMap: Record<string, string>;
 }
 
@@ -184,18 +185,31 @@ export function buildStrategyContext(
   const groupNameUpperToName: Record<string, string> = {};
   const groupMembers: Record<string, string[]> = {};
   for (const g of vault.tokenGroups) {
+    const normalizedGroupName = g.name.trim();
+    if (!normalizedGroupName) continue;
+
     let groupTotal = 0;
     const upperSyms: string[] = [];
     for (const s of g.symbols) {
-      const upper = s.toUpperCase();
-      symbolToGroup[upper] = g.name;
+      const upper = s.trim().toUpperCase();
+      if (!upper) continue;
+      symbolToGroup[upper] = normalizedGroupName;
       groupTotal += symbolValues[upper] || 0;
       upperSyms.push(upper);
     }
-    groupValues[g.name] = groupTotal;
-    groupNameUpperToName[g.name.toUpperCase()] = g.name;
-    groupMembers[g.name.toUpperCase()] = upperSyms;
+    groupValues[normalizedGroupName] = groupTotal;
+    groupNameUpperToName[normalizedGroupName.toUpperCase()] = normalizedGroupName;
+    groupMembers[normalizedGroupName.toUpperCase()] = upperSyms;
   }
+
+  const stablecoinTotal = Array.from(stablecoinSymbolSet).reduce(
+    (sum, symbol) => sum + (symbolValues[symbol] || 0),
+    0
+  );
+  const aggregateValues: Record<string, number> = {
+    STABLECOIN: stablecoinTotal,
+    STABLECOINS: stablecoinTotal,
+  };
 
   // CoinGecko ID map from transactions
   const symbolCoingeckoMap: Record<string, string> = {};
@@ -239,19 +253,25 @@ export function buildStrategyContext(
     groupValues,
     groupNameUpperToName,
     groupMembers,
+    aggregateValues,
     symbolCoingeckoMap,
   };
 }
 
 // ── Shared suggestion computation ────────────────────────────────
 
-function resolveCurrentValue(symbol: string, ctx: StrategyContext): number {
+export function resolveCurrentValue(symbol: string, ctx: StrategyContext): number {
+  const normalizedSymbol = symbol.trim().toUpperCase();
+
   // A target should resolve to group value only when the target key is the group name.
-  const directGroupName = ctx.groupNameUpperToName[symbol];
+  const directGroupName = ctx.groupNameUpperToName[normalizedSymbol];
   if (directGroupName !== undefined) {
     return ctx.groupValues[directGroupName] ?? 0;
   }
-  return ctx.symbolValues[symbol] || 0;
+  if (ctx.symbolValues[normalizedSymbol] !== undefined) {
+    return ctx.symbolValues[normalizedSymbol] || 0;
+  }
+  return ctx.aggregateValues[normalizedSymbol] || 0;
 }
 
 function computeSuggestion(

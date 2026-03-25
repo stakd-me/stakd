@@ -137,4 +137,111 @@ describe("rebalance-strategies", () => {
     expect(output.suggestions[0].tokenSymbol).toBe("BTC");
     expect(output.suggestions[0].action).toBe("hold");
   });
+
+  it("aggregates STABLECOIN targets from underlying stablecoin holdings", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "tx-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "bitcoin",
+        type: "buy",
+        quantity: "0.931",
+        pricePerUnit: "100",
+        totalCost: "93.1",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "tx-usdt",
+        tokenSymbol: "USDT",
+        tokenName: "Tether",
+        chain: "ethereum",
+        type: "buy",
+        quantity: "6.9",
+        pricePerUnit: "1",
+        totalCost: "6.9",
+        fee: "0",
+        coingeckoId: "tether",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    vault.rebalanceTargets = [
+      {
+        id: "target-stablecoin",
+        tokenSymbol: "STABLECOIN",
+        targetPercent: 10,
+        coingeckoId: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    const context = buildStrategyContext(vault, createSamplePriceMap());
+    const output = computeThresholdSuggestions(context);
+
+    expect(output.suggestions).toHaveLength(1);
+    expect(output.suggestions[0]).toMatchObject({
+      tokenSymbol: "STABLECOIN",
+      targetPercent: 10,
+      currentPercent: 6.9,
+      currentValue: 6.9,
+      deviation: -3.1,
+    });
+  });
+
+  it("matches trimmed group names when resolving grouped targets", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "tx-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "bitcoin",
+        type: "buy",
+        quantity: "1",
+        pricePerUnit: "100",
+        totalCost: "100",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    vault.tokenGroups = [
+      {
+        id: "group-core",
+        name: " CORE ",
+        symbols: [" btc "],
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    vault.rebalanceTargets = [
+      {
+        id: "target-core",
+        tokenSymbol: "CORE",
+        targetPercent: 100,
+        coingeckoId: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    const context = buildStrategyContext(vault, createSamplePriceMap());
+    const output = computeThresholdSuggestions(context);
+
+    expect(output.suggestions).toHaveLength(1);
+    expect(output.suggestions[0]).toMatchObject({
+      tokenSymbol: "CORE",
+      currentPercent: 100,
+      currentValue: 100,
+      deviation: 0,
+      action: "hold",
+    });
+  });
 });
