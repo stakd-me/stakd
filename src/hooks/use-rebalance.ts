@@ -1630,6 +1630,12 @@ export function useRebalance() {
 
   const suggestionsLoading = pricesLoading;
 
+  const isPriceStale = useMemo(() => {
+    const oldest = suggestionsData?.oldestPriceUpdate;
+    if (!oldest) return false;
+    return Date.now() - new Date(oldest).getTime() > 30 * 60 * 1000;
+  }, [suggestionsData?.oldestPriceUpdate]);
+
   const activeSessions = allSessions.filter(
     (s) => s.status === "in_progress"
   );
@@ -1787,6 +1793,7 @@ export function useRebalance() {
     untargetedSuggestions,
     targetedSymbolsUpper,
     suggestionsLoading,
+    isPriceStale,
     activeSessions,
     pastSessions,
     chartData,
