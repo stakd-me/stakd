@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useVaultStore } from "@/lib/store";
 import { saveVaultToServer } from "@/lib/services/vault-sync";
 
-const DEBOUNCE_MS = 2000;
+const DEBOUNCE_MS = 5000;
 
 /**
  * Watches the vault isDirty flag and auto-saves after a debounce.

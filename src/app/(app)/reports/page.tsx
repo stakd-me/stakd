@@ -11,7 +11,12 @@ import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigato
 import { StatusPill } from "@/components/ui/status-pill";
 import { SummaryStrip } from "@/components/ui/summary-strip";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
-import { PortfolioLineChart } from "@/components/charts/portfolio-line";
+import dynamic from "next/dynamic";
+
+const PortfolioLineChart = dynamic(
+  () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
+  { ssr: false }
+);
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useVaultStore } from "@/lib/store";
 import { usePortfolio } from "@/hooks/use-portfolio";

@@ -13,22 +13,23 @@ import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import { useTranslation } from "@/hooks/use-translation";
-import { useChartTheme } from "@/hooks/use-chart-theme";
-import { AllocationPieChart } from "@/components/charts/allocation-pie";
-import { PortfolioLineChart } from "@/components/charts/portfolio-line";
+import dynamic from "next/dynamic";
+
+const AllocationPieChart = dynamic(
+  () => import("@/components/charts/allocation-pie").then((m) => ({ default: m.AllocationPieChart })),
+  { ssr: false }
+);
+const PortfolioLineChart = dynamic(
+  () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
+  { ssr: false }
+);
 import { AlertTriangle, CheckCircle2, RefreshCw, Scale, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
-import {
-  Chart as ChartJS,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  Tooltip as ChartTooltip,
-  Legend as ChartLegend,
-} from "chart.js";
-import { Bar } from "react-chartjs-2";
 
-ChartJS.register(BarElement, CategoryScale, LinearScale, ChartTooltip, ChartLegend);
+const CategoryBarChart = dynamic(
+  () => import("@/components/charts/category-bar").then((m) => ({ default: m.CategoryBarChart })),
+  { ssr: false }
+);
 import { DashboardSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
@@ -84,12 +85,10 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const { format: formatValue } = useCurrency();
   const { t } = useTranslation();
-  const chartTheme = useChartTheme();
-
   // ── Client-side data from vault store + hooks ──────────────────────
-  const { breakdown, totals, history, lastPriceUpdate, isLoading, refreshPrices } = usePortfolio();
+  const { holdings, breakdown, totals, history, lastPriceUpdate, isLoading, refreshPrices } = usePortfolio();
   const { priceMap } = usePrices();
-  const analytics = useAnalytics();
+  const analytics = useAnalytics(holdings);
   const vault = useVaultStore((s) => s.vault);
   const rebalanceStrategy = (vault.settings.rebalanceStrategy || "percent-of-portfolio") as RebalanceStrategy;
   const parsedHoldZonePercent = parseFloat(vault.settings.holdZonePercent || "5");
@@ -674,55 +673,10 @@ export default function DashboardPage() {
                 title={t("dashboard.categoryBreakdown")}
                 summary={categoryChartSummary}
               >
-                <div className="h-64">
-                  <Bar
-                    data={{
-                      labels: categoryBreakdown.map((cb) => cb.category),
-                      datasets: [
-                        {
-                          label: t("dashboard.allocationPercent"),
-                          data: categoryBreakdown.map((cb) => cb.percent),
-                          backgroundColor: [
-                            "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
-                            "#ec4899", "#06b6d4", "#84cc16", "#f97316",
-                          ],
-                          borderRadius: 4,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      indexAxis: "y",
-                      plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                          backgroundColor: chartTheme.tooltipBg,
-                          titleColor: chartTheme.tooltipText,
-                          bodyColor: chartTheme.tooltipText,
-                          borderColor: chartTheme.tooltipBorder,
-                          borderWidth: 1,
-                          callbacks: {
-                            label: (item) => `${(item.raw as number).toFixed(1)}%`,
-                          },
-                        },
-                      },
-                      scales: {
-                        x: {
-                          grid: { color: chartTheme.gridColor },
-                          ticks: {
-                            color: chartTheme.tickColor,
-                            callback: (v) => `${v}%`,
-                          },
-                        },
-                        y: {
-                          grid: { display: false },
-                          ticks: { color: chartTheme.tickColor, font: { size: 12 } },
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                <CategoryBarChart
+                  data={categoryBreakdown}
+                  allocationLabel={t("dashboard.allocationPercent")}
+                />
               </AccessibleChartFrame>
             </CardContent>
           </Card>

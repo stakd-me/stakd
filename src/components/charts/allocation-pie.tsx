@@ -19,7 +19,9 @@ interface AllocationData {
   color: string;
 }
 
-export function AllocationPieChart({ data }: { data: AllocationData[] }) {
+import { memo } from "react";
+
+export const AllocationPieChart = memo(function AllocationPieChart({ data }: { data: AllocationData[] }) {
   const chartTheme = useChartTheme();
 
   return (
@@ -77,4 +79,4 @@ export function AllocationPieChart({ data }: { data: AllocationData[] }) {
       </div>
     </div>
   );
-}
+});

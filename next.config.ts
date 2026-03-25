@@ -1,4 +1,9 @@
 import type { NextConfig } from "next";
+import bundleAnalyzer from "@next/bundle-analyzer";
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -18,6 +23,9 @@ const contentSecurityPolicy = [
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["pg"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "chart.js", "@tanstack/react-query"],
+  },
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },
@@ -49,4 +57,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

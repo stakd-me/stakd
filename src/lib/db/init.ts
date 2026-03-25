@@ -74,6 +74,8 @@ export async function initializeDatabase() {
         ON sessions(refresh_token_hash);
       CREATE INDEX IF NOT EXISTS idx_prices_symbol
         ON prices(symbol);
+      CREATE INDEX IF NOT EXISTS idx_prices_updated_at
+        ON prices(updated_at);
     `);
   } finally {
     client.release();

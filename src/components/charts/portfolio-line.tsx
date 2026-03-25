@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, memo } from "react";
 import {
   Chart as ChartJS,
   LineElement,
@@ -21,7 +21,7 @@ interface HistoryData {
   value: number;
 }
 
-export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
+export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { data: HistoryData[] }) {
   const chartTheme = useChartTheme();
   const chartRef = useRef<ChartJS<"line">>(null);
   const sanitizedData = data.filter(
@@ -129,4 +129,4 @@ export function PortfolioLineChart({ data }: { data: HistoryData[] }) {
       />
     </div>
   );
-}
+});

@@ -83,8 +83,13 @@ function toPriceMap(prices: PricesResponse["prices"]): {
   return { priceMap: map, oldestUpdatedAt };
 }
 
-export function usePrices() {
+interface UsePricesOptions {
+  refetchInterval?: number;
+}
+
+export function usePrices(options?: UsePricesOptions) {
   const queryClient = useQueryClient();
+  const refetchInterval = options?.refetchInterval ?? 60_000;
 
   const query = useQuery<{ priceMap: PriceMap; updatedAt: string | null }>({
     queryKey: ["prices"],
@@ -99,7 +104,7 @@ export function usePrices() {
       };
     },
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval,
   });
 
   const refreshPrices = async () => {

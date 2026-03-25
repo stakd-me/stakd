@@ -9,7 +9,12 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
-import { PortfolioLineChart } from "@/components/charts/portfolio-line";
+import dynamic from "next/dynamic";
+
+const PortfolioLineChart = dynamic(
+  () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
+  { ssr: false }
+);
 import { cn, formatUsd } from "@/lib/utils";
 import { ChartSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
@@ -111,7 +116,7 @@ export default function HistoryPage() {
   const { t } = useTranslation();
   const chartTheme = useChartTheme();
   const vault = useVaultStore((s) => s.vault);
-  const { isLoading, priceMap } = usePrices();
+  const { isLoading, priceMap } = usePrices({ refetchInterval: 300_000 });
 
   const snapshots = vault.portfolioSnapshots;
 

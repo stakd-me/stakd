@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:migrate": "node scripts/db-migrate.mjs",
-    "fetch-coins": "npx tsx scripts/fetch-coins.ts"
+    "fetch-coins": "npx tsx scripts/fetch-coins.ts",
+    "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
@@ -33,6 +34,7 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
