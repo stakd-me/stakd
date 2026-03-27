@@ -565,10 +565,12 @@ export default function PortfolioPage() {
     setEditQty(tx.quantity);
     setEditPrice(tx.pricePerUnit);
     setEditFeePercent(
-      calculateFeePercentFromAmount(
-        totalCost,
-        Number.parseFloat(tx.fee)
-      ).toString()
+      tx.type === "buy" || tx.type === "sell"
+        ? calculateFeePercentFromAmount(
+            totalCost,
+            Number.parseFloat(tx.fee)
+          ).toString()
+        : "0"
     );
     setEditDate(toLocalDatetimeString(new Date(tx.transactedAt)));
     setEditNote(tx.note || "");
@@ -589,7 +591,10 @@ export default function PortfolioPage() {
       setEditError(t("portfolio.validationPricePositive"));
       return;
     }
-    const feePercent = parseFloat(editFeePercent);
+    const feePercent =
+      editType === "buy" || editType === "sell"
+        ? parseFloat(editFeePercent)
+        : 0;
     if (!Number.isFinite(feePercent) || feePercent < 0) {
       setEditError(t("portfolio.validationFeeNonNegative"));
       return;
@@ -1485,10 +1490,13 @@ export default function PortfolioPage() {
   const renderTransactionEditForm = (tx: Transaction) => {
     const editTotalCost =
       Number.parseFloat(editQty || "0") * Number.parseFloat(editPrice || "0");
-    const editFeeAmountUsd = calculateFeeAmountFromPercent(
-      editTotalCost,
-      Number.parseFloat(editFeePercent || "0")
-    );
+    const editFeeAmountUsd =
+      editType === "buy" || editType === "sell"
+        ? calculateFeeAmountFromPercent(
+            editTotalCost,
+            Number.parseFloat(editFeePercent || "0")
+          )
+        : 0;
     const settlementPreview =
       tx.settlement && (editType === "buy" || editType === "sell")
         ? rebuildTradeSettlement(
@@ -1547,18 +1555,22 @@ export default function PortfolioPage() {
             onChange={(e) => setEditPrice(e.target.value)}
           />
         </div>
-        <div>
-          <label className="mb-1 block text-xs text-text-subtle">
-            {t("portfolio.feePercent")}
-          </label>
-          <Input
-            type="number"
-            step="any"
-            min="0"
-            value={editFeePercent}
-            onChange={(e) => setEditFeePercent(e.target.value)}
-          />
-        </div>
+        {editType === "buy" || editType === "sell" ? (
+          <div>
+            <label className="mb-1 block text-xs text-text-subtle">
+              {t("portfolio.feePercent")}
+            </label>
+            <Input
+              type="number"
+              step="any"
+              min="0"
+              value={editFeePercent}
+              onChange={(e) => setEditFeePercent(e.target.value)}
+            />
+          </div>
+        ) : (
+          <div />
+        )}
         <div>
           <label className="mb-1 block text-xs text-text-subtle">
             {t("common.date")}
@@ -1586,9 +1598,11 @@ export default function PortfolioPage() {
           {t("common.total") + ":"}{" "}
           {formatUsd(editTotalCost)}
           </div>
-          <div>
-            {t("portfolio.estimatedFee")}: {formatUsd(editFeeAmountUsd)}
-          </div>
+          {editType === "buy" || editType === "sell" ? (
+            <div>
+              {t("portfolio.estimatedFee")}: {formatUsd(editFeeAmountUsd)}
+            </div>
+          ) : null}
         </div>
       )}
       {settlementPreview ? (

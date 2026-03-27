@@ -270,6 +270,9 @@ export default function AddTransactionPage() {
   );
 
   const settlementAmountUsd = useMemo(() => {
+    if (type !== "buy" && type !== "sell") {
+      return 0;
+    }
     const parsedFeePercent =
       feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
     const feeUsd = calculateFeeAmountFromPercent(
@@ -284,13 +287,16 @@ export default function AddTransactionPage() {
   }, [feePercent, totalCost, type]);
 
   const feeAmountUsd = useMemo(() => {
+    if (type !== "buy" && type !== "sell") {
+      return 0;
+    }
     const parsedFeePercent =
       feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
     return calculateFeeAmountFromPercent(
       totalCost,
       Number.isFinite(parsedFeePercent) ? parsedFeePercent : 0
     );
-  }, [feePercent, totalCost]);
+  }, [feePercent, totalCost, type]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -317,7 +323,11 @@ export default function AddTransactionPage() {
       return;
     }
     const parsedFeePercent =
-      feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
+      type === "buy" || type === "sell"
+        ? feePercent.trim().length > 0
+          ? parseFloat(feePercent)
+          : 0
+        : 0;
     if (!Number.isFinite(parsedFeePercent) || parsedFeePercent < 0) {
       setError(t("portfolio.validationFeeNonNegative"));
       return;
@@ -663,25 +673,29 @@ export default function AddTransactionPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="feePercent" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.fee")} <span className="text-text-dim">({t("common.optional")})</span>
-                </label>
-                <Input
-                  id="feePercent"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder={t("portfolioAdd.feePlaceholder")}
-                  value={feePercent}
-                  onChange={(e) => setFeePercent(e.target.value)}
-                />
-                <p className="text-xs text-text-dim">
-                  {t("portfolioAdd.feeAmountPreview", {
-                    amount: formatUsd(feeAmountUsd),
-                  })}
-                </p>
-              </div>
+              {(type === "buy" || type === "sell") ? (
+                <div className="space-y-2">
+                  <label htmlFor="feePercent" className="text-sm font-medium text-text-muted">
+                    {t("portfolioAdd.fee")} <span className="text-text-dim">({t("common.optional")})</span>
+                  </label>
+                  <Input
+                    id="feePercent"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder={t("portfolioAdd.feePlaceholder")}
+                    value={feePercent}
+                    onChange={(e) => setFeePercent(e.target.value)}
+                  />
+                  <p className="text-xs text-text-dim">
+                    {t("portfolioAdd.feeAmountPreview", {
+                      amount: formatUsd(feeAmountUsd),
+                    })}
+                  </p>
+                </div>
+              ) : (
+                <div />
+              )}
               <div className="space-y-2">
                 <label htmlFor="coingeckoId" className="text-sm font-medium text-text-muted">
                   {t("portfolioAdd.coingeckoId")} <span className="text-text-dim">({t("common.optional")})</span>
