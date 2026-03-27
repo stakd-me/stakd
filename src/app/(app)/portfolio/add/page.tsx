@@ -253,9 +253,7 @@ export default function AddTransactionPage() {
       return;
     }
 
-    if (!settlementSymbol) {
-      setSettlementEnabled(true);
-    }
+    setSettlementEnabled(true);
   }, [settlementSymbol, type]);
 
   const selectedSettlementOption = useMemo(
