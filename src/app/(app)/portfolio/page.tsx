@@ -30,6 +30,10 @@ import { useVaultStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
+import {
+  createVaultTransaction,
+  rebuildTradeSettlement,
+} from "@/lib/transactions";
 
 type TxType = PortfolioTxType;
 type CsvRequiredColumn = "date" | "symbol" | "quantity" | "price";
@@ -336,6 +340,7 @@ export default function PortfolioPage() {
         coingeckoId: tx.coingeckoId,
         note: tx.note,
         transactedAt: tx.transactedAt,
+        settlement: tx.settlement,
       }));
   }, [vaultTransactions]);
 
@@ -423,21 +428,20 @@ export default function PortfolioPage() {
           ...prev,
           transactions: [
             ...prev.transactions,
-            {
+            createVaultTransaction({
               id: crypto.randomUUID(),
               tokenSymbol: normalizedSymbol,
               tokenName: normalizedName,
               chain: "",
               type: "buy",
-              quantity: quantity.toString(),
-              pricePerUnit: initialPrice.toString(),
-              totalCost: (quantity * initialPrice).toString(),
-              fee: "0",
+              quantity,
+              pricePerUnit: initialPrice,
+              fee: 0,
               coingeckoId: normalizedCoingeckoId || null,
-              note: data.note.trim() || null,
+              note: data.note,
               transactedAt: nowIso,
               createdAt: nowIso,
-            },
+            }),
           ],
           tokenCategories: withAutoStablecoinCategory(
             prev.tokenCategories,
@@ -590,6 +594,18 @@ export default function PortfolioPage() {
 
     setSubmittingEdit(true);
     try {
+      const nextSettlement =
+        editType === "buy" || editType === "sell"
+          ? rebuildTradeSettlement(
+              {
+                type: editType,
+                quantity: qty,
+                pricePerUnit: price,
+                fee: editingTx.fee,
+              },
+              editingTx.settlement
+            )
+          : undefined;
       const updates = {
         type: editType as TxType,
         quantity: qty.toString(),
@@ -597,6 +613,7 @@ export default function PortfolioPage() {
         totalCost: String(qty * price),
         transactedAt: parsedEditDate.toISOString(),
         note: editNote.trim() || null,
+        settlement: nextSettlement,
       };
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
@@ -668,21 +685,20 @@ export default function PortfolioPage() {
       const nowIso = new Date().toISOString();
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
-        transactions: [...prev.transactions, {
+        transactions: [...prev.transactions, createVaultTransaction({
           id,
           tokenSymbol: item.symbol,
           tokenName: item.tokenName || item.symbol,
           chain: "",
           type: txType,
-          quantity: qty.toString(),
-          pricePerUnit: price.toString(),
-          totalCost: String(qty * price),
-          fee: "0",
+          quantity: qty,
+          pricePerUnit: price,
+          fee: 0,
           coingeckoId: item.coingeckoId || null,
-          note: inlineNote.trim() || null,
+          note: inlineNote,
           transactedAt: parsedInlineDate.toISOString(),
           createdAt: nowIso,
-        }],
+        })],
         tokenCategories: withAutoStablecoinCategory(
           prev.tokenCategories,
           item.symbol,
@@ -975,21 +991,23 @@ export default function PortfolioPage() {
     setImporting(true);
     setImportError(null);
     try {
-      const newTransactions = importPreview.map((row) => ({
-        id: crypto.randomUUID(),
-        tokenSymbol: row.symbol,
-        tokenName: row.name,
-        chain: "",
-        type: row.type,
-        quantity: row.quantity.toString(),
-        pricePerUnit: row.pricePerUnit.toString(),
-        totalCost: String(row.quantity * row.pricePerUnit),
-        fee: row.fee.toString(),
-        coingeckoId: row.coingeckoId,
-        note: row.note,
-        transactedAt: row.dateIso,
-        createdAt: new Date().toISOString(),
-      }));
+      const createdAtIso = new Date().toISOString();
+      const newTransactions = importPreview.map((row) =>
+        createVaultTransaction({
+          id: crypto.randomUUID(),
+          tokenSymbol: row.symbol,
+          tokenName: row.name,
+          chain: "",
+          type: row.type,
+          quantity: row.quantity,
+          pricePerUnit: row.pricePerUnit,
+          fee: row.fee,
+          coingeckoId: row.coingeckoId,
+          note: row.note,
+          transactedAt: row.dateIso,
+          createdAt: createdAtIso,
+        })
+      );
 
       useVaultStore.getState().updateVault((prev) => {
         const nowIso = new Date().toISOString();
@@ -1446,8 +1464,22 @@ export default function PortfolioPage() {
     </div>
   );
 
-  const renderTransactionEditForm = (tx: Transaction) => (
-    <div className="space-y-3">
+  const renderTransactionEditForm = (tx: Transaction) => {
+    const settlementPreview =
+      tx.settlement && (editType === "buy" || editType === "sell")
+        ? rebuildTradeSettlement(
+            {
+              type: editType,
+              quantity: editQty || tx.quantity,
+              pricePerUnit: editPrice || tx.pricePerUnit,
+              fee: tx.fee,
+            },
+            tx.settlement
+          )
+        : undefined;
+
+    return (
+      <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         {(["buy", "sell", "receive", "send"] as const).map((typ) => (
           <button
@@ -1518,6 +1550,23 @@ export default function PortfolioPage() {
           {formatUsd(parseFloat(editQty || "0") * parseFloat(editPrice || "0"))}
         </div>
       )}
+      {settlementPreview ? (
+        <div className="text-xs text-text-subtle">
+          {t("portfolio.transactionSettlementSummary", {
+            token: settlementPreview.tokenSymbol,
+            direction:
+              settlementPreview.direction === "out"
+                ? t("portfolio.transactionSettlementOut")
+                : t("portfolio.transactionSettlementIn"),
+            amount: formatUsd(Number.parseFloat(settlementPreview.totalCost)),
+          })}{" "}
+          {t("portfolio.transactionSettlementWillRecalculate")}
+        </div>
+      ) : tx.settlement ? (
+        <div className="text-xs text-text-subtle">
+          {t("portfolio.transactionSettlementRemoved")}
+        </div>
+      ) : null}
       {editError && (
         <div className="text-xs text-status-negative" role="alert" aria-live="assertive">
           {editError}
@@ -1540,7 +1589,8 @@ export default function PortfolioPage() {
         </Button>
       </div>
     </div>
-  );
+    );
+  };
 
   if (isLoading) {
     return (

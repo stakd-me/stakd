@@ -1,3 +1,8 @@
+import type {
+  VaultTransactionSettlement,
+  VaultTransactionType,
+} from "@/lib/crypto/vault-types";
+
 export interface BreakdownItem {
   holdingKey: string;
   symbol: string;
@@ -20,7 +25,7 @@ export interface PortfolioTransaction {
   id: string;
   tokenSymbol: string;
   tokenName: string;
-  type: string;
+  type: VaultTransactionType;
   quantity: string;
   pricePerUnit: string;
   totalCost: string;
@@ -28,6 +33,7 @@ export interface PortfolioTransaction {
   coingeckoId: string | null;
   note: string | null;
   transactedAt: string;
+  settlement?: VaultTransactionSettlement;
 }
 
 export interface ManualEntry {
@@ -48,7 +54,7 @@ export interface PortfolioCoinListItem {
   binance: boolean;
 }
 
-export type PortfolioTxType = "buy" | "sell" | "receive" | "send";
+export type PortfolioTxType = VaultTransactionType;
 
 export interface ImportPreviewRow {
   rowNumber: number;

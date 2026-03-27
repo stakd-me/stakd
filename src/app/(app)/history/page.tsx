@@ -23,6 +23,7 @@ import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import type { VaultTransaction } from "@/lib/crypto/vault-types";
 import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
+import { expandTransactionForBalance } from "@/lib/transactions";
 import Link from "next/link";
 import {
   Chart as ChartJS,
@@ -55,8 +56,9 @@ function computeRealizedPLTimeline(transactions: VaultTransaction[]): {
   timeline: PLPoint[];
   totalRealizedPL: number;
 } {
-  // Sort all transactions chronologically
-  const sorted = [...transactions].sort(
+  // Settlement legs should update cost-basis pools without showing up as
+  // extra realized events in the chart.
+  const sorted = transactions.flatMap(expandTransactionForBalance).sort(
     (a, b) => new Date(a.transactedAt).getTime() - new Date(b.transactedAt).getTime()
   );
 
@@ -81,29 +83,31 @@ function computeRealizedPLTimeline(transactions: VaultTransaction[]): {
         costBasis[key].totalCost += cost + fee;
       }
       costBasis[key].totalQty += qty;
-    } else if (tx.type === "sell") {
+    } else if (tx.type === "sell" || tx.type === "send") {
       const avgCost =
         costBasis[key].totalQty > 0
           ? costBasis[key].totalCost / costBasis[key].totalQty
           : 0;
+      const shouldRecordRealizedPl = tx.type === "sell" && !tx.isSettlement;
       const sellPrice = qty > 0 ? (cost - fee) / qty : 0;
-      const pl = (sellPrice - avgCost) * qty;
+      const pl = shouldRecordRealizedPl ? (sellPrice - avgCost) * qty : 0;
 
-      // Reduce the cost basis pool proportionally
       if (costBasis[key].totalQty > 0) {
         const fraction = qty / costBasis[key].totalQty;
         costBasis[key].totalCost -= costBasis[key].totalCost * fraction;
       }
       costBasis[key].totalQty -= qty;
 
-      cumulativePL += pl;
+      if (shouldRecordRealizedPl) {
+        cumulativePL += pl;
 
-      timeline.push({
-        date: tx.transactedAt,
-        cumulativePL,
-        symbol: tx.tokenSymbol.toUpperCase(),
-        pl,
-      });
+        timeline.push({
+          date: tx.transactedAt,
+          cumulativePL,
+          symbol: tx.tokenSymbol.toUpperCase(),
+          pl,
+        });
+      }
     }
   }
 

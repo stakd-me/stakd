@@ -139,6 +139,25 @@ export function TransactionsSection({
                           <p className="text-text-primary">{tx.note}</p>
                         </div>
                       ) : null}
+                      {tx.settlement ? (
+                        <div className="col-span-2">
+                          <p className="text-xs text-text-subtle">
+                            {t("portfolio.transactionSettlement")}
+                          </p>
+                          <p className="text-text-primary">
+                            {t("portfolio.transactionSettlementSummary", {
+                              token: tx.settlement.tokenSymbol,
+                              direction:
+                                tx.settlement.direction === "out"
+                                  ? t("portfolio.transactionSettlementOut")
+                                  : t("portfolio.transactionSettlementIn"),
+                              amount: formatUsd(
+                                Number.parseFloat(tx.settlement.totalCost)
+                              ),
+                            })}
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -222,6 +241,20 @@ export function TransactionsSection({
                           <th scope="row" className="py-3 pr-4 text-left">
                             <p className="font-medium">{tx.tokenSymbol}</p>
                             <p className="text-xs text-text-subtle">{tx.tokenName}</p>
+                            {tx.settlement ? (
+                              <p className="mt-1 text-xs text-text-subtle">
+                                {t("portfolio.transactionSettlementSummary", {
+                                  token: tx.settlement.tokenSymbol,
+                                  direction:
+                                    tx.settlement.direction === "out"
+                                      ? t("portfolio.transactionSettlementOut")
+                                      : t("portfolio.transactionSettlementIn"),
+                                  amount: formatUsd(
+                                    Number.parseFloat(tx.settlement.totalCost)
+                                  ),
+                                })}
+                              </p>
+                            ) : null}
                           </th>
                           <td className="py-3 pr-4 text-right font-mono">
                             {formatCrypto(tx.quantity)}

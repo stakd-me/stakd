@@ -3,12 +3,24 @@
  * All user-specific data lives here. Server never sees the plaintext.
  */
 
+export type VaultTransactionType = "buy" | "sell" | "receive" | "send";
+
+export interface VaultTransactionSettlement {
+  tokenSymbol: string;
+  tokenName: string;
+  coingeckoId: string | null;
+  direction: "in" | "out";
+  quantity: string;
+  pricePerUnit: string;
+  totalCost: string;
+}
+
 export interface VaultTransaction {
   id: string; // client-generated UUID
   tokenSymbol: string;
   tokenName: string;
   chain: string;
-  type: "buy" | "sell" | "receive" | "send";
+  type: VaultTransactionType;
   quantity: string;
   pricePerUnit: string;
   totalCost: string;
@@ -17,6 +29,7 @@ export interface VaultTransaction {
   note: string | null;
   transactedAt: string; // ISO string
   createdAt: string;    // ISO string
+  settlement?: VaultTransactionSettlement;
 }
 
 export interface VaultManualEntry {

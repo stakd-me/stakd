@@ -7,6 +7,10 @@ import {
   getTokenAllocations,
   type PriceData,
 } from "@/lib/services/portfolio-calculator";
+import {
+  buildTradeSettlement,
+  createVaultTransaction,
+} from "@/lib/transactions";
 
 function createSampleVault() {
   const vault = createEmptyVault();
@@ -161,5 +165,87 @@ describe("portfolio-calculator", () => {
     expect(holdings[0].currentQty).toBeCloseTo(0.6);
     expect(holdings[0].realizedPL).toBeCloseTo(0);
     expect(holdings[0].currentValue).toBeCloseTo(72);
+  });
+
+  it("updates stablecoin holdings from embedded settlement legs", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      createVaultTransaction({
+        id: "fund-usdt",
+        tokenSymbol: "USDT",
+        tokenName: "Tether",
+        chain: "",
+        type: "buy",
+        quantity: 100000,
+        pricePerUnit: 1,
+        fee: 0,
+        coingeckoId: "tether",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+      createVaultTransaction({
+        id: "buy-btc-with-usdt",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: 1,
+        pricePerUnit: 69000,
+        fee: 0,
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-02T00:00:00.000Z",
+        createdAt: "2026-01-02T00:00:00.000Z",
+        settlement: buildTradeSettlement({
+          settlement: {
+            tokenSymbol: "USDT",
+            tokenName: "Tether",
+            coingeckoId: "tether",
+          },
+          type: "buy",
+          totalCost: 69000,
+          fee: 0,
+          pricePerUnit: 1,
+        }),
+      }),
+      createVaultTransaction({
+        id: "sell-btc-to-usdt",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "sell",
+        quantity: 0.25,
+        pricePerUnit: 70000,
+        fee: 0,
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-03T00:00:00.000Z",
+        createdAt: "2026-01-03T00:00:00.000Z",
+        settlement: buildTradeSettlement({
+          settlement: {
+            tokenSymbol: "USDT",
+            tokenName: "Tether",
+            coingeckoId: "tether",
+          },
+          type: "sell",
+          totalCost: 17500,
+          fee: 0,
+          pricePerUnit: 1,
+        }),
+      }),
+    ];
+
+    const holdings = getHoldings(vault, {
+      bitcoin: { usd: 70000, change24h: null },
+      tether: { usd: 1, change24h: null },
+    });
+
+    const btc = holdings.find((holding) => holding.symbol === "BTC");
+    const usdt = holdings.find((holding) => holding.symbol === "USDT");
+
+    expect(btc?.currentQty).toBeCloseTo(0.75);
+    expect(usdt?.currentQty).toBeCloseTo(48500);
+    expect(usdt?.avgCostBasis).toBeCloseTo(1);
   });
 });

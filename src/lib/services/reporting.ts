@@ -1,5 +1,6 @@
 import type { VaultData, VaultTransaction } from "@/lib/crypto/vault-types";
 import type { TokenHolding } from "@/lib/services/portfolio-calculator";
+import { expandTransactionForBalance } from "@/lib/transactions";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
@@ -248,7 +249,7 @@ function computeHeldDaysByAsset(
 ): Record<string, number> {
   const firstAcquireMsByAsset: Record<string, number> = {};
 
-  for (const tx of transactions) {
+  for (const tx of transactions.flatMap(expandTransactionForBalance)) {
     const timestamp = new Date(tx.transactedAt).getTime();
     if (!Number.isFinite(timestamp) || timestamp > endMs) continue;
     if (tx.type !== "buy" && tx.type !== "receive") continue;
@@ -530,7 +531,7 @@ function buildHistoricalPriceSeriesByAsset(params: {
   endMs: number;
 }): HistoricalPriceSeriesByAsset {
   const byAsset: HistoricalPriceSeriesByAsset = {};
-  const txSorted = [...params.transactions].sort(
+  const txSorted = params.transactions.flatMap(expandTransactionForBalance).sort(
     (a, b) => new Date(a.transactedAt).getTime() - new Date(b.transactedAt).getTime()
   );
 
@@ -657,7 +658,7 @@ function computeEstimatedAssetValueByAssetAt(params: {
 }): EstimatedAssetValueAtResult {
   const qtyByAsset: Record<string, number> = {};
 
-  for (const tx of params.transactions) {
+  for (const tx of params.transactions.flatMap(expandTransactionForBalance)) {
     const timestamp = new Date(tx.transactedAt).getTime();
     if (!Number.isFinite(timestamp) || timestamp > params.atMs) continue;
 
@@ -722,7 +723,7 @@ function computeOpeningCapitalAt(params: {
   let exactTransactionCount = 0;
   let estimatedTransactionCount = 0;
   let unknownTransactionCount = 0;
-  const sortedTransactions = [...params.transactions].sort(
+  const sortedTransactions = params.transactions.flatMap(expandTransactionForBalance).sort(
     (a, b) => new Date(a.transactedAt).getTime() - new Date(b.transactedAt).getTime()
   );
 
@@ -807,7 +808,7 @@ function computeNetFlowByAsset(
 ): Record<string, number> {
   const netFlowByAsset: Record<string, number> = {};
 
-  for (const tx of transactions) {
+  for (const tx of transactions.flatMap(expandTransactionForBalance)) {
     const timestamp = new Date(tx.transactedAt).getTime();
     const isBeforeStart = includeStartBoundary ? timestamp < startMs : timestamp <= startMs;
     if (!Number.isFinite(timestamp) || isBeforeStart || timestamp > endMs) {

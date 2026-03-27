@@ -1,4 +1,5 @@
 import type { VaultData } from "@/lib/crypto/vault-types";
+import { expandTransactionForBalance } from "@/lib/transactions";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ export function getHoldings(
   vault: VaultData,
   priceMap: Record<string, PriceData>
 ): TokenHolding[] {
-  const allTx = vault.transactions;
+  const allTx = vault.transactions.flatMap(expandTransactionForBalance);
 
   // Group by (tokenSymbol upper + coingeckoId)
   const groups: Record<string, {

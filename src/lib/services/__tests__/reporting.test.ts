@@ -1,6 +1,10 @@
 import { createEmptyVault } from "@/lib/crypto/vault-types";
 import type { TokenHolding } from "@/lib/services/portfolio-calculator";
 import { computePortfolioReport } from "@/lib/services/reporting";
+import {
+  buildTradeSettlement,
+  createVaultTransaction,
+} from "@/lib/transactions";
 
 function makeHolding(overrides: Partial<TokenHolding>): TokenHolding {
   return {
@@ -596,6 +600,80 @@ describe("computePortfolioReport", () => {
 
     expect(report.activity.estimatedAmountTransactionCount).toBeGreaterThan(0);
     expect(report.dataQuality.level).toBe("estimated");
+  });
+
+  it("does not double-count settlement legs in trading activity", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      createVaultTransaction({
+        id: "buy-btc-settled",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "",
+        type: "buy",
+        quantity: 1,
+        pricePerUnit: 69000,
+        fee: 25,
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-03-03T12:00:00.000Z",
+        createdAt: "2026-03-03T12:00:00.000Z",
+        settlement: buildTradeSettlement({
+          settlement: {
+            tokenSymbol: "USDT",
+            tokenName: "Tether",
+            coingeckoId: "tether",
+          },
+          type: "buy",
+          totalCost: 69000,
+          fee: 25,
+          pricePerUnit: 1,
+        }),
+      }),
+    ];
+
+    const report = computePortfolioReport({
+      vault,
+      holdings: [
+        makeHolding({
+          symbol: "BTC",
+          coingeckoId: "bitcoin",
+          currentQty: 1,
+          currentPrice: 69000,
+          currentValue: 69000,
+          totalBuyCost: 69025,
+          avgCostBasis: 69025,
+          unrealizedPL: -25,
+          unrealizedPLPercent: 0,
+        }),
+        makeHolding({
+          symbol: "USDT",
+          tokenName: "Tether",
+          coingeckoId: "tether",
+          currentQty: 30975,
+          buyQty: 100000,
+          sellQty: 69025,
+          totalBuyCost: 100000,
+          totalSellRevenue: 69025,
+          totalFees: 0,
+          avgCostBasis: 1,
+          currentPrice: 1,
+          currentValue: 30975,
+          unrealizedPL: 0,
+          unrealizedPLPercent: 0,
+          realizedPL: 0,
+        }),
+      ],
+      currentTotalValueUsd: 99975,
+      period: "weekly",
+      referenceDate: new Date("2026-03-04T18:00:00.000Z"),
+    });
+
+    expect(report.activity.transactionCount).toBe(1);
+    expect(report.activity.buyVolumeUsd).toBe(69000);
+    expect(report.activity.totalFeesUsd).toBe(25);
+    expect(report.summary.tradingTurnoverUsd).toBe(69000);
+    expect(report.summary.netFlowUsd).toBe(69025);
   });
 
   it("keeps bridge identity: start + capital net flow + pnl = end", () => {

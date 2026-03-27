@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { formatUsd, toLocalDatetimeString } from "@/lib/utils";
 import { ArrowLeft, Search, AlertTriangle } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
@@ -15,13 +16,29 @@ import { apiFetch } from "@/lib/api-client";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import { rankTokenSearchResults } from "@/lib/search/token-search";
-import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
+import {
+  buildStablecoinSymbolSet,
+  withAutoStablecoinCategory,
+} from "@/lib/constants/stablecoins";
+import { getHoldings } from "@/lib/services/portfolio-calculator";
+import {
+  buildTradeSettlement,
+  computeSettlementAmountUsd,
+  createVaultTransaction,
+} from "@/lib/transactions";
 
 interface CoinListItem {
   id: string;
   symbol: string;
   name: string;
   binance: boolean;
+}
+
+interface StablecoinOption {
+  symbol: string;
+  name: string;
+  coingeckoId: string | null;
+  currentQty: number;
 }
 
 type TxType = "buy" | "sell" | "receive" | "send";
@@ -47,6 +64,7 @@ export default function AddTransactionPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { ensurePrices } = usePrices();
+  const vault = useVaultStore((state) => state.vault);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
@@ -61,6 +79,8 @@ export default function AddTransactionPage() {
   const [fee, setFee] = useState("");
   const [coingeckoId, setCoingeckoId] = useState("");
   const [note, setNote] = useState("");
+  const [settlementEnabled, setSettlementEnabled] = useState(true);
+  const [settlementSymbol, setSettlementSymbol] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Track CoinGecko selection to detect manual edits
@@ -138,6 +158,125 @@ export default function AddTransactionPage() {
     return qty * price;
   }, [quantity, pricePerUnit]);
 
+  const stablecoinOptions = useMemo(() => {
+    const stablecoinSymbols = buildStablecoinSymbolSet(vault.tokenCategories);
+    const currentQtyBySymbol = new Map<string, number>();
+    const optionsBySymbol = new Map<string, StablecoinOption>();
+    const holdings = getHoldings(vault, {});
+
+    for (const holding of holdings) {
+      const normalizedSymbol = holding.symbol.trim().toUpperCase();
+      if (!stablecoinSymbols.has(normalizedSymbol)) continue;
+      currentQtyBySymbol.set(normalizedSymbol, holding.currentQty);
+      optionsBySymbol.set(normalizedSymbol, {
+        symbol: normalizedSymbol,
+        name: holding.tokenName || normalizedSymbol,
+        coingeckoId: holding.coingeckoId,
+        currentQty: holding.currentQty,
+      });
+    }
+
+    for (const tx of vault.transactions) {
+      const normalizedSymbol = tx.tokenSymbol.trim().toUpperCase();
+      if (!stablecoinSymbols.has(normalizedSymbol)) continue;
+      if (!optionsBySymbol.has(normalizedSymbol)) {
+        optionsBySymbol.set(normalizedSymbol, {
+          symbol: normalizedSymbol,
+          name: tx.tokenName || normalizedSymbol,
+          coingeckoId: tx.coingeckoId,
+          currentQty: currentQtyBySymbol.get(normalizedSymbol) ?? 0,
+        });
+      }
+    }
+
+    for (const entry of vault.manualEntries) {
+      const normalizedSymbol = entry.tokenSymbol.trim().toUpperCase();
+      if (!stablecoinSymbols.has(normalizedSymbol)) continue;
+      if (!optionsBySymbol.has(normalizedSymbol)) {
+        optionsBySymbol.set(normalizedSymbol, {
+          symbol: normalizedSymbol,
+          name: entry.tokenName || normalizedSymbol,
+          coingeckoId: entry.coingeckoId,
+          currentQty: currentQtyBySymbol.get(normalizedSymbol) ?? entry.quantity,
+        });
+      }
+    }
+
+    for (const coin of coinList ?? []) {
+      const normalizedSymbol = coin.symbol.trim().toUpperCase();
+      if (!stablecoinSymbols.has(normalizedSymbol)) continue;
+      if (!optionsBySymbol.has(normalizedSymbol)) {
+        optionsBySymbol.set(normalizedSymbol, {
+          symbol: normalizedSymbol,
+          name: coin.name,
+          coingeckoId: coin.id,
+          currentQty: currentQtyBySymbol.get(normalizedSymbol) ?? 0,
+        });
+      }
+    }
+
+    for (const stablecoinSymbol of stablecoinSymbols) {
+      if (!optionsBySymbol.has(stablecoinSymbol)) {
+        optionsBySymbol.set(stablecoinSymbol, {
+          symbol: stablecoinSymbol,
+          name: stablecoinSymbol,
+          coingeckoId: null,
+          currentQty: currentQtyBySymbol.get(stablecoinSymbol) ?? 0,
+        });
+      }
+    }
+
+    return [...optionsBySymbol.values()].sort((a, b) => {
+      if (b.currentQty !== a.currentQty) {
+        return b.currentQty - a.currentQty;
+      }
+      return a.symbol.localeCompare(b.symbol);
+    });
+  }, [coinList, vault]);
+
+  const defaultSettlementSymbol = stablecoinOptions[0]?.symbol ?? "USDT";
+
+  useEffect(() => {
+    if (
+      settlementSymbol &&
+      stablecoinOptions.some((option) => option.symbol === settlementSymbol)
+    ) {
+      return;
+    }
+    setSettlementSymbol(defaultSettlementSymbol);
+  }, [defaultSettlementSymbol, settlementSymbol, stablecoinOptions]);
+
+  useEffect(() => {
+    if (type === "receive" || type === "send") {
+      setSettlementEnabled(false);
+      return;
+    }
+
+    if (!settlementSymbol) {
+      setSettlementEnabled(true);
+    }
+  }, [settlementSymbol, type]);
+
+  const selectedSettlementOption = useMemo(
+    () =>
+      stablecoinOptions.find((option) => option.symbol === settlementSymbol) ?? {
+        symbol: defaultSettlementSymbol,
+        name: defaultSettlementSymbol,
+        coingeckoId: null,
+        currentQty: 0,
+      },
+    [defaultSettlementSymbol, settlementSymbol, stablecoinOptions]
+  );
+
+  const settlementAmountUsd = useMemo(() => {
+    const parsedFee = fee.trim().length > 0 ? parseFloat(fee) : 0;
+    return computeSettlementAmountUsd({
+      type,
+      totalCost,
+      fee: Number.isFinite(parsedFee) ? parsedFee : 0,
+    });
+  }, [fee, totalCost, type]);
+
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -167,6 +306,11 @@ export default function AddTransactionPage() {
       setError(t("portfolio.validationFeeNonNegative"));
       return;
     }
+    const needsSettlement = settlementEnabled && (type === "buy" || type === "sell");
+    if (needsSettlement && !settlementSymbol.trim()) {
+      setError(t("portfolioAdd.validationSettlementSymbolRequired"));
+      return;
+    }
     if (!transactedAt) {
       setError(t("portfolio.validationDateRequired"));
       return;
@@ -185,35 +329,66 @@ export default function AddTransactionPage() {
     try {
       const cgId = coingeckoId.trim() || null;
       const createdAtIso = new Date().toISOString();
-      const newTx = {
+      const settlement = needsSettlement
+        ? buildTradeSettlement({
+            settlement: {
+              tokenSymbol: selectedSettlementOption.symbol,
+              tokenName: selectedSettlementOption.name,
+              coingeckoId: selectedSettlementOption.coingeckoId,
+            },
+            type,
+            totalCost: qty * price,
+            fee: parsedFee,
+            pricePerUnit: 1,
+          })
+        : undefined;
+      const newTx = createVaultTransaction({
         id: crypto.randomUUID(),
         tokenSymbol: symbol.trim(),
         tokenName: name.trim(),
         chain: "",
         type,
-        quantity: qty.toString(),
-        pricePerUnit: price.toString(),
-        totalCost: (qty * price).toString(),
-        fee: parsedFee.toString(),
+        quantity: qty,
+        pricePerUnit: price,
+        fee: parsedFee,
         coingeckoId: cgId,
-        note: note.trim() || null,
+        note,
         transactedAt: parsedTransactedAt.toISOString(),
         createdAt: createdAtIso,
-      };
+        settlement,
+      });
 
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
         transactions: [...prev.transactions, newTx],
-        tokenCategories: withAutoStablecoinCategory(
-          prev.tokenCategories,
-          newTx.tokenSymbol,
-          createdAtIso
+        tokenCategories: [newTx.tokenSymbol, settlement?.tokenSymbol].reduce(
+          (categories, tokenSymbol) =>
+            tokenSymbol
+              ? withAutoStablecoinCategory(categories, tokenSymbol, createdAtIso)
+              : categories,
+          prev.tokenCategories
         ),
       }));
 
-      // Ensure price tracking for this token
-      if (cgId) {
-        ensurePrices([{ coingeckoId: cgId, symbol: symbol.trim() }]).catch(() => {});
+      const tokensToEnsure = [
+        cgId ? { coingeckoId: cgId, symbol: symbol.trim() } : null,
+        settlement?.coingeckoId
+          ? {
+              coingeckoId: settlement.coingeckoId,
+              symbol: settlement.tokenSymbol,
+            }
+          : null,
+      ].filter(
+        (
+          token
+        ): token is {
+          coingeckoId: string;
+          symbol: string;
+        } => Boolean(token)
+      );
+
+      if (tokensToEnsure.length > 0) {
+        ensurePrices(tokensToEnsure).catch(() => {});
       }
 
       toast(t("portfolioAdd.transactionAdded"), "success");
@@ -397,6 +572,64 @@ export default function AddTransactionPage() {
                 <p className="text-sm text-text-subtle">
                   {t("portfolioAdd.totalCost", { amount: formatUsd(totalCost) })}
                 </p>
+              </div>
+            )}
+
+            {(type === "buy" || type === "sell") && (
+              <div className="space-y-3 rounded-md border border-border bg-bg-card px-4 py-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={settlementEnabled}
+                    onChange={(e) => setSettlementEnabled(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-border"
+                  />
+                  <div className="space-y-1">
+                    <span className="text-sm font-medium text-text-primary">
+                      {t("portfolioAdd.adjustStablecoinBalance")}
+                    </span>
+                    <p className="text-xs text-text-subtle">
+                      {t("portfolioAdd.adjustStablecoinBalanceDesc")}
+                    </p>
+                  </div>
+                </label>
+
+                {settlementEnabled && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="settlementStablecoin"
+                        className="text-sm font-medium text-text-muted"
+                      >
+                        {t("portfolioAdd.settlementStablecoin")}
+                      </label>
+                      <Select
+                        id="settlementStablecoin"
+                        value={settlementSymbol}
+                        onChange={(e) => setSettlementSymbol(e.target.value)}
+                      >
+                        {stablecoinOptions.map((option) => (
+                          <option key={option.symbol} value={option.symbol}>
+                            {option.symbol} · {option.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    {settlementAmountUsd > 0 && (
+                      <div className="rounded-md bg-bg-input px-4 py-3 text-sm text-text-subtle">
+                        {t("portfolioAdd.settlementPreview", {
+                          token: selectedSettlementOption.symbol,
+                          direction:
+                            type === "buy"
+                              ? t("portfolio.transactionSettlementOut")
+                              : t("portfolio.transactionSettlementIn"),
+                          amount: formatUsd(settlementAmountUsd),
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
