@@ -31,6 +31,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
 import {
+  calculateFeeAmountFromPercent,
+  calculateFeePercentFromAmount,
   createVaultTransaction,
   rebuildTradeSettlement,
 } from "@/lib/transactions";
@@ -241,6 +243,7 @@ export default function PortfolioPage() {
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [editQty, setEditQty] = useState("");
   const [editPrice, setEditPrice] = useState("");
+  const [editFeePercent, setEditFeePercent] = useState("0.1");
   const [editDate, setEditDate] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editType, setEditType] = useState<TxType>("buy");
@@ -555,10 +558,18 @@ export default function PortfolioPage() {
   }, [toast, t]);
 
   const openEditForm = (tx: Transaction) => {
+    const totalCost =
+      Number.parseFloat(tx.quantity) * Number.parseFloat(tx.pricePerUnit);
     setEditingTx(tx);
     setEditType(tx.type as TxType);
     setEditQty(tx.quantity);
     setEditPrice(tx.pricePerUnit);
+    setEditFeePercent(
+      calculateFeePercentFromAmount(
+        totalCost,
+        Number.parseFloat(tx.fee)
+      ).toString()
+    );
     setEditDate(toLocalDatetimeString(new Date(tx.transactedAt)));
     setEditNote(tx.note || "");
     setEditError(null);
@@ -578,6 +589,11 @@ export default function PortfolioPage() {
       setEditError(t("portfolio.validationPricePositive"));
       return;
     }
+    const feePercent = parseFloat(editFeePercent);
+    if (!Number.isFinite(feePercent) || feePercent < 0) {
+      setEditError(t("portfolio.validationFeeNonNegative"));
+      return;
+    }
     if (!editDate) {
       setEditError(t("portfolio.validationDateRequired"));
       return;
@@ -594,6 +610,7 @@ export default function PortfolioPage() {
 
     setSubmittingEdit(true);
     try {
+      const feeUsd = calculateFeeAmountFromPercent(qty * price, feePercent);
       const nextSettlement =
         editType === "buy" || editType === "sell"
           ? rebuildTradeSettlement(
@@ -601,7 +618,7 @@ export default function PortfolioPage() {
                 type: editType,
                 quantity: qty,
                 pricePerUnit: price,
-                fee: editingTx.fee,
+                fee: feeUsd,
               },
               editingTx.settlement
             )
@@ -611,6 +628,7 @@ export default function PortfolioPage() {
         quantity: qty.toString(),
         pricePerUnit: price.toString(),
         totalCost: String(qty * price),
+        fee: String(feeUsd),
         transactedAt: parsedEditDate.toISOString(),
         note: editNote.trim() || null,
         settlement: nextSettlement,
@@ -628,7 +646,7 @@ export default function PortfolioPage() {
     } finally {
       setSubmittingEdit(false);
     }
-  }, [editDate, editNote, editPrice, editQty, editType, editingTx, t, toast]);
+  }, [editDate, editFeePercent, editNote, editPrice, editQty, editType, editingTx, t, toast]);
 
   const handleDeleteConfirm = () => {
     if (deleteTarget) {
@@ -1465,6 +1483,12 @@ export default function PortfolioPage() {
   );
 
   const renderTransactionEditForm = (tx: Transaction) => {
+    const editTotalCost =
+      Number.parseFloat(editQty || "0") * Number.parseFloat(editPrice || "0");
+    const editFeeAmountUsd = calculateFeeAmountFromPercent(
+      editTotalCost,
+      Number.parseFloat(editFeePercent || "0")
+    );
     const settlementPreview =
       tx.settlement && (editType === "buy" || editType === "sell")
         ? rebuildTradeSettlement(
@@ -1472,7 +1496,7 @@ export default function PortfolioPage() {
               type: editType,
               quantity: editQty || tx.quantity,
               pricePerUnit: editPrice || tx.pricePerUnit,
-              fee: tx.fee,
+              fee: editFeeAmountUsd,
             },
             tx.settlement
           )
@@ -1498,7 +1522,7 @@ export default function PortfolioPage() {
           {tx.tokenSymbol}
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div>
           <label className="mb-1 block text-xs text-text-subtle">
             {t("portfolio.quantity")} *
@@ -1525,6 +1549,18 @@ export default function PortfolioPage() {
         </div>
         <div>
           <label className="mb-1 block text-xs text-text-subtle">
+            {t("portfolio.feePercent")}
+          </label>
+          <Input
+            type="number"
+            step="any"
+            min="0"
+            value={editFeePercent}
+            onChange={(e) => setEditFeePercent(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-text-subtle">
             {t("common.date")}
           </label>
           <Input
@@ -1545,9 +1581,14 @@ export default function PortfolioPage() {
         </div>
       </div>
       {editQty && editPrice && (
-        <div className="text-xs text-text-subtle">
+        <div className="space-y-1 text-xs text-text-subtle">
+          <div>
           {t("common.total") + ":"}{" "}
-          {formatUsd(parseFloat(editQty || "0") * parseFloat(editPrice || "0"))}
+          {formatUsd(editTotalCost)}
+          </div>
+          <div>
+            {t("portfolio.estimatedFee")}: {formatUsd(editFeeAmountUsd)}
+          </div>
         </div>
       )}
       {settlementPreview ? (

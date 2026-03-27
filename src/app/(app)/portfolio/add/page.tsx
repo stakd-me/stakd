@@ -23,6 +23,7 @@ import {
 import { getHoldings } from "@/lib/services/portfolio-calculator";
 import {
   buildTradeSettlement,
+  calculateFeeAmountFromPercent,
   computeSettlementAmountUsd,
   createVaultTransaction,
 } from "@/lib/transactions";
@@ -76,7 +77,7 @@ export default function AddTransactionPage() {
   const [quantity, setQuantity] = useState("");
   const [pricePerUnit, setPricePerUnit] = useState("");
   const [transactedAt, setTransactedAt] = useState(toLocalDatetimeString());
-  const [fee, setFee] = useState("");
+  const [feePercent, setFeePercent] = useState("0.1");
   const [coingeckoId, setCoingeckoId] = useState("");
   const [note, setNote] = useState("");
   const [settlementEnabled, setSettlementEnabled] = useState(true);
@@ -269,13 +270,27 @@ export default function AddTransactionPage() {
   );
 
   const settlementAmountUsd = useMemo(() => {
-    const parsedFee = fee.trim().length > 0 ? parseFloat(fee) : 0;
+    const parsedFeePercent =
+      feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
+    const feeUsd = calculateFeeAmountFromPercent(
+      totalCost,
+      Number.isFinite(parsedFeePercent) ? parsedFeePercent : 0
+    );
     return computeSettlementAmountUsd({
       type,
       totalCost,
-      fee: Number.isFinite(parsedFee) ? parsedFee : 0,
+      fee: feeUsd,
     });
-  }, [fee, totalCost, type]);
+  }, [feePercent, totalCost, type]);
+
+  const feeAmountUsd = useMemo(() => {
+    const parsedFeePercent =
+      feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
+    return calculateFeeAmountFromPercent(
+      totalCost,
+      Number.isFinite(parsedFeePercent) ? parsedFeePercent : 0
+    );
+  }, [feePercent, totalCost]);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -301,11 +316,13 @@ export default function AddTransactionPage() {
       setError(t("portfolio.validationPricePositive"));
       return;
     }
-    const parsedFee = fee.trim().length > 0 ? parseFloat(fee) : 0;
-    if (!Number.isFinite(parsedFee) || parsedFee < 0) {
+    const parsedFeePercent =
+      feePercent.trim().length > 0 ? parseFloat(feePercent) : 0;
+    if (!Number.isFinite(parsedFeePercent) || parsedFeePercent < 0) {
       setError(t("portfolio.validationFeeNonNegative"));
       return;
     }
+    const parsedFee = calculateFeeAmountFromPercent(totalCost, parsedFeePercent);
     const needsSettlement = settlementEnabled && (type === "buy" || type === "sell");
     if (needsSettlement && !settlementSymbol.trim()) {
       setError(t("portfolioAdd.validationSettlementSymbolRequired"));
@@ -647,18 +664,23 @@ export default function AddTransactionPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="fee" className="text-sm font-medium text-text-muted">
+                <label htmlFor="feePercent" className="text-sm font-medium text-text-muted">
                   {t("portfolioAdd.fee")} <span className="text-text-dim">({t("common.optional")})</span>
                 </label>
                 <Input
-                  id="fee"
+                  id="feePercent"
                   type="number"
                   step="any"
                   min="0"
-                  placeholder="0"
-                  value={fee}
-                  onChange={(e) => setFee(e.target.value)}
+                  placeholder={t("portfolioAdd.feePlaceholder")}
+                  value={feePercent}
+                  onChange={(e) => setFeePercent(e.target.value)}
                 />
+                <p className="text-xs text-text-dim">
+                  {t("portfolioAdd.feeAmountPreview", {
+                    amount: formatUsd(feeAmountUsd),
+                  })}
+                </p>
               </div>
               <div className="space-y-2">
                 <label htmlFor="coingeckoId" className="text-sm font-medium text-text-muted">

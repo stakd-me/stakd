@@ -115,6 +115,24 @@ export function computeSettlementAmountUsd(params: {
   return 0;
 }
 
+export function calculateFeeAmountFromPercent(
+  totalCost: number,
+  feePercent: number
+): number {
+  if (!Number.isFinite(totalCost) || totalCost <= 0) return 0;
+  if (!Number.isFinite(feePercent) || feePercent <= 0) return 0;
+  return (totalCost * feePercent) / 100;
+}
+
+export function calculateFeePercentFromAmount(
+  totalCost: number,
+  feeAmount: number
+): number {
+  if (!Number.isFinite(totalCost) || totalCost <= 0) return 0;
+  if (!Number.isFinite(feeAmount) || feeAmount <= 0) return 0;
+  return (feeAmount / totalCost) * 100;
+}
+
 export function buildTradeSettlement(
   params: TradeSettlementInput
 ): VaultTransactionSettlement | undefined {

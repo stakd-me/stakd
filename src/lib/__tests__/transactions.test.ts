@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildTradeSettlement,
+  calculateFeeAmountFromPercent,
+  calculateFeePercentFromAmount,
   computeSettlementAmountUsd,
   createVaultTransaction,
   expandTransactionForBalance,
@@ -23,6 +25,11 @@ describe("transaction helpers", () => {
         fee: 15,
       })
     ).toBe(34_985);
+  });
+
+  it("converts fee percentages to stored fee amounts and back", () => {
+    expect(calculateFeeAmountFromPercent(69_000, 0.1)).toBeCloseTo(69);
+    expect(calculateFeePercentFromAmount(69_000, 69)).toBeCloseTo(0.1);
   });
 
   it("normalizes a settled trade into balance-impact legs", () => {
