@@ -2,10 +2,7 @@ import { db, schema } from "@/lib/db";
 import { inArray } from "drizzle-orm";
 import { fetchBinancePrices } from "./binance";
 import { fetchSecondaryExchangePrices } from "./secondary-exchanges";
-import {
-  COINGECKO_TO_BINANCE_SYMBOL,
-  resolveBinanceSymbol,
-} from "./binance-symbol-resolver";
+import { COINGECKO_TO_BINANCE_SYMBOL } from "./binance-symbol-resolver";
 
 export type ExchangeName = "binance" | "okx" | "bybit" | "mexc" | "gate" | "none";
 

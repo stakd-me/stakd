@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { useAuthStore, useVaultStore } from "@/lib/store";
+import { useAuthStore } from "@/lib/store";
 import { AuthScreen } from "@/components/auth-screen";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
@@ -15,7 +15,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
   const setLoading = useAuthStore((s) => s.setLoading);
-  const vault = useVaultStore((s) => s.vault);
   const loginRefreshDone = useRef(false);
 
   // Auto-save vault on changes

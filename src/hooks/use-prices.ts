@@ -209,7 +209,7 @@ function usePriceStream() {
             }
           }
         }
-      } catch (err) {
+      } catch {
         if (aborted) return;
         // Connection lost — schedule reconnect
       }

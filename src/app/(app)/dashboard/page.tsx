@@ -32,7 +32,6 @@ const CategoryBarChart = dynamic(
   { ssr: false }
 );
 import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/toast";
 import Link from "next/link";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
@@ -82,7 +81,6 @@ function getTimeRangeMs(range: TimeRange): number | null {
 
 export default function DashboardPage() {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
-  const { toast } = useToast();
   const { format: formatValue } = useCurrency();
   const { t } = useTranslation();
   // ── Client-side data from vault store + hooks ──────────────────────
@@ -152,7 +150,7 @@ export default function DashboardPage() {
       });
   }, [strategyOutput, holdZonePercent]);
 
-  const concentrationAlerts = useMemo(() => {
+  const concentrationAlerts = (() => {
     const result: DashboardAlert[] = [];
     for (const item of breakdown) {
       const normalizedSymbol = item.symbol.toUpperCase();
@@ -175,21 +173,12 @@ export default function DashboardPage() {
       }
     }
     return result;
-  }, [
-    breakdown,
-    concentrationThresholdPercent,
-    highConcentrationThresholdPercent,
-    excludeStablecoinsFromConcentration,
-    stablecoinSymbols,
-  ]);
+  })();
 
-  const alerts = useMemo(
-    () => [...deviationAlerts, ...concentrationAlerts],
-    [deviationAlerts, concentrationAlerts]
-  );
+  const alerts = [...deviationAlerts, ...concentrationAlerts];
 
   // ── Client-side category breakdown from vault.tokenCategories ──────
-  const categoryBreakdown = useMemo(() => {
+  const categoryBreakdown = (() => {
     const categories = vault.tokenCategories;
     if (categories.length === 0 || totals.totalValue === 0) return [];
 
@@ -216,7 +205,7 @@ export default function DashboardPage() {
         percent: (valueUsd / totals.totalValue) * 100,
       }))
       .sort((a, b) => b.valueUsd - a.valueUsd);
-  }, [vault.tokenCategories, breakdown, totals.totalValue]);
+  })();
 
   const totalValue = totals.totalValue;
   const totalPL = totals.totalPL;
@@ -226,19 +215,18 @@ export default function DashboardPage() {
     [breakdown]
   );
   const remainingHoldingsCount = Math.max(0, breakdown.length - topHoldings.length);
+  const [now] = useState(() => Date.now());
   const isPriceStale = useMemo(() => {
     if (!lastPriceUpdate) return true;
-    return Date.now() - new Date(lastPriceUpdate).getTime() > 60 * 1000;
-  }, [lastPriceUpdate]);
+    return now - new Date(lastPriceUpdate).getTime() > 60 * 1000;
+  }, [lastPriceUpdate, now]);
   const deviationAlertTokenCount = useMemo(
     () => new Set(deviationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size,
     [deviationAlerts]
   );
-  const concentrationAlertTokenCount = useMemo(
-    () => new Set(concentrationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size,
-    [concentrationAlerts]
-  );
-  const mergedAlertBadges = useMemo(() => {
+  const concentrationAlertTokenCount =
+    new Set(concentrationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size;
+  const mergedAlertBadges = (() => {
     const severityRank: Record<DashboardAlertSeverity, number> = {
       low: 1,
       medium: 2,
@@ -290,7 +278,7 @@ export default function DashboardPage() {
           severityRank[b.severity] - severityRank[a.severity] ||
           Math.abs(b.value) - Math.abs(a.value)
       );
-  }, [alerts]);
+  })();
   const hasAlerts = alerts.length > 0;
   const primaryAlert = mergedAlertBadges[0] ?? null;
   const highestAlertSeverity = primaryAlert?.severity ?? "low";
@@ -304,10 +292,10 @@ export default function DashboardPage() {
   const filteredHistory = useMemo(() => {
     const rangeMs = getTimeRangeMs(timeRange);
     if (!rangeMs || history.length === 0) return history;
-    const cutoff = Date.now() - rangeMs;
+    const cutoff = now - rangeMs;
     const filtered = history.filter((h) => new Date(h.date).getTime() >= cutoff);
     return filtered.length > 0 ? filtered : history;
-  }, [history, timeRange]);
+  }, [history, timeRange, now]);
 
   // Pie chart data - directly use breakdown (already per-token)
   const pieData = useMemo(() => {
