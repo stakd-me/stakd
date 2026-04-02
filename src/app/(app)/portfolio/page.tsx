@@ -1667,8 +1667,8 @@ export default function PortfolioPage() {
           <>
             <p>
               {t("portfolio.subtitle")}
-              {lastPriceUpdate && (
-                <span className="ml-2 text-xs">
+              {lastPriceUpdate && Date.now() - new Date(lastPriceUpdate).getTime() > 60_000 && (
+                <span className="ml-2 text-xs text-warning">
                   · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
                 </span>
               )}

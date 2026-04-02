@@ -1633,7 +1633,7 @@ export function useRebalance() {
   const isPriceStale = useMemo(() => {
     const oldest = suggestionsData?.oldestPriceUpdate;
     if (!oldest) return false;
-    return Date.now() - new Date(oldest).getTime() > 30 * 60 * 1000;
+    return Date.now() - new Date(oldest).getTime() > 60 * 1000;
   }, [suggestionsData?.oldestPriceUpdate]);
 
   const activeSessions = allSessions.filter(

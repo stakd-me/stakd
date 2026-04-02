@@ -86,13 +86,38 @@ function toPriceMap(prices: PricesResponse["prices"]): {
 }
 
 // ---------------------------------------------------------------------------
-// SSE price stream hook (internal)
+// SSE price stream hook (fetch-based, supports Authorization header)
 // ---------------------------------------------------------------------------
+
+function parseSseEvents(
+  chunk: string,
+  buffer: string
+): { events: { event: string; data: string }[]; remaining: string } {
+  const text = buffer + chunk;
+  const events: { event: string; data: string }[] = [];
+  const blocks = text.split("\n\n");
+  // Last element may be incomplete
+  const remaining = blocks.pop() ?? "";
+
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+    let event = "message";
+    let data = "";
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event: ")) event = line.slice(7);
+      else if (line.startsWith("data: ")) data = line.slice(6);
+      else if (line.startsWith(":")) continue; // comment / heartbeat
+    }
+    if (data) events.push({ event, data });
+  }
+  return { events, remaining };
+}
 
 function usePriceStream() {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
   const sseConnected = useRef(false);
+  const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!accessToken) {
@@ -100,15 +125,15 @@ function usePriceStream() {
       return;
     }
 
-    const url = `/api/prices/stream?token=${encodeURIComponent(accessToken)}`;
-    const es = new EventSource(url);
+    let aborted = false;
+    const abortController = new AbortController();
 
-    es.addEventListener("prices", (event) => {
+    const applyPriceEvent = (data: string) => {
       try {
         const payload: Record<
           string,
           { usd: number; change24h: number | null; updatedAt: string }
-        > = JSON.parse(event.data);
+        > = JSON.parse(data);
 
         const priceMap: PriceMap = {};
         const updatedAts: string[] = [];
@@ -127,31 +152,84 @@ function usePriceStream() {
             ? updatedAts.reduce((oldest, v) => (v < oldest ? v : oldest))
             : null;
 
-        queryClient.setQueryData(["prices"], (prev: { priceMap: PriceMap; updatedAt: string | null } | undefined) => {
-          // Merge SSE data with existing data (SSE may not include all tokens initially)
-          const merged = { ...prev?.priceMap, ...priceMap };
-          return {
-            priceMap: merged,
+        queryClient.setQueryData(
+          ["prices"],
+          (
+            prev:
+              | { priceMap: PriceMap; updatedAt: string | null }
+              | undefined
+          ) => ({
+            priceMap: { ...prev?.priceMap, ...priceMap },
             updatedAt: oldestUpdatedAt ?? prev?.updatedAt ?? null,
-          };
-        });
+          })
+        );
       } catch {
         // ignore parse errors
       }
-    });
-
-    es.onopen = () => {
-      sseConnected.current = true;
     };
 
-    es.onerror = () => {
+    const connect = async () => {
+      if (aborted) return;
+
+      try {
+        // Use fresh token on each connection attempt
+        const currentToken = useAuthStore.getState().accessToken;
+        if (!currentToken) return;
+
+        const res = await fetch("/api/prices/stream", {
+          headers: { Authorization: `Bearer ${currentToken}` },
+          signal: abortController.signal,
+        });
+
+        if (!res.ok || !res.body) {
+          // On 401, don't retry — let the polling fallback handle it
+          if (res.status === 401) {
+            sseConnected.current = false;
+            return;
+          }
+          throw new Error(`SSE response ${res.status}`);
+        }
+
+        sseConnected.current = true;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let sseBuffer = "";
+
+        while (!aborted) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const { events, remaining } = parseSseEvents(chunk, sseBuffer);
+          sseBuffer = remaining;
+
+          for (const evt of events) {
+            if (evt.event === "prices") {
+              applyPriceEvent(evt.data);
+            }
+          }
+        }
+      } catch (err) {
+        if (aborted) return;
+        // Connection lost — schedule reconnect
+      }
+
       sseConnected.current = false;
-      // EventSource auto-reconnects; we just track state
+      if (!aborted) {
+        reconnectTimeout.current = setTimeout(connect, 3_000);
+      }
     };
+
+    void connect();
 
     return () => {
-      es.close();
+      aborted = true;
+      abortController.abort();
       sseConnected.current = false;
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+        reconnectTimeout.current = null;
+      }
     };
   }, [accessToken, queryClient]);
 

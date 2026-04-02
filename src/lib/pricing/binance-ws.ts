@@ -41,7 +41,7 @@ const STALE_TIMEOUT_MS = 30_000;
 const PROACTIVE_RECONNECT_MS = 23 * 60 * 60 * 1_000; // 23 hours
 const DB_PERSIST_INTERVAL_MS = 10_000;
 const HISTORY_PERSIST_INTERVAL_MS = 15 * 60 * 1_000; // 15 min
-const SSE_BROADCAST_INTERVAL_MS = 3_000;
+const SSE_BROADCAST_INTERVAL_MS = 1_000;
 
 // ---------------------------------------------------------------------------
 // BinanceWebSocketManager

@@ -241,7 +241,7 @@ export default function DashboardPage() {
   const remainingHoldingsCount = Math.max(0, breakdown.length - topHoldings.length);
   const isPriceStale = useMemo(() => {
     if (!lastPriceUpdate) return true;
-    return Date.now() - new Date(lastPriceUpdate).getTime() > 30 * 60 * 1000;
+    return Date.now() - new Date(lastPriceUpdate).getTime() > 60 * 1000;
   }, [lastPriceUpdate]);
   const deviationAlertTokenCount = useMemo(
     () => new Set(deviationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size,
@@ -372,8 +372,8 @@ export default function DashboardPage() {
         description={t("dashboard.subtitle")}
         actions={
           <>
-          {lastPriceUpdate && (
-            <StatusPill tone={isPriceStale ? "warning" : "success"}>
+          {lastPriceUpdate && isPriceStale && (
+            <StatusPill tone="warning">
               {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
             </StatusPill>
           )}
@@ -491,13 +491,13 @@ export default function DashboardPage() {
           value={formatValue(totalValue)}
           valueSize="3xl"
           secondary={
-            lastPriceUpdate
+            lastPriceUpdate && isPriceStale
               ? t("dashboard.prices", {
                   time: formatTimeAgo(new Date(lastPriceUpdate)),
                 })
               : undefined
           }
-          secondaryTone={lastPriceUpdate && isPriceStale ? "warning" : "muted"}
+          secondaryTone={isPriceStale ? "warning" : "muted"}
           className="xl:col-span-2"
         />
 

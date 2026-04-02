@@ -1,28 +1,13 @@
 import { NextRequest } from "next/server";
-import { verifyAccessToken } from "@/lib/auth/jwt";
+import { authenticateRequest, authError } from "@/lib/auth-guard";
 import { getBinanceWsManager } from "@/lib/pricing/binance-ws";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest): Promise<Response> {
-  // Auth via query param (EventSource doesn't support custom headers)
-  const token = req.nextUrl.searchParams.get("token");
-  if (!token) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  try {
-    await verifyAccessToken(token);
-  } catch {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  const user = await authenticateRequest(req);
+  if (!user) return authError();
 
   const manager = getBinanceWsManager();
   if (!manager) {

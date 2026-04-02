@@ -137,16 +137,10 @@ export default function RebalancePage() {
           {rb.suggestionsData.lastRebalanceTime && (
             <span>{t("rebalance.lastRebalance")}: {formatTimeAgo(new Date(rb.suggestionsData.lastRebalanceTime))}</span>
           )}
-          {rb.suggestionsData.oldestPriceUpdate && (
-            rb.isPriceStale ? (
-              <StatusPill tone="warning">
-                {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
-              </StatusPill>
-            ) : (
-              <span className="text-text-dim">
-                {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
-              </span>
-            )
+          {rb.suggestionsData.oldestPriceUpdate && rb.isPriceStale && (
+            <StatusPill tone="warning">
+              {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
+            </StatusPill>
           )}
           {(rb.suggestionsData.autoRefreshMinutes ?? 0) > 0 && (
             <StatusPill tone="success" icon={<RefreshCw className="h-3 w-3" />}>
