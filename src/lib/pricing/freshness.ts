@@ -1,5 +1,5 @@
 import type { PriceData } from "@/lib/services/portfolio-calculator";
-import { resolveBinanceSymbol } from "@/lib/pricing/binance-symbol-resolver";
+import { COINGECKO_TO_BINANCE_SYMBOL } from "@/lib/pricing/binance-symbol-resolver";
 
 export interface PriceFreshnessToken {
   coingeckoId: string | null | undefined;
@@ -13,16 +13,17 @@ function normalizeCoingeckoId(
   return normalized.length > 0 ? normalized : null;
 }
 
-function oldestIso(values: string[]): string | null {
+function newestIso(values: string[]): string | null {
   if (values.length === 0) return null;
-  return values.reduce((oldest, value) => (value < oldest ? value : oldest));
+  return values.reduce((newest, value) => (value > newest ? value : newest));
 }
 
 /**
- * Returns the oldest updatedAt for tokens relevant to the current view.
+ * Returns the newest updatedAt across tokens with real-time price feeds.
  * Behavior:
- * - If at least one token is Binance-eligible, only Binance-eligible timestamps are considered.
- * - Otherwise, all provided tokens are considered (e.g. CoinGecko-only portfolio).
+ * - If at least one token is streamed via Binance WS, return the newest
+ *   timestamp from those tokens (real-time tokens represent current freshness).
+ * - Otherwise, fall back to the newest timestamp across all tokens.
  */
 export function getOldestPriceUpdateForTokens(
   priceMap: Record<string, PriceData>,
@@ -44,21 +45,18 @@ export function getOldestPriceUpdateForTokens(
     }
   }
 
-  const rows = Array.from(tokenMap.entries()).map(([coingeckoId, symbol]) => ({
+  const rows = Array.from(tokenMap.entries()).map(([coingeckoId]) => ({
     coingeckoId,
-    symbol,
     updatedAt: priceMap[coingeckoId]?.updatedAt ?? null,
-    // Use curated ID mapping only (no symbol fallback) to avoid
-    // classifying CoinGecko-only long-tail tokens as Binance-backed.
-    isBinanceEligible: !!resolveBinanceSymbol(coingeckoId),
+    isRealTime: !!COINGECKO_TO_BINANCE_SYMBOL[coingeckoId],
   }));
 
-  const binanceRows = rows.filter((row) => row.isBinanceEligible);
-  const sourceRows = binanceRows.length > 0 ? binanceRows : rows;
+  const realTimeRows = rows.filter((row) => row.isRealTime);
+  const sourceRows = realTimeRows.length > 0 ? realTimeRows : rows;
 
   const updatedAts = sourceRows
     .map((row) => row.updatedAt)
     .filter((value): value is string => typeof value === "string" && value.length > 0);
 
-  return oldestIso(updatedAts);
+  return newestIso(updatedAts);
 }
