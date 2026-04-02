@@ -146,6 +146,19 @@ export class BinanceWebSocketManager extends EventEmitter {
     this.coingeckoIdToSymbol.set(coingeckoId, symbol);
   }
 
+  /** Pre-populate in-memory cache from DB on startup. WS data will overwrite. */
+  seedPrices(
+    rows: { coingeckoId: string; priceUsd: number; change24h: number | null; updatedAt: Date }[]
+  ): void {
+    for (const row of rows) {
+      this.prices.set(row.coingeckoId, {
+        priceUsd: row.priceUsd,
+        change24h: row.change24h,
+        updatedAt: row.updatedAt.getTime(),
+      });
+    }
+  }
+
   /** Get a snapshot of the full in-memory price map (keyed by coingeckoId) */
   getPrices(): Map<string, InMemoryPrice> {
     return new Map(this.prices);
@@ -520,8 +533,16 @@ export async function startBinanceWebSocket(): Promise<void> {
   const manager = new BinanceWebSocketManager();
   wsGlobal.__binanceWsManager = manager;
 
-  // Pre-populate no-exchange prices so SSE delivers complete data
-  manager.mergeNonBinancePrices(noExchangeRows);
+  // Pre-populate ALL prices from DB so SSE delivers complete data immediately.
+  // WS updates will overwrite these as tickers arrive.
+  manager.seedPrices(
+    allPrices.map((r) => ({
+      coingeckoId: r.coingeckoId,
+      priceUsd: r.priceUsd,
+      change24h: r.change24h,
+      updatedAt: r.updatedAt,
+    }))
+  );
 
   // Start Binance WS
   if (binanceEntries.length > 0) {
