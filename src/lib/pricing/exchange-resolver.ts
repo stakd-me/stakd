@@ -1,5 +1,5 @@
 import { db, schema } from "@/lib/db";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import { fetchBinancePrices } from "./binance";
 import { fetchSecondaryExchangePrices } from "./secondary-exchanges";
 import { COINGECKO_TO_BINANCE_SYMBOL } from "./binance-symbol-resolver";
@@ -37,11 +37,17 @@ export async function resolveTokenExchanges(
   for (const token of tokens) {
     const hit = cachedMap.get(token.coingeckoId);
     if (hit) {
-      results.push({
-        coingeckoId: hit.coingeckoId,
-        symbol: hit.symbol,
-        exchange: hit.exchange as ExchangeName,
-      });
+      // Override stale "none" cache for tokens known to be on Binance
+      const curatedSymbol = COINGECKO_TO_BINANCE_SYMBOL[token.coingeckoId];
+      if (hit.exchange === "none" && curatedSymbol) {
+        uncached.push(token);
+      } else {
+        results.push({
+          coingeckoId: hit.coingeckoId,
+          symbol: hit.symbol,
+          exchange: hit.exchange as ExchangeName,
+        });
+      }
     } else {
       uncached.push(token);
     }
@@ -95,7 +101,14 @@ export async function resolveTokenExchanges(
             resolvedAt: new Date(),
           }))
         )
-        .onConflictDoNothing();
+        .onConflictDoUpdate({
+            target: schema.exchangeCache.coingeckoId,
+            set: {
+              symbol: sql`excluded.symbol`,
+              exchange: sql`excluded.exchange`,
+              resolvedAt: sql`excluded.resolved_at`,
+            },
+          });
     } catch (err) {
       console.warn("[exchange-resolver] Failed to cache resolutions:", err);
     }
