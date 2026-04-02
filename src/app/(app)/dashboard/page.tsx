@@ -9,6 +9,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { SummaryStrip } from "@/components/ui/summary-strip";
 import { KpiCard } from "@/components/ui/kpi-card";
+import { PriceFlash } from "@/components/ui/price-flash";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
@@ -456,7 +457,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
         <KpiCard
           label={t("dashboard.totalValue")}
-          value={formatValue(totalValue)}
+          value={<PriceFlash value={totalValue}>{formatValue(totalValue)}</PriceFlash>}
           valueSize="3xl"
           secondary={
             lastPriceUpdate && isPriceStale
@@ -471,7 +472,7 @@ export default function DashboardPage() {
 
         <KpiCard
           label={t("dashboard.totalPL")}
-          value={`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}
+          value={<PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}</PriceFlash>}
           valueTone={totalPL >= 0 ? "positive" : "negative"}
           valueSize="3xl"
           secondary={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
@@ -480,7 +481,7 @@ export default function DashboardPage() {
 
         <KpiCard
           label={t("portfolio.change24h")}
-          value={`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}
+          value={<PriceFlash value={totals.change24h}>{`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}</PriceFlash>}
           valueTone={totals.change24h >= 0 ? "positive" : "negative"}
           valueSize="3xl"
           secondary={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}

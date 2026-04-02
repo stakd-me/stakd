@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn, formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Copy, Minus, Package, Plus } from "lucide-react";
+import { PriceFlash } from "@/components/ui/price-flash";
 import type { BreakdownItem } from "@/components/portfolio/types";
 
 type HoldingActionType = "buy" | "sell";
@@ -87,7 +88,7 @@ export function HoldingsSection({
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-text-primary">
-                          {formatUsd(item.value)}
+                          <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                         </p>
                         <p className="text-xs text-text-subtle">
                           {item.percent.toFixed(1)}%
@@ -111,7 +112,7 @@ export function HoldingsSection({
                       <div>
                         <p className="text-xs text-text-subtle">{t("portfolio.price")}</p>
                         <p className="text-text-primary">
-                          {formatUsdPrice(item.currentPrice)}
+                          <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
                         </p>
                       </div>
                       <div>
@@ -262,10 +263,10 @@ export function HoldingsSection({
                             {formatUsdPrice(item.avgCost)}
                           </td>
                           <td className="py-3 pr-4 text-right">
-                            {formatUsdPrice(item.currentPrice)}
+                            <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
                           </td>
                           <td className="py-3 pr-4 text-right font-medium">
-                            {formatUsd(item.value)}
+                            <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                           </td>
                           <td
                             className={cn(

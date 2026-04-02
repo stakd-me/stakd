@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
+import { PriceFlash } from "@/components/ui/price-flash";
 import { formatUsd } from "@/lib/utils";
 import {
   getActionBadge,
@@ -95,7 +96,7 @@ export function CurrentVsTargetSection({
                       {suggestion.deviation.toFixed(1)}%
                     </td>
                     <td className="py-3 pr-4 text-right">
-                      {formatUsd(suggestion.currentValue)}
+                      <PriceFlash value={suggestion.currentValue}>{formatUsd(suggestion.currentValue)}</PriceFlash>
                     </td>
                     <td className="py-3 pr-4 text-center">
                       <span
