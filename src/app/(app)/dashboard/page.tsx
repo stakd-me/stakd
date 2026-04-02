@@ -102,9 +102,6 @@ export default function DashboardPage() {
   );
   const excludeStablecoinsFromConcentration =
     vault.settings.excludeStablecoinsFromConcentration === "1";
-  const concentrationThresholdLabel = Number.isInteger(concentrationThresholdPercent)
-    ? concentrationThresholdPercent.toString()
-    : concentrationThresholdPercent.toFixed(1);
   const highConcentrationThresholdPercent = getHighConcentrationThresholdPercent(
     concentrationThresholdPercent
   );
@@ -283,12 +280,6 @@ export default function DashboardPage() {
     if (!lastPriceUpdate) return true;
     return now - new Date(lastPriceUpdate).getTime() > 60 * 1000;
   }, [lastPriceUpdate, now]);
-  const deviationAlertTokenCount = useMemo(
-    () => new Set(deviationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size,
-    [deviationAlerts]
-  );
-  const concentrationAlertTokenCount =
-    new Set(concentrationAlerts.map((a) => a.tokenSymbol.toUpperCase())).size;
   const mergedAlertBadges = (() => {
     const severityRank: Record<DashboardAlertSeverity, number> = {
       low: 1,

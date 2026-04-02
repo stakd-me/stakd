@@ -1,6 +1,6 @@
 "use client";
 
-import { useMarketSignal, type MarketSignalData } from "@/hooks/use-market-signal";
+import { useMarketSignal } from "@/hooks/use-market-signal";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn, formatUsd } from "@/lib/utils";
 import { Activity, TrendingDown, TrendingUp, AlertTriangle, Loader2 } from "lucide-react";
