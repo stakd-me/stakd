@@ -4,7 +4,7 @@ import { type ReactNode, useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface AccessibleChartFrameProps {
-  title: string;
+  title?: string;
   summary: string;
   className?: string;
   children: ReactNode;
@@ -21,13 +21,15 @@ export function AccessibleChartFrame({
 
   return (
     <figure
-      aria-labelledby={titleId}
+      aria-labelledby={title ? titleId : undefined}
       aria-describedby={summaryId}
       className={cn("space-y-2", className)}
     >
-      <figcaption id={titleId} className="sr-only">
-        {title}
-      </figcaption>
+      {title && (
+        <figcaption id={titleId} className="sr-only">
+          {title}
+        </figcaption>
+      )}
       <p id={summaryId} className="sr-only">
         {summary}
       </p>

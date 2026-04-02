@@ -272,7 +272,6 @@ export default function HistoryPage() {
             <CardContent>
               {chartData.length > 0 ? (
                 <AccessibleChartFrame
-                  title={t("history.valueOverTime")}
                   summary={valueChartSummary}
                 >
                   <PortfolioLineChart data={chartData} />
@@ -317,7 +316,6 @@ export default function HistoryPage() {
           <CardContent>
             {plData.timeline.length > 0 ? (
               <AccessibleChartFrame
-                title={t("history.realizedPLTimeline")}
                 summary={realizedChartSummary}
               >
                 <div className="h-64">

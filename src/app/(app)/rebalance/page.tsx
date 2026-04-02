@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { InlineHelpCard } from "@/components/ui/inline-help";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -13,7 +11,6 @@ import { SummaryStrip } from "@/components/ui/summary-strip";
 import { formatUsd, formatTimeAgo } from "@/lib/utils";
 import {
   Clock,
-  FileText,
   RefreshCw,
 } from "lucide-react";
 import { Skeleton, CardSkeleton } from "@/components/ui/skeleton";
@@ -147,14 +144,12 @@ export default function RebalancePage() {
               {t("rebalance.autoRefresh")}: {t("rebalance.every")} {rb.suggestionsData.autoRefreshMinutes}m
             </StatusPill>
           )}
-          <span className="text-text-dim">({t("rebalance.configureInSettings")})</span>
         </div>
       )}
 
       <SectionNavigator
         baseId={phasesBaseId}
         label={t("rebalance.focusView")}
-        description={t("rebalance.subtitle")}
         value={rb.activePhase}
         onChange={(value) => {
           rb.setActivePhase(value);
@@ -165,28 +160,6 @@ export default function RebalancePage() {
       />
 
       <SectionPanel baseId={phasesBaseId} value={rb.activePhase}>
-      <InlineHelpCard
-        icon={<FileText className="h-4 w-4" />}
-        title={t("rebalance.inlineHelpTitle")}
-        description={t("rebalance.inlineHelpDescription")}
-        items={[
-          t("rebalance.inlineHelpSetup"),
-          t("rebalance.inlineHelpAnalysis"),
-          t("rebalance.inlineHelpExecution"),
-        ]}
-        action={
-          <Link href="/rebalance/guide#find-strategy">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto px-0 py-0 text-current hover:bg-transparent"
-            >
-              {t("rebalance.openGuide")}
-            </Button>
-          </Link>
-        }
-      />
-
       {rb.suggestionsData && (
         <SummaryStrip
           items={[

@@ -342,16 +342,9 @@ export function AuthScreen() {
 
         <section className="w-full rounded-2xl border border-border-subtle bg-bg-card p-6 shadow-sm sm:p-8">
           <div className="space-y-6">
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-text-primary">
-                {tab === "login" ? t("auth.signIn") : t("auth.createAccount")}
-              </h2>
-              <p className="text-sm text-text-subtle">
-                {tab === "login"
-                  ? t("auth.signInDescription")
-                  : t("auth.createAccountDescription")}
-              </p>
-            </div>
+            <h2 className="text-2xl font-bold text-text-primary">
+              {tab === "login" ? t("auth.signIn") : t("auth.createAccount")}
+            </h2>
 
             <div
               className="grid grid-cols-2 rounded-xl border border-border-subtle bg-bg-muted p-1"
@@ -478,7 +471,7 @@ export function AuthScreen() {
                 {loading ? t("common.processing") : ""}
               </p>
 
-              {tab === "login" ? (
+              {tab === "login" && (
                 <div className="rounded-xl border border-border-subtle bg-bg-card p-4">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
@@ -501,17 +494,6 @@ export function AuthScreen() {
                     </span>
                   </label>
                 </div>
-              ) : (
-                <InlineHelpCard
-                  tone="warning"
-                  icon={<TriangleAlert className="h-4 w-4" />}
-                  title={t("auth.registerSecurityTitle")}
-                  description={t("auth.registerSecuritySummary")}
-                  items={[
-                    t("auth.savePassphraseDesc"),
-                    t("auth.registerStartsSessionOnly"),
-                  ]}
-                />
               )}
 
               <Button

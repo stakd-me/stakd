@@ -372,11 +372,6 @@ export default function DashboardPage() {
         description={t("dashboard.subtitle")}
         actions={
           <>
-          {lastPriceUpdate && isPriceStale && (
-            <StatusPill tone="warning">
-              {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
-            </StatusPill>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -553,7 +548,6 @@ export default function DashboardPage() {
           <CardContent>
             {filteredHistory.length > 0 ? (
               <AccessibleChartFrame
-                title={t("dashboard.portfolioHistory")}
                 summary={historyChartSummary}
               >
                 <PortfolioLineChart data={filteredHistory} />
