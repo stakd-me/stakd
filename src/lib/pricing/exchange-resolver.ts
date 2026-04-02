@@ -6,6 +6,8 @@ import { COINGECKO_TO_BINANCE_SYMBOL } from "./binance-symbol-resolver";
 
 export type ExchangeName = "binance" | "okx" | "bybit" | "mexc" | "gate" | "none";
 
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+
 export interface ExchangeResolution {
   coingeckoId: string;
   symbol: string;
@@ -34,12 +36,15 @@ export async function resolveTokenExchanges(
   const results: ExchangeResolution[] = [];
   const uncached: { coingeckoId: string; symbol: string }[] = [];
 
+  const now = Date.now();
   for (const token of tokens) {
     const hit = cachedMap.get(token.coingeckoId);
     if (hit) {
-      // Override stale "none" cache for tokens known to be on Binance
+      const age = now - new Date(hit.resolvedAt).getTime();
+      const expired = age > CACHE_TTL_MS;
+      // Re-resolve if: cache expired, or "none" for a known Binance token
       const curatedSymbol = COINGECKO_TO_BINANCE_SYMBOL[token.coingeckoId];
-      if (hit.exchange === "none" && curatedSymbol) {
+      if (expired || (hit.exchange === "none" && curatedSymbol)) {
         uncached.push(token);
       } else {
         results.push({
