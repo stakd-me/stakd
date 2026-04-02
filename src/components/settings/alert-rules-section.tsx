@@ -7,6 +7,7 @@ import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKeys } from "@/i18n";
 import { useVaultStore } from "@/lib/store";
 import { saveVaultToServer } from "@/lib/services/vault-sync";
 import { Bell, Plus, Trash2, Save } from "lucide-react";
@@ -244,7 +245,7 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                     <div className="mt-2 flex flex-wrap gap-3">
                       {Object.entries(PHASE_RESERVE_MAP).map(([phase, pct]) => (
                         <span key={phase} className="rounded bg-bg-hover px-2 py-0.5">
-                          {t(`marketSignal.phase.${phase}`)}: {pct}%
+                          {t(`marketSignal.phase.${phase}` as TranslationKeys)}: {pct}%
                         </span>
                       ))}
                     </div>
