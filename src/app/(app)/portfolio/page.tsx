@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HoldingsSection } from "@/components/portfolio/holdings-section";
+import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
 import { ImportReviewModal } from "@/components/portfolio/import-review-modal";
 import { ManualEntriesSection } from "@/components/portfolio/manual-entries-section";
 import { TransactionsSection } from "@/components/portfolio/transactions-section";
@@ -270,6 +271,9 @@ export default function PortfolioPage() {
   const [editEntryNote, setEditEntryNote] = useState("");
   const [deleteManualTarget, setDeleteManualTarget] = useState<ManualEntry | null>(null);
 
+  // Edit holding info state
+  const [editingHolding, setEditingHolding] = useState<BreakdownItem | null>(null);
+
   // Mutation-in-progress states (to replicate isPending for UI disable)
   const [addingManualEntry, setAddingManualEntry] = useState(false);
   const [updatingManualEntry, setUpdatingManualEntry] = useState(false);
@@ -527,6 +531,72 @@ export default function PortfolioPage() {
       setDeletingManualEntry(false);
     }
   }, [toast, t]);
+
+  // --- Edit holding info ---
+  const handleEditHoldingSave = useCallback(
+    async (data: { coingeckoId: string; firstBuyDate: string | null }) => {
+      if (!editingHolding) return;
+      const symbol = editingHolding.symbol;
+      const oldCoingeckoId = editingHolding.coingeckoId;
+
+      try {
+        useVaultStore.getState().updateVault((prev) => {
+          const newCoingeckoId = data.coingeckoId || null;
+
+          // Update coingeckoId across all matching transactions
+          const updatedTransactions = prev.transactions.map((tx) => {
+            if (tx.tokenSymbol !== symbol || tx.coingeckoId !== oldCoingeckoId) return tx;
+            return { ...tx, coingeckoId: newCoingeckoId };
+          });
+
+          // Update coingeckoId across all matching manual entries
+          const updatedManualEntries = prev.manualEntries.map((e) => {
+            if (e.tokenSymbol !== symbol || e.coingeckoId !== oldCoingeckoId) return e;
+            return { ...e, coingeckoId: newCoingeckoId, updatedAt: new Date().toISOString() };
+          });
+
+          // Update first buy date: find the earliest transaction and adjust it
+          if (data.firstBuyDate) {
+            const newDate = new Date(data.firstBuyDate);
+            if (!Number.isNaN(newDate.getTime())) {
+              const matchingTxs = updatedTransactions
+                .map((tx, idx) => ({ tx, idx }))
+                .filter(({ tx }) => tx.tokenSymbol === symbol && tx.coingeckoId === newCoingeckoId);
+
+              if (matchingTxs.length > 0) {
+                // Find the earliest transaction
+                const earliest = matchingTxs.reduce((min, cur) =>
+                  new Date(cur.tx.transactedAt) < new Date(min.tx.transactedAt) ? cur : min
+                );
+                updatedTransactions[earliest.idx] = {
+                  ...updatedTransactions[earliest.idx],
+                  transactedAt: newDate.toISOString(),
+                };
+              }
+            }
+          }
+
+          return {
+            ...prev,
+            transactions: updatedTransactions,
+            manualEntries: updatedManualEntries,
+          };
+        });
+
+        // Ensure prices are fetched for the new coingeckoId
+        if (data.coingeckoId && data.coingeckoId !== oldCoingeckoId) {
+          await ensurePrices([{ coingeckoId: data.coingeckoId, symbol }]);
+        }
+
+        toast(t("portfolio.holdingUpdated", { symbol }), "success");
+      } catch {
+        toast(t("portfolio.failedUpdateHolding"), "error");
+      } finally {
+        setEditingHolding(null);
+      }
+    },
+    [editingHolding, toast, t, ensurePrices]
+  );
 
   // --- Transaction CRUD ---
   const handleDeleteTransaction = useCallback((id: string) => {
@@ -1917,6 +1987,7 @@ export default function PortfolioPage() {
           onOpenInlineForm={openInlineForm}
           onCloseInlineForm={closeInlineForm}
           onRepeatLast={handleRepeatLast}
+          onEditHolding={setEditingHolding}
           onOpenManualSection={() => {
             setActiveSection("manual");
             setShowManualEntries(true);
@@ -1984,6 +2055,15 @@ export default function PortfolioPage() {
         confirmLabel={t("common.delete")}
         variant="danger"
       />
+
+      {editingHolding && (
+        <EditHoldingDialog
+          open={editingHolding !== null}
+          item={editingHolding}
+          onSave={handleEditHoldingSave}
+          onCancel={() => setEditingHolding(null)}
+        />
+      )}
 
       <ImportReviewModal
         open={showImportModal}

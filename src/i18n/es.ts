@@ -265,6 +265,18 @@ const es: Record<TranslationKeys, string> = {
   "portfolio.csvIssuePriceInvalid": "Price must be greater than 0",
   "portfolio.csvIssueDateInvalid": "Fecha is invalid",
   "portfolio.csvIssueFeeInvalid": "Fee must be a no negativo number",
+
+  // Edit holding info
+  "portfolio.editHolding": "Editar info del token",
+  "portfolio.editHoldingTitle": "Editar Info del Token",
+  "portfolio.editHoldingDesc": "Actualizar CoinGecko ID o fecha de primera compra para {symbol}. Los cambios aplican a todas las transacciones y entradas manuales de este token.",
+  "portfolio.editCoingeckoId": "CoinGecko ID",
+  "portfolio.editCoingeckoIdHint": "Usado para seguimiento de precios. Dejar vacío si desconocido.",
+  "portfolio.editFirstBuyDate": "Fecha de primera compra",
+  "portfolio.editFirstBuyDateHint": "Ajusta la fecha de transacción más antigua de este token.",
+  "portfolio.holdingUpdated": "Info del token actualizada para {symbol}",
+  "portfolio.failedUpdateHolding": "Error al actualizar info del token",
+
   "portfolioAdd.title": "Agregar Transaccion",
   "portfolioAdd.subtitle": "Record a transaction",
   "portfolioAdd.searchCoinGecko": "Buscar CoinGecko",

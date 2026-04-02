@@ -275,6 +275,17 @@ const en = {
   "portfolio.csvIssueDateInvalid": "Date is invalid",
   "portfolio.csvIssueFeeInvalid": "Fee must be a non-negative number",
 
+  // Edit holding info
+  "portfolio.editHolding": "Edit token info",
+  "portfolio.editHoldingTitle": "Edit Token Info",
+  "portfolio.editHoldingDesc": "Update CoinGecko ID or first buy date for {symbol}. Changes apply to all transactions and manual entries for this token.",
+  "portfolio.editCoingeckoId": "CoinGecko ID",
+  "portfolio.editCoingeckoIdHint": "Used for price tracking. Leave empty if unknown.",
+  "portfolio.editFirstBuyDate": "First Buy Date",
+  "portfolio.editFirstBuyDateHint": "Adjusts the earliest transaction date for this token.",
+  "portfolio.holdingUpdated": "Token info updated for {symbol}",
+  "portfolio.failedUpdateHolding": "Failed to update token info",
+
   // Portfolio Add page
   "portfolioAdd.title": "Add Transaction",
   "portfolioAdd.subtitle": "Record a transaction",

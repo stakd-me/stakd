@@ -277,6 +277,17 @@ const vi: Record<TranslationKeys, string> = {
   "portfolio.csvIssueDateInvalid": "Ngày không hợp lệ",
   "portfolio.csvIssueFeeInvalid": "Phí phải là số không âm",
 
+  // Edit holding info
+  "portfolio.editHolding": "Sửa thông tin token",
+  "portfolio.editHoldingTitle": "Sửa thông tin Token",
+  "portfolio.editHoldingDesc": "Cập nhật CoinGecko ID hoặc ngày mua đầu tiên cho {symbol}. Thay đổi áp dụng cho tất cả giao dịch và mục thủ công của token này.",
+  "portfolio.editCoingeckoId": "CoinGecko ID",
+  "portfolio.editCoingeckoIdHint": "Dùng để theo dõi giá. Để trống nếu không biết.",
+  "portfolio.editFirstBuyDate": "Ngày mua đầu tiên",
+  "portfolio.editFirstBuyDateHint": "Điều chỉnh ngày giao dịch sớm nhất của token này.",
+  "portfolio.holdingUpdated": "Đã cập nhật thông tin token {symbol}",
+  "portfolio.failedUpdateHolding": "Không thể cập nhật thông tin token",
+
   // Portfolio Add page
   "portfolioAdd.title": "Thêm giao dịch",
   "portfolioAdd.subtitle": "Ghi nhận giao dịch",

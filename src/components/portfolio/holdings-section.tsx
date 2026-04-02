@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn, formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
-import { Copy, Minus, Package, Plus } from "lucide-react";
+import { Copy, Minus, Package, Pencil, Plus } from "lucide-react";
 import { PriceFlash } from "@/components/ui/price-flash";
 import type { BreakdownItem } from "@/components/portfolio/types";
 
@@ -23,6 +23,7 @@ interface HoldingsSectionProps {
   onOpenInlineForm: (item: BreakdownItem, type: HoldingActionType) => void;
   onCloseInlineForm: () => void;
   onRepeatLast: (item: BreakdownItem) => void;
+  onEditHolding: (item: BreakdownItem) => void;
   onOpenManualSection: () => void;
 }
 
@@ -37,6 +38,7 @@ export function HoldingsSection({
   onOpenInlineForm,
   onCloseInlineForm,
   onRepeatLast,
+  onEditHolding,
   onOpenManualSection,
 }: HoldingsSectionProps) {
   const { t } = useTranslation();
@@ -196,6 +198,15 @@ export function HoldingsSection({
                         <Copy className="mr-2 h-4 w-4" />
                         {t("portfolio.repeatLast")}
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-text-subtle hover:text-text-tertiary"
+                        onClick={() => onEditHolding(item)}
+                      >
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t("portfolio.editHolding")}
+                      </Button>
                     </div>
 
                     {isExpanded ? (
@@ -339,6 +350,16 @@ export function HoldingsSection({
                                 aria-label={`${t("portfolio.repeatLast")} ${item.symbol}`}
                               >
                                 <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-text-subtle hover:text-text-tertiary"
+                                onClick={() => onEditHolding(item)}
+                                title={t("portfolio.editHolding")}
+                                aria-label={`${t("portfolio.editHolding")} ${item.symbol}`}
+                              >
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             </div>
                           </td>
