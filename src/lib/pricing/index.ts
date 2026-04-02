@@ -322,7 +322,22 @@ export async function ensurePricesExist(
     .where(inArray(schema.prices.coingeckoId, ids));
 
   const existingIds = new Set(existingRows.map((r) => r.coingeckoId));
-  const missing = normalizedTokens.filter((t) => !existingIds.has(t.coingeckoId));
+
+  // Also check which symbols already exist to avoid duplicate symbol entries
+  const candidateSymbols = normalizedTokens
+    .filter((t) => !existingIds.has(t.coingeckoId))
+    .map((t) => t.symbol);
+  const existingSymbolRows = candidateSymbols.length > 0
+    ? await db
+        .select({ symbol: schema.prices.symbol })
+        .from(schema.prices)
+        .where(inArray(schema.prices.symbol, candidateSymbols))
+    : [];
+  const existingSymbols = new Set(existingSymbolRows.map((r) => r.symbol));
+
+  const missing = normalizedTokens.filter(
+    (t) => !existingIds.has(t.coingeckoId) && !existingSymbols.has(t.symbol)
+  );
 
   if (missing.length === 0) return;
 
