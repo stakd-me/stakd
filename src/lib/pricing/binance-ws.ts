@@ -477,6 +477,20 @@ export async function startBinanceWebSocket(): Promise<void> {
   if (process.env.NODE_ENV === "test") return;
   if (wsGlobal.__binanceWsManager) return; // already running
 
+  // Clean up non-canonical duplicate symbols before starting.
+  // The curated map defines THE canonical coingeckoId for each symbol.
+  // Any other coingeckoId claiming the same symbol is a lookalike token.
+  const { BINANCE_SYMBOL_TO_COINGECKO_ID } = await import("./binance-symbol-resolver");
+  for (const [symbol, canonicalId] of Object.entries(BINANCE_SYMBOL_TO_COINGECKO_ID)) {
+    const { and, ne, eq } = await import("drizzle-orm");
+    await db
+      .delete(schema.prices)
+      .where(and(eq(schema.prices.symbol, symbol), ne(schema.prices.coingeckoId, canonicalId)));
+    await db
+      .delete(schema.exchangeCache)
+      .where(and(eq(schema.exchangeCache.symbol, symbol), ne(schema.exchangeCache.coingeckoId, canonicalId)));
+  }
+
   const allPrices = await db
     .select({
       coingeckoId: schema.prices.coingeckoId,
