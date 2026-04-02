@@ -487,7 +487,7 @@ export function useRebalance() {
         return null;
       }
 
-      const unitPrice = priceMap[coingeckoId]?.usd ?? 0;
+      const unitPrice = priceMap[symbol]?.usd ?? priceMap[coingeckoId]?.usd ?? 0;
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
         return null;
       }
@@ -773,11 +773,13 @@ export function useRebalance() {
           knownSymbolCoingeckoMap[symbol] ??
           resolveCanonicalCoinGeckoIdBySymbol(symbol);
         const trackingStatus =
-          !coingeckoId
-            ? "untracked"
-            : priceMap[coingeckoId]
+          priceMap[symbol]
+            ? "tracked"
+            : coingeckoId && priceMap[coingeckoId]
               ? "tracked"
-              : "requested";
+              : coingeckoId
+                ? "requested"
+                : "untracked";
 
         if (trackingStatus === "tracked") trackedCount += 1;
         else if (trackingStatus === "requested") requestedCount += 1;

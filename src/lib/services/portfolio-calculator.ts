@@ -75,18 +75,23 @@ function resolveCoingeckoId(
   return BINANCE_SYMBOL_TO_COINGECKO_ID[symbol.trim().toUpperCase()] ?? null;
 }
 
-function getPriceByCoingeckoId(
+/**
+ * Look up price by symbol first (CEX/Binance), then coingeckoId (CoinGecko fallback).
+ * priceMap is dual-keyed: both "BTC" and "bitcoin" point to the same price data.
+ */
+function getPrice(
   priceMap: Record<string, PriceData>,
-  coingeckoId: string | null | undefined,
-  symbol?: string
+  symbol: string | undefined,
+  coingeckoId: string | null | undefined
 ): PriceData | null {
-  const normalized = normalizeCoingeckoId(coingeckoId);
-  if (normalized && priceMap[normalized]) return priceMap[normalized];
-  // Fallback: look up by uppercase symbol (priceMap is dual-keyed)
+  // Primary: look up by symbol (CEX price, always available)
   if (symbol) {
     const upper = symbol.trim().toUpperCase();
     if (upper && priceMap[upper]) return priceMap[upper];
   }
+  // Fallback: look up by coingeckoId (CoinGecko / long-tail tokens)
+  const normalized = normalizeCoingeckoId(coingeckoId);
+  if (normalized && priceMap[normalized]) return priceMap[normalized];
   return null;
 }
 
@@ -154,7 +159,7 @@ export function getHoldings(
   for (const g of Object.values(groups)) {
     const currentQty = g.buyQty + g.receiveQty - g.sellQty - g.sendQty;
     const avgCostBasis = g.buyQty > 0 ? g.totalBuyCost / g.buyQty : 0;
-    const priceData = getPriceByCoingeckoId(priceMap, g.coingeckoId, g.symbol);
+    const priceData = getPrice(priceMap, g.symbol, g.coingeckoId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
 
@@ -196,7 +201,7 @@ export function getHoldings(
         (h.coingeckoId ?? "") === (normalizedEntryId ?? "")
     );
 
-    const priceData = getPriceByCoingeckoId(priceMap, normalizedEntryId, entry.tokenSymbol);
+    const priceData = getPrice(priceMap, entry.tokenSymbol, normalizedEntryId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
     const entryQty = toSafeNumber(entry.quantity);
