@@ -147,9 +147,9 @@ function usePriceStream() {
           if (p.updatedAt) updatedAts.push(p.updatedAt);
         }
 
-        const oldestUpdatedAt =
+        const newestUpdatedAt =
           updatedAts.length > 0
-            ? updatedAts.reduce((oldest, v) => (v < oldest ? v : oldest))
+            ? updatedAts.reduce((newest, v) => (v > newest ? v : newest))
             : null;
 
         queryClient.setQueryData(
@@ -160,7 +160,7 @@ function usePriceStream() {
               | undefined
           ) => ({
             priceMap: { ...prev?.priceMap, ...priceMap },
-            updatedAt: oldestUpdatedAt ?? prev?.updatedAt ?? null,
+            updatedAt: newestUpdatedAt ?? prev?.updatedAt ?? null,
           })
         );
       } catch {
@@ -248,10 +248,11 @@ export function usePrices(options?: UsePricesOptions) {
   const queryClient = useQueryClient();
   const sseConnected = usePriceStream();
 
-  // When SSE is connected, use a longer polling interval as fallback.
-  // When SSE is disconnected, poll more aggressively.
-  const fallbackInterval = options?.refetchInterval ?? 60_000;
-  const refetchInterval = sseConnected.current ? fallbackInterval : 10_000;
+  // Disable REST polling when SSE is connected to prevent overwriting fresh data.
+  // Only poll as fallback when SSE is disconnected.
+  const refetchInterval = sseConnected.current
+    ? false
+    : (options?.refetchInterval ?? 10_000);
 
   const query = useQuery<{ priceMap: PriceMap; updatedAt: string | null }>({
     queryKey: ["prices"],

@@ -62,17 +62,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     apiFetch("/api/prices/refresh", { method: "POST" }).catch(() => {});
   }, [isAuthenticated]);
 
-  // Keep periodic refresh in sync with current settings.
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const autoRefreshMinutes = parseInt(vault.settings.autoRefreshMinutes || "15", 10);
-    if (!Number.isFinite(autoRefreshMinutes) || autoRefreshMinutes <= 0) return;
-
-    const interval = setInterval(() => {
-      apiFetch("/api/prices/refresh", { method: "POST" }).catch(() => {});
-    }, autoRefreshMinutes * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [isAuthenticated, vault.settings.autoRefreshMinutes]);
 
   if (isLoading) {
     return (

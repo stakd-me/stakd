@@ -1243,24 +1243,6 @@ export default function SettingsPage() {
                 <CardTitle>{t("settings.sectionRefresh")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <FormField
-                  label={t("settings.autoRefresh")}
-                  htmlFor="settings-auto-refresh"
-                  hint={t("settings.autoRefreshDesc")}
-                >
-                  <Input
-                    id="settings-auto-refresh"
-                    type="number"
-                    min={0}
-                    max={60}
-                    step={1}
-                    value={autoRefreshMinutes}
-                    onChange={(e) => setAutoRefreshMinutes(e.target.value)}
-                    placeholder="15"
-                    className="w-full max-w-[8rem]"
-                  />
-                </FormField>
-
                 <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
                   <p className="text-sm font-medium text-text-primary">
                     {t("settings.rebalanceSettings")}

@@ -302,7 +302,6 @@ export type RebalancePhase = "setup" | "analysis" | "execution" | "all";
 export function useRebalance() {
   const { toast } = useToast();
   const { t } = useTranslation();
-  const [refreshingPrices, setRefreshingPrices] = useState(false);
   const [targets, setTargets] = useState<TargetRow[]>([]);
   const [isSeeded, setIsSeeded] = useState(false);
 
@@ -347,7 +346,6 @@ export function useRebalance() {
     priceMap,
     updatedAt: pricesUpdatedAt,
     isLoading: pricesLoading,
-    refreshPrices,
     ensurePrices,
   } = usePrices();
 
@@ -991,18 +989,6 @@ export function useRebalance() {
       setLogPending(false);
     }
   }, [strategyContext, symbolValues, totalValue, vault.rebalanceTargets, toast, t]);
-
-  const handleRefreshPrices = useCallback(async () => {
-    setRefreshingPrices(true);
-    try {
-      await refreshPrices();
-      toast(t("dashboard.pricesRefreshed"), "success");
-    } catch {
-      toast(t("dashboard.failedToRefresh"), "error");
-    } finally {
-      setRefreshingPrices(false);
-    }
-  }, [refreshPrices, toast, t]);
 
   const ensureGroupSymbolsTracked = useCallback(
     async (symbols: string[]) => {
@@ -1744,7 +1730,6 @@ export function useRebalance() {
   return {
     // State
     targets, setTargets,
-    refreshingPrices,
     targetExpanded,
     activePhase, setActivePhase,
     phaseInitialized, setPhaseInitialized,
@@ -1807,7 +1792,6 @@ export function useRebalance() {
     handleToggleTargetExpanded,
     handleSave,
     handleLogSnapshot,
-    handleRefreshPrices,
     handleCreateGroup,
     handleUpdateGroup,
     handleTrackGroup,
