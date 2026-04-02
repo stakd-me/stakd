@@ -63,6 +63,14 @@ export const prices = pgTable("prices", {
   uniqueIndex("idx_prices_symbol").on(table.symbol),
 ]);
 
+// ── Exchange Resolution Cache ────────────────────────────────────────
+export const exchangeCache = pgTable("exchange_cache", {
+  coingeckoId: text("coingecko_id").primaryKey(),
+  symbol: text("symbol").notNull(),
+  exchange: text("exchange").notNull(), // "binance" | "okx" | "bybit" | "mexc" | "gate" | "none"
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // ── Price History (shared) ───────────────────────────────────────────
 export const priceHistory = pgTable("price_history", {
   id: serial("id").primaryKey(),

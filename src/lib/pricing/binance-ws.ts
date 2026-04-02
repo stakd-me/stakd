@@ -2,11 +2,12 @@ import WebSocket from "ws";
 import { EventEmitter } from "events";
 import { db, schema } from "@/lib/db";
 import { persistPriceRows, type PriceWriteRow } from "@/lib/pricing";
+import { resolveTokenExchanges, type ExchangeName } from "./exchange-resolver";
 import {
-  BINANCE_SYMBOL_TO_COINGECKO_ID,
-  COINGECKO_TO_BINANCE_SYMBOL,
-  resolveBinanceSymbol,
-} from "./binance-symbol-resolver";
+  createSecondaryWs,
+  type SecondaryWsExchange,
+  type WsPriceUpdate,
+} from "./secondary-ws";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,6 +52,7 @@ export class BinanceWebSocketManager extends EventEmitter {
   private ws: WebSocket | null = null;
   private prices = new Map<string, InMemoryPrice>(); // keyed by coingeckoId
   private symbolToCoingeckoId = new Map<string, string>(); // BTCUSDT -> bitcoin
+  private coingeckoIdToSymbol = new Map<string, string>(); // bitcoin -> BTC
   private subscribedSymbols = new Set<string>(); // BTC, ETH, ...
   private reconnectAttempts = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -59,6 +61,7 @@ export class BinanceWebSocketManager extends EventEmitter {
   private dbPersistTimer: ReturnType<typeof setInterval> | null = null;
   private historyPersistTimer: ReturnType<typeof setInterval> | null = null;
   private sseBroadcastTimer: ReturnType<typeof setInterval> | null = null;
+  private secondaryClients = new Map<string, ReturnType<typeof createSecondaryWs>>();
   private stopped = false;
   private lastBroadcastData: string | null = null;
 
@@ -69,16 +72,42 @@ export class BinanceWebSocketManager extends EventEmitter {
     for (const sym of symbols) {
       this.subscribedSymbols.add(sym.toUpperCase());
     }
-    this.buildSymbolMap();
     this.connect();
     this.startDbPersistLoop();
     this.startHistoryPersistLoop();
     this.startSseBroadcastLoop();
   }
 
+  /** Start a secondary exchange WS client feeding into the shared price map */
+  startSecondaryExchange(
+    exchange: SecondaryWsExchange,
+    entries: { symbol: string; coingeckoId: string }[]
+  ): void {
+    if (entries.length === 0) return;
+    const existing = this.secondaryClients.get(exchange);
+    if (existing) {
+      existing.subscribe(entries);
+      return;
+    }
+
+    const client = createSecondaryWs(exchange, (update: WsPriceUpdate) => {
+      this.prices.set(update.coingeckoId, {
+        priceUsd: update.priceUsd,
+        change24h: update.change24h,
+        updatedAt: Date.now(),
+      });
+    });
+    this.secondaryClients.set(exchange, client);
+    client.start(entries);
+  }
+
   stop(): void {
     this.stopped = true;
     this.clearAllTimers();
+    for (const client of this.secondaryClients.values()) {
+      client.stop();
+    }
+    this.secondaryClients.clear();
     if (this.ws) {
       this.ws.removeAllListeners();
       this.ws.close();
@@ -87,17 +116,19 @@ export class BinanceWebSocketManager extends EventEmitter {
   }
 
   /** Add symbols to a live connection via SUBSCRIBE */
-  subscribe(symbols: string[]): void {
+  subscribe(
+    entries: { symbol: string; coingeckoId: string }[]
+  ): void {
     const newSymbols: string[] = [];
-    for (const sym of symbols) {
-      const upper = sym.toUpperCase();
+    for (const entry of entries) {
+      const upper = entry.symbol.toUpperCase();
       if (!this.subscribedSymbols.has(upper)) {
         this.subscribedSymbols.add(upper);
         newSymbols.push(upper);
       }
+      this.registerSymbolMapping(upper, entry.coingeckoId);
     }
     if (newSymbols.length === 0) return;
-    this.buildSymbolMap();
 
     if (this.ws?.readyState === WebSocket.OPEN) {
       const streams = newSymbols.map((s) => `${s.toLowerCase()}usdt@miniTicker`);
@@ -106,6 +137,13 @@ export class BinanceWebSocketManager extends EventEmitter {
       );
       console.log(`[binance-ws] Subscribed to ${newSymbols.length} new symbols`);
     }
+  }
+
+  /** Register a symbol <-> coingeckoId mapping */
+  registerSymbolMapping(symbol: string, coingeckoId: string): void {
+    const pairKey = `${symbol}USDT`;
+    this.symbolToCoingeckoId.set(pairKey, coingeckoId);
+    this.coingeckoIdToSymbol.set(coingeckoId, symbol);
   }
 
   /** Get a snapshot of the full in-memory price map (keyed by coingeckoId) */
@@ -119,8 +157,8 @@ export class BinanceWebSocketManager extends EventEmitter {
   ): void {
     for (const row of rows) {
       // Only set if not already fed by WebSocket
-      const binanceSymbol = COINGECKO_TO_BINANCE_SYMBOL[row.coingeckoId];
-      if (binanceSymbol && this.subscribedSymbols.has(binanceSymbol)) continue;
+      const wsSymbol = this.coingeckoIdToSymbol.get(row.coingeckoId);
+      if (wsSymbol && this.subscribedSymbols.has(wsSymbol)) continue;
       this.prices.set(row.coingeckoId, {
         priceUsd: row.priceUsd,
         change24h: row.change24h,
@@ -131,16 +169,7 @@ export class BinanceWebSocketManager extends EventEmitter {
 
   // ---- Connection ----------------------------------------------------------
 
-  private buildSymbolMap(): void {
-    this.symbolToCoingeckoId.clear();
-    for (const sym of this.subscribedSymbols) {
-      const pairKey = `${sym}USDT`;
-      const coingeckoId = BINANCE_SYMBOL_TO_COINGECKO_ID[sym];
-      if (coingeckoId) {
-        this.symbolToCoingeckoId.set(pairKey, coingeckoId);
-      }
-    }
-  }
+  // symbolToCoingeckoId is now built incrementally via registerSymbolMapping()
 
   private connect(): void {
     if (this.stopped) return;
@@ -301,12 +330,12 @@ export class BinanceWebSocketManager extends EventEmitter {
 
     for (const [coingeckoId, price] of this.prices) {
       // Only persist Binance-fed prices (non-Binance ones are managed by background refresh)
-      const binanceSymbol = COINGECKO_TO_BINANCE_SYMBOL[coingeckoId];
-      if (!binanceSymbol || !this.subscribedSymbols.has(binanceSymbol)) continue;
+      const wsSymbol = this.coingeckoIdToSymbol.get(coingeckoId);
+      if (!wsSymbol || !this.subscribedSymbols.has(wsSymbol)) continue;
 
       rows.push({
         coingeckoId,
-        symbol: binanceSymbol,
+        symbol: wsSymbol,
         priceUsd: price.priceUsd,
         change24h: price.change24h,
       });
@@ -429,7 +458,7 @@ export function getBinanceWsManager(): BinanceWebSocketManager | undefined {
 
 /**
  * Initialize the Binance WebSocket manager.
- * Reads tracked tokens from the DB, resolves Binance symbols, and starts streaming.
+ * Reads tracked tokens from the DB, auto-resolves exchanges, and starts streaming.
  */
 export async function startBinanceWebSocket(): Promise<void> {
   if (process.env.NODE_ENV === "test") return;
@@ -445,8 +474,23 @@ export async function startBinanceWebSocket(): Promise<void> {
     })
     .from(schema.prices);
 
-  const binanceSymbols: string[] = [];
-  const nonBinanceRows: {
+  if (allPrices.length === 0) {
+    console.log("[binance-ws] No tracked tokens, skipping WebSocket");
+    return;
+  }
+
+  // Auto-resolve which exchange carries each token (cached in DB)
+  const resolutions = await resolveTokenExchanges(
+    allPrices.map((r) => ({ coingeckoId: r.coingeckoId, symbol: r.symbol }))
+  );
+
+  const resolutionMap = new Map(resolutions.map((r) => [r.coingeckoId, r]));
+
+  // Group tokens by exchange
+  const SECONDARY_EXCHANGES: SecondaryWsExchange[] = ["okx", "bybit", "mexc", "gate"];
+  const binanceEntries: { symbol: string; coingeckoId: string }[] = [];
+  const secondaryByExchange = new Map<SecondaryWsExchange, { symbol: string; coingeckoId: string }[]>();
+  const noExchangeRows: {
     coingeckoId: string;
     priceUsd: number;
     change24h: number | null;
@@ -454,12 +498,17 @@ export async function startBinanceWebSocket(): Promise<void> {
   }[] = [];
 
   for (const row of allPrices) {
-    const symbol = resolveBinanceSymbol(row.coingeckoId, row.symbol);
-    const isBinance = symbol && COINGECKO_TO_BINANCE_SYMBOL[row.coingeckoId];
-    if (isBinance && symbol) {
-      binanceSymbols.push(symbol);
+    const resolution = resolutionMap.get(row.coingeckoId);
+    const exchange = resolution?.exchange as ExchangeName | undefined;
+
+    if (exchange === "binance") {
+      binanceEntries.push({ symbol: resolution!.symbol, coingeckoId: row.coingeckoId });
+    } else if (exchange && SECONDARY_EXCHANGES.includes(exchange as SecondaryWsExchange)) {
+      const key = exchange as SecondaryWsExchange;
+      if (!secondaryByExchange.has(key)) secondaryByExchange.set(key, []);
+      secondaryByExchange.get(key)!.push({ symbol: resolution!.symbol, coingeckoId: row.coingeckoId });
     } else {
-      nonBinanceRows.push({
+      noExchangeRows.push({
         coingeckoId: row.coingeckoId,
         priceUsd: row.priceUsd,
         change24h: row.change24h,
@@ -468,15 +517,29 @@ export async function startBinanceWebSocket(): Promise<void> {
     }
   }
 
-  if (binanceSymbols.length === 0) {
-    console.log("[binance-ws] No Binance-eligible symbols found, skipping WebSocket");
-    return;
-  }
-
   const manager = new BinanceWebSocketManager();
   wsGlobal.__binanceWsManager = manager;
 
-  // Pre-populate non-Binance prices so SSE delivers complete data
-  manager.mergeNonBinancePrices(nonBinanceRows);
-  manager.start(binanceSymbols);
+  // Pre-populate no-exchange prices so SSE delivers complete data
+  manager.mergeNonBinancePrices(noExchangeRows);
+
+  // Start Binance WS
+  if (binanceEntries.length > 0) {
+    for (const entry of binanceEntries) {
+      manager.registerSymbolMapping(entry.symbol, entry.coingeckoId);
+    }
+    manager.start(binanceEntries.map((e) => e.symbol));
+  } else {
+    manager.start([]);
+  }
+
+  // Start secondary exchange WS clients
+  for (const [exchange, entries] of secondaryByExchange) {
+    manager.startSecondaryExchange(exchange, entries);
+  }
+
+  const secondaryTotal = Array.from(secondaryByExchange.values()).reduce((s, e) => s + e.length, 0);
+  console.log(
+    `[price-ws] Started: binance=${binanceEntries.length} secondary=${secondaryTotal} (${Array.from(secondaryByExchange.entries()).map(([e, v]) => `${e}=${v.length}`).join(" ")}) no-exchange=${noExchangeRows.length}`
+  );
 }

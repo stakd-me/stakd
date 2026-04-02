@@ -44,6 +44,7 @@ export const COINGECKO_TO_BINANCE_SYMBOL: Record<string, string> = {
   "the-graph": "GRT",
   "curve-dao-token": "CRV",
   "theta-token": "THETA",
+  bittensor: "TAO",
 };
 
 export const BINANCE_SYMBOL_TO_COINGECKO_ID: Record<string, string> = Object.entries(

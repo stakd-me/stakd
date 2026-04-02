@@ -59,6 +59,13 @@ export async function initializeDatabase() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
 
+      CREATE TABLE IF NOT EXISTS exchange_cache (
+        coingecko_id TEXT PRIMARY KEY,
+        symbol TEXT NOT NULL,
+        exchange TEXT NOT NULL,
+        resolved_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
       CREATE TABLE IF NOT EXISTS price_history (
         id SERIAL PRIMARY KEY,
         coingecko_id TEXT NOT NULL,

@@ -6,10 +6,7 @@ import {
   COINGECKO_FALLBACK_FETCHES_PER_DAY,
   splitByCoinGeckoCooldown,
 } from "./coingecko-fallback";
-import {
-  resolveBinanceSymbol,
-  COINGECKO_TO_BINANCE_SYMBOL,
-} from "./binance-symbol-resolver";
+import { resolveBinanceSymbol } from "./binance-symbol-resolver";
 import { fetchSecondaryExchangePrices } from "./secondary-exchanges";
 
 const COINGECKO_BATCH_SIZE = 50;
@@ -436,24 +433,41 @@ export async function ensurePricesExist(
     await db.insert(schema.priceHistory).values(historyRows);
   }
 
-  // Subscribe new Binance-eligible tokens to WebSocket for real-time updates
+  // Auto-resolve exchanges and subscribe new tokens to WebSocket
   try {
+    const { resolveTokenExchanges } = await import("@/lib/pricing/exchange-resolver");
     const { getBinanceWsManager } = await import("@/lib/pricing/binance-ws");
+    const resolutions = await resolveTokenExchanges(missing);
     const manager = getBinanceWsManager();
     if (manager) {
-      const newBinanceSymbols = missing
-        .map((t) => COINGECKO_TO_BINANCE_SYMBOL[t.coingeckoId])
-        .filter((s): s is string => !!s);
-      if (newBinanceSymbols.length > 0) {
-        manager.subscribe(newBinanceSymbols);
+      const SECONDARY_EXCHANGES = ["okx", "bybit", "mexc", "gate"] as const;
+
+      // Subscribe Binance tokens to WS
+      const binanceEntries = resolutions
+        .filter((r) => r.exchange === "binance")
+        .map((r) => ({ symbol: r.symbol, coingeckoId: r.coingeckoId }));
+      if (binanceEntries.length > 0) {
+        manager.subscribe(binanceEntries);
       }
-      // Merge non-Binance tokens into in-memory cache for SSE broadcast
-      const nonBinanceRows = priceRows.filter(
-        (r) => !COINGECKO_TO_BINANCE_SYMBOL[r.coingeckoId]
+
+      // Subscribe secondary exchange tokens to their WS
+      for (const exchange of SECONDARY_EXCHANGES) {
+        const entries = resolutions
+          .filter((r) => r.exchange === exchange)
+          .map((r) => ({ symbol: r.symbol, coingeckoId: r.coingeckoId }));
+        if (entries.length > 0) {
+          manager.startSecondaryExchange(exchange, entries);
+        }
+      }
+
+      // Merge no-exchange tokens into in-memory cache for SSE broadcast
+      const noExchangeIds = new Set(
+        resolutions.filter((r) => r.exchange === "none").map((r) => r.coingeckoId)
       );
-      if (nonBinanceRows.length > 0) {
+      const noExchangeRows = priceRows.filter((r) => noExchangeIds.has(r.coingeckoId));
+      if (noExchangeRows.length > 0) {
         manager.mergeNonBinancePrices(
-          nonBinanceRows.map((r) => ({
+          noExchangeRows.map((r) => ({
             coingeckoId: r.coingeckoId,
             priceUsd: r.priceUsd,
             change24h: r.change24h,
@@ -463,7 +477,7 @@ export async function ensurePricesExist(
       }
     }
   } catch {
-    // WS manager may not be initialized yet
+    // WS manager or exchange resolver may not be initialized yet
   }
 }
 
