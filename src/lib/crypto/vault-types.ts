@@ -129,6 +129,12 @@ export function createEmptyVault(): VaultData {
       concentrationThresholdPercent: "30",
       excludeStablecoinsFromConcentration: "0",
       treatStablecoinsAsCashReserve: "0",
+      alertRules: JSON.stringify([
+        { id: "default-tp-btc", type: "take-profit", enabled: true, asset: "BTC", thresholdPercent: 100 },
+        { id: "default-tp-eth", type: "take-profit", enabled: true, asset: "ETH", thresholdPercent: 100 },
+        { id: "default-fear", type: "buy-on-fear", enabled: true, thresholdValue: 25 },
+        { id: "default-reserve", type: "stablecoin-reserve", enabled: true },
+      ]),
     },
   };
 }

@@ -48,6 +48,7 @@ export function Sidebar() {
     return getRebalanceAlertTokenCount(vault, priceMap);
   }, [vault, priceMap]);
 
+
   const handleLogout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });

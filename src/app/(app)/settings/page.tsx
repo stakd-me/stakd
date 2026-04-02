@@ -30,6 +30,8 @@ import {
 } from "@/lib/crypto/key-store";
 import { saveVaultToServer } from "@/lib/services/vault-sync";
 import { createEmptyVault } from "@/lib/crypto/vault-types";
+import { AlertRulesSection } from "@/components/settings/alert-rules-section";
+import { parseAlertRules } from "@/lib/alert-rules";
 import {
   CONCENTRATION_ALERT_THRESHOLD_PERCENT,
   MAX_CONCENTRATION_ALERT_THRESHOLD_PERCENT,
@@ -66,6 +68,7 @@ type SettingsSection =
   | "risk"
   | "trading"
   | "refresh"
+  | "alerts"
   | "danger"
   | "about"
   | "all";
@@ -545,6 +548,10 @@ export default function SettingsPage() {
   }, [rebalanceStrategy]);
 
   const tradingFieldsCount = buyOnlyMode ? 6 : 5;
+  const alertRulesCount = useMemo(
+    () => parseAlertRules(vault.settings.alertRules).length,
+    [vault.settings.alertRules]
+  );
   const settingsSectionOptions = useMemo(
     () => [
       {
@@ -578,6 +585,12 @@ export default function SettingsPage() {
         count: 1,
       },
       {
+        value: "alerts" as const,
+        label: t("settings.sectionAlerts"),
+        description: t("settings.alertRulesDescription"),
+        count: alertRulesCount,
+      },
+      {
         value: "danger" as const,
         label: t("settings.sectionDanger"),
         description: t("settings.exportBackup"),
@@ -599,12 +612,24 @@ export default function SettingsPage() {
           3 +
           tradingFieldsCount +
           1 +
+          alertRulesCount +
           1 +
           1,
       },
     ],
-    [strategyFieldsCount, t, tradingFieldsCount]
+    [strategyFieldsCount, t, tradingFieldsCount, alertRulesCount]
   );
+
+  const holdingSymbols = useMemo(() => {
+    const symbols = new Set<string>();
+    for (const tx of vault.transactions) {
+      symbols.add(tx.tokenSymbol.toUpperCase());
+    }
+    for (const me of vault.manualEntries) {
+      symbols.add(me.tokenSymbol.toUpperCase());
+    }
+    return Array.from(symbols);
+  }, [vault.transactions, vault.manualEntries]);
 
   const showSecuritySection =
     activeSection === "all" || activeSection === "security";
@@ -615,6 +640,8 @@ export default function SettingsPage() {
     activeSection === "all" || activeSection === "trading";
   const showRefreshSection =
     activeSection === "all" || activeSection === "refresh";
+  const showAlertsSection =
+    activeSection === "all" || activeSection === "alerts";
   const showDangerSection =
     activeSection === "all" || activeSection === "danger";
   const showAboutSection =
@@ -1266,6 +1293,8 @@ export default function SettingsPage() {
           )}
         </div>
       )}
+
+      {showAlertsSection && <AlertRulesSection holdingSymbols={holdingSymbols} />}
 
       {showDangerSection && (
         <Card className="border-status-negative-border">

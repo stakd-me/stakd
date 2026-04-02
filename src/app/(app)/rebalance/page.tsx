@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
-import { SummaryStrip } from "@/components/ui/summary-strip";
 import { formatUsd, formatTimeAgo } from "@/lib/utils";
 import { Clock } from "lucide-react";
 import { Skeleton, CardSkeleton } from "@/components/ui/skeleton";
@@ -141,37 +140,6 @@ export default function RebalancePage() {
       />
 
       <SectionPanel baseId={phasesBaseId} value={rb.activePhase}>
-      {rb.suggestionsData && (
-        <SummaryStrip
-          items={[
-            {
-              key: "trades",
-              label: t("rebalance.totalTrades"),
-              value: rb.actionableSuggestions.length,
-            },
-            {
-              key: "drift",
-              label: t("rebalance.portfolioDrift"),
-              value: `${rb.maxDeviation.toFixed(1)}%`,
-              tone:
-                rb.maxDeviation <= rb.holdZonePercent
-                  ? "positive"
-                  : rb.maxDeviation <= rb.holdZonePercent * 2
-                    ? "warning"
-                    : "negative",
-            },
-            {
-              key: "volume",
-              label: t("rebalance.totalVolume"),
-              value: formatUsd(rb.totalSuggestedVolume),
-            },
-          ]}
-          columnsClassName="sm:grid-cols-3"
-          size="compact"
-          align="center"
-        />
-      )}
-
       {/* ── 3. Target Allocation ─────────────────────────────── */}
       {rb.showSetupPhase && (
         <TargetAllocationSection
