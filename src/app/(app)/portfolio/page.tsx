@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { cn, formatUsd, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
-import { Plus, Search, Download, Upload, Package, RefreshCw } from "lucide-react";
+import { Plus, Search, Download, Upload, Package } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -203,7 +203,7 @@ export default function PortfolioPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { ensurePrices } = usePrices();
-  const { holdings, breakdown: rawBreakdown, totals, lastPriceUpdate, isLoading: portfolioLoading, refreshPrices } = usePortfolio();
+  const { holdings, breakdown: rawBreakdown, totals, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
   const { data: coinList } = useQuery<CoinListItem[]>({
     queryKey: ["coins-list"],
     queryFn: async () => {
@@ -218,7 +218,6 @@ export default function PortfolioPage() {
   const vaultManualEntries = useVaultStore((s) => s.vault.manualEntries);
 
   const [search, setSearch] = useState("");
-  const [refreshingPrices, setRefreshingPrices] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importDialogRef = useRef<HTMLDivElement>(null);
   const previousImportFocusRef = useRef<HTMLElement | null>(null);
@@ -393,18 +392,6 @@ export default function PortfolioPage() {
     ],
     [breakdown.length, manualEntries.length, t, transactions.length]
   );
-
-  const handleRefreshPrices = useCallback(async () => {
-    setRefreshingPrices(true);
-    try {
-      await refreshPrices();
-      toast(t("dashboard.pricesRefreshed"), "success");
-    } catch {
-      toast(t("dashboard.failedToRefresh"), "error");
-    } finally {
-      setRefreshingPrices(false);
-    }
-  }, [refreshPrices, t, toast]);
 
   // --- Manual entry CRUD ---
   const handleAddManualEntry = useCallback(async (data: { tokenSymbol: string; tokenName: string; coingeckoId: string; quantity: string; initialPrice: string; note: string }) => {
@@ -1678,15 +1665,6 @@ export default function PortfolioPage() {
         }
         actions={
           <>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleRefreshPrices}
-            disabled={refreshingPrices}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshingPrices ? "animate-spin" : ""}`} />
-            {t("dashboard.refresh")}
-          </Button>
           <Button size="sm" variant="outline" onClick={handleExportCsv}>
             <Download className="mr-2 h-4 w-4" />
             {t("common.export")}

@@ -23,7 +23,7 @@ const PortfolioLineChart = dynamic(
   () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
   { ssr: false }
 );
-import { AlertTriangle, CheckCircle2, RefreshCw, Scale, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Scale, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 
 const CategoryBarChart = dynamic(
@@ -80,13 +80,12 @@ function getTimeRangeMs(range: TimeRange): number | null {
 }
 
 export default function DashboardPage() {
-  const [refreshing, setRefreshing] = useState(false);
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const { toast } = useToast();
   const { format: formatValue } = useCurrency();
   const { t } = useTranslation();
   // ── Client-side data from vault store + hooks ──────────────────────
-  const { holdings, breakdown, totals, history, lastPriceUpdate, isLoading, refreshPrices } = usePortfolio();
+  const { holdings, breakdown, totals, history, lastPriceUpdate, isLoading } = usePortfolio();
   const { priceMap } = usePrices();
   const analytics = useAnalytics(holdings);
   const vault = useVaultStore((s) => s.vault);
@@ -217,19 +216,6 @@ export default function DashboardPage() {
       }))
       .sort((a, b) => b.valueUsd - a.valueUsd);
   }, [vault.tokenCategories, breakdown, totals.totalValue]);
-
-  // ── Refresh handler using hook ─────────────────────────────────────
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await refreshPrices();
-      toast(t("dashboard.pricesRefreshed"), "success");
-    } catch {
-      toast(t("dashboard.failedToRefresh"), "error");
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const totalValue = totals.totalValue;
   const totalPL = totals.totalPL;
@@ -370,19 +356,6 @@ export default function DashboardPage() {
       <PageHeader
         title={t("dashboard.title")}
         description={t("dashboard.subtitle")}
-        actions={
-          <>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            {t("dashboard.refresh")}
-          </Button>
-          </>
-        }
       />
 
       <StatusBanner
@@ -558,21 +531,11 @@ export default function DashboardPage() {
                 description={t("dashboard.historyEmptyHelp")}
                 icon={<TrendingUp className="h-5 w-5" />}
                 action={
-                  <>
-                    <Link href="/portfolio/add">
-                      <Button size="sm">
-                        {t("portfolio.addTransaction")}
-                      </Button>
-                    </Link>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRefresh}
-                      disabled={refreshing}
-                    >
-                      {t("dashboard.refresh")}
+                  <Link href="/portfolio/add">
+                    <Button size="sm">
+                      {t("portfolio.addTransaction")}
                     </Button>
-                  </>
+                  </Link>
                 }
               />
             )}

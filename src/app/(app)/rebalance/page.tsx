@@ -9,10 +9,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { SummaryStrip } from "@/components/ui/summary-strip";
 import { formatUsd, formatTimeAgo } from "@/lib/utils";
-import {
-  Clock,
-  RefreshCw,
-} from "lucide-react";
+import { Clock } from "lucide-react";
 import { Skeleton, CardSkeleton } from "@/components/ui/skeleton";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useTranslation } from "@/hooks/use-translation";
@@ -91,27 +88,16 @@ export default function RebalancePage() {
         title={t("rebalance.title")}
         description={t("rebalance.subtitle")}
         actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rb.handleRefreshPrices}
-              disabled={rb.refreshingPrices}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${rb.refreshingPrices ? "animate-spin" : ""}`} />
-              {t("dashboard.refresh")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rb.handleLogSnapshot}
-              disabled={rb.logPending}
-              title={t("rebalance.snapshotTooltip")}
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              {rb.logPending ? t("rebalance.logging") : t("rebalance.logSnapshot")}
-            </Button>
-          </>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={rb.handleLogSnapshot}
+            disabled={rb.logPending}
+            title={t("rebalance.snapshotTooltip")}
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            {rb.logPending ? t("rebalance.logging") : t("rebalance.logSnapshot")}
+          </Button>
         }
       />
 
@@ -137,11 +123,6 @@ export default function RebalancePage() {
           {rb.suggestionsData.oldestPriceUpdate && rb.isPriceStale && (
             <StatusPill tone="warning">
               {t("rebalance.prices")}: {formatTimeAgo(new Date(rb.suggestionsData.oldestPriceUpdate))}
-            </StatusPill>
-          )}
-          {(rb.suggestionsData.autoRefreshMinutes ?? 0) > 0 && (
-            <StatusPill tone="success" icon={<RefreshCw className="h-3 w-3" />}>
-              {t("rebalance.autoRefresh")}: {t("rebalance.every")} {rb.suggestionsData.autoRefreshMinutes}m
             </StatusPill>
           )}
         </div>
