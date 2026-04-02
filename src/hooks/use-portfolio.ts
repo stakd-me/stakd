@@ -32,8 +32,9 @@ export interface PortfolioBreakdownItem {
 
 export function usePortfolio() {
   const vault = useVaultStore((s) => s.vault);
-  const { priceMap, updatedAt, isLoading: pricesLoading, refreshPrices } = usePrices();
+  const { priceMap, updatedAt, isLoading: pricesLoading, refreshPrices, ensurePrices } = usePrices();
   const lastSnapshotSignatureRef = useRef<string | null>(null);
+  const ensuredTokensRef = useRef<Set<string>>(new Set());
 
   const holdings = useMemo(
     () => getHoldings(vault, priceMap),
@@ -44,6 +45,23 @@ export function usePortfolio() {
     () => getPortfolioSummary(vault, priceMap),
     [vault, priceMap]
   );
+
+  // Auto-ensure prices exist for all held tokens (subscribes to WS for real-time updates)
+  useEffect(() => {
+    const missing = holdings
+      .filter((h) => h.currentQty > 0 && h.currentPrice === 0)
+      .filter((h) => {
+        const key = `${h.symbol}:${h.coingeckoId ?? ""}`;
+        if (ensuredTokensRef.current.has(key)) return false;
+        ensuredTokensRef.current.add(key);
+        return true;
+      })
+      .map((h) => ({ coingeckoId: h.coingeckoId ?? h.symbol.toLowerCase(), symbol: h.symbol }));
+
+    if (missing.length > 0) {
+      ensurePrices(missing).catch(() => {});
+    }
+  }, [holdings, ensurePrices]);
 
   const breakdown = useMemo((): PortfolioBreakdownItem[] => {
     return holdings
