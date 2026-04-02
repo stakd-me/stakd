@@ -4,7 +4,7 @@ const BINANCE_SYMBOL_PATTERN = /^[A-Z0-9]{2,20}$/;
  * Curated CoinGecko -> CEX symbol map for high-usage assets.
  * This prevents wrong pricing when many CoinGecko tokens share the same symbol.
  */
-const COINGECKO_TO_BINANCE_SYMBOL: Record<string, string> = {
+export const COINGECKO_TO_BINANCE_SYMBOL: Record<string, string> = {
   bitcoin: "BTC",
   ethereum: "ETH",
   tether: "USDT",
@@ -46,7 +46,7 @@ const COINGECKO_TO_BINANCE_SYMBOL: Record<string, string> = {
   "theta-token": "THETA",
 };
 
-const BINANCE_SYMBOL_TO_COINGECKO_ID: Record<string, string> = Object.entries(
+export const BINANCE_SYMBOL_TO_COINGECKO_ID: Record<string, string> = Object.entries(
   COINGECKO_TO_BINANCE_SYMBOL
 ).reduce<Record<string, string>>((acc, [coingeckoId, symbol]) => {
   if (!acc[symbol]) {

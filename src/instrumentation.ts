@@ -7,5 +7,11 @@ export async function register() {
     await initializeDatabase();
     console.log("[startup] Database tables initialized");
     startBackgroundPriceRefreshScheduler();
+
+    const { startBinanceWebSocket } = await import(
+      "@/lib/pricing/binance-ws"
+    );
+    await startBinanceWebSocket();
+    console.log("[startup] Binance WebSocket price stream initialized");
   }
 }

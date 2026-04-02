@@ -1,7 +1,8 @@
-import { refreshAllPrices } from "@/lib/pricing";
+import { refreshAllPrices, getAllPrices } from "@/lib/pricing";
 import { debounce } from "@/lib/redis";
+import { getBinanceWsManager } from "@/lib/pricing/binance-ws";
 
-const DEFAULT_INTERVAL_MINUTES = 15;
+const DEFAULT_INTERVAL_MINUTES = 60;
 const MIN_INTERVAL_MINUTES = 1;
 const MAX_INTERVAL_MINUTES = 24 * 60;
 const DEBOUNCE_SECONDS = 60;
@@ -60,6 +61,23 @@ async function runRefreshTick(reason: "startup" | "interval"): Promise<void> {
 
     await refreshAllPrices();
     console.log(`[pricing] Background refresh completed (${reason})`);
+
+    // Notify WS manager to reload non-Binance prices from DB
+    const manager = getBinanceWsManager();
+    if (manager) {
+      try {
+        const allPrices = await getAllPrices();
+        const rows = Object.entries(allPrices).map(([coingeckoId, p]) => ({
+          coingeckoId,
+          priceUsd: p.usd,
+          change24h: p.change24h,
+          updatedAt: p.updatedAt,
+        }));
+        manager.mergeNonBinancePrices(rows);
+      } catch (err) {
+        console.warn("[pricing] Failed to merge non-Binance prices into WS manager:", err);
+      }
+    }
   } catch (error) {
     console.error(
       `[pricing] Background refresh failed (${reason}):`,

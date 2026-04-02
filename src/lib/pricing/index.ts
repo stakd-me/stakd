@@ -18,7 +18,7 @@ const PRICE_HISTORY_PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 let lastPriceHistoryPruneAttemptAtMs = 0;
 
-interface PriceWriteRow {
+export interface PriceWriteRow {
   coingeckoId: string;
   symbol: string;
   priceUsd: number;
@@ -80,7 +80,7 @@ async function fetchCoinGeckoRows(
   return rows;
 }
 
-async function persistPriceRows(
+export async function persistPriceRows(
   rows: PriceWriteRow[],
   now: Date
 ): Promise<{ priceRowsWritten: number; historyRowsWritten: number }> {
