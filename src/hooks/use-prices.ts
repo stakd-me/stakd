@@ -5,11 +5,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/store";
 import type { PriceData } from "@/lib/services/portfolio-calculator";
+import { COINGECKO_TO_BINANCE_SYMBOL } from "@/lib/pricing/binance-symbol-resolver";
 
 export type PriceMap = Record<string, PriceData>;
 
 interface PriceArrayRow {
   coingeckoId: string;
+  symbol?: string;
   priceUsd?: number;
   usd?: number;
   change24h: number | null;
@@ -54,11 +56,10 @@ function toPriceMap(prices: PricesResponse["prices"]): {
           : 0;
       const updatedAt = normalizeIsoDate(p.updatedAt);
       if (updatedAt) updatedAts.push(updatedAt);
-      map[p.coingeckoId] = {
-        usd,
-        change24h: p.change24h ?? null,
-        updatedAt,
-      };
+      const priceData = { usd, change24h: p.change24h ?? null, updatedAt };
+      map[p.coingeckoId] = priceData;
+      // Also key by uppercase symbol so holdings can look up by symbol directly
+      if (p.symbol) map[p.symbol.toUpperCase()] = priceData;
     }
   } else {
     for (const [coingeckoId, p] of Object.entries(prices)) {
@@ -69,11 +70,9 @@ function toPriceMap(prices: PricesResponse["prices"]): {
           : 0;
       const updatedAt = normalizeIsoDate(p.updatedAt);
       if (updatedAt) updatedAts.push(updatedAt);
-      map[coingeckoId] = {
-        usd,
-        change24h: p.change24h ?? null,
-        updatedAt,
-      };
+      const priceData = { usd, change24h: p.change24h ?? null, updatedAt };
+      map[coingeckoId] = priceData;
+      if (p.symbol) map[p.symbol.toUpperCase()] = priceData;
     }
   }
 
@@ -139,11 +138,15 @@ function usePriceStream() {
         const updatedAts: string[] = [];
 
         for (const [coingeckoId, p] of Object.entries(payload)) {
-          priceMap[coingeckoId] = {
+          const priceData = {
             usd: p.usd,
             change24h: p.change24h,
             updatedAt: p.updatedAt,
           };
+          priceMap[coingeckoId] = priceData;
+          // Also key by symbol so holdings can look up by symbol
+          const symbol = COINGECKO_TO_BINANCE_SYMBOL[coingeckoId];
+          if (symbol) priceMap[symbol] = priceData;
           if (p.updatedAt) updatedAts.push(p.updatedAt);
         }
 

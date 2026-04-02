@@ -19,7 +19,6 @@ interface ManualEntriesSectionProps {
   search: string;
   meSymbol: string;
   meName: string;
-  meCoingeckoId: string;
   meQuantity: string;
   meInitialPrice: string;
   meNote: string;
@@ -38,7 +37,6 @@ interface ManualEntriesSectionProps {
   onSetShowManualSymbolSuggestions: (value: boolean) => void;
   onSelectManualSymbolSuggestion: (coin: PortfolioCoinListItem) => void;
   onSetMeName: (value: string) => void;
-  onSetMeCoingeckoId: (value: string) => void;
   onSetMeQuantity: (value: string) => void;
   onSetMeInitialPrice: (value: string) => void;
   onSetMeNote: (value: string) => void;
@@ -60,7 +58,6 @@ export function ManualEntriesSection({
   search,
   meSymbol,
   meName,
-  meCoingeckoId,
   meQuantity,
   meInitialPrice,
   meNote,
@@ -79,7 +76,6 @@ export function ManualEntriesSection({
   onSetShowManualSymbolSuggestions,
   onSelectManualSymbolSuggestion,
   onSetMeName,
-  onSetMeCoingeckoId,
   onSetMeQuantity,
   onSetMeInitialPrice,
   onSetMeNote,
@@ -202,16 +198,6 @@ export function ManualEntriesSection({
               </div>
               <div>
                 <label className="mb-1 block text-xs text-text-subtle">
-                  {t("portfolio.coingeckoId")}
-                </label>
-                <Input
-                  placeholder={t("portfolioAdd.coingeckoIdPlaceholder")}
-                  value={meCoingeckoId}
-                  onChange={(event) => onSetMeCoingeckoId(event.target.value)}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs text-text-subtle">
                   {t("portfolio.quantity")}
                 </label>
                 <Input
@@ -320,11 +306,6 @@ export function ManualEntriesSection({
                         <span className="font-mono text-sm text-text-tertiary">
                           {formatCrypto(entry.quantity)}
                         </span>
-                        {entry.coingeckoId ? (
-                          <span className="text-xs text-text-dim">
-                            {entry.coingeckoId}
-                          </span>
-                        ) : null}
                         {entry.note ? (
                           <span className="text-xs italic text-text-dim">
                             {entry.note}

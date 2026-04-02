@@ -27,6 +27,7 @@ import {
   computeSettlementAmountUsd,
   createVaultTransaction,
 } from "@/lib/transactions";
+import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
 
 interface CoinListItem {
   id: string;
@@ -148,8 +149,7 @@ export default function AddTransactionPage() {
 
   const tokenMismatch = selectedCoin && (
     symbol !== selectedCoin.symbol ||
-    name !== selectedCoin.name ||
-    coingeckoId !== selectedCoin.id
+    name !== selectedCoin.name
   );
 
   const totalCost = useMemo(() => {
@@ -352,7 +352,9 @@ export default function AddTransactionPage() {
 
     setSubmitting(true);
     try {
-      const cgId = coingeckoId.trim() || null;
+      const cgId = coingeckoId.trim()
+        || BINANCE_SYMBOL_TO_COINGECKO_ID[symbol.trim().toUpperCase()]
+        || null;
       const createdAtIso = new Date().toISOString();
       const settlement = needsSettlement
         ? buildTradeSettlement({
@@ -694,17 +696,7 @@ export default function AddTransactionPage() {
               ) : (
                 <div />
               )}
-              <div className="space-y-2">
-                <label htmlFor="coingeckoId" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.coingeckoId")} <span className="text-text-dim">({t("common.optional")})</span>
-                </label>
-                <Input
-                  id="coingeckoId"
-                  placeholder={t("portfolioAdd.coingeckoIdPlaceholder")}
-                  value={coingeckoId}
-                  onChange={(e) => setCoingeckoId(e.target.value)}
-                />
-              </div>
+              <div />
             </div>
 
             <div className="space-y-2">

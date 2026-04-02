@@ -74,7 +74,6 @@ export function TargetAllocationSection({
   const { t } = useTranslation();
   const [showAutoGenMenu, setShowAutoGenMenu] = useState(false);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
-  const [showAdvancedFields, setShowAdvancedFields] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [sortMode, setSortMode] = useState<DeviationSortMode>("absolute");
   const autocompleteRef = useRef<HTMLDivElement>(null);
@@ -340,15 +339,6 @@ export function TargetAllocationSection({
               </div>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAdvancedFields((prev) => !prev)}
-          >
-            {showAdvancedFields
-              ? t("rebalance.hideAdvanced")
-              : t("rebalance.showAdvanced")}
-          </Button>
           <div className="relative" ref={sortRef}>
             <Button
               variant="outline"
@@ -410,11 +400,6 @@ export function TargetAllocationSection({
       {expanded && (
         <CardContent>
           <div className="space-y-3" ref={autocompleteRef}>
-            {showAdvancedFields && (
-              <p className="text-xs text-text-dim">
-                {t("rebalance.advancedFieldsHint")}
-              </p>
-            )}
             {targets.length > 0 && (
               <div className="hidden items-center gap-3 text-xs text-text-dim md:flex">
                 <span className="w-44">{t("rebalance.tokenHeader")}</span>
@@ -546,21 +531,6 @@ export function TargetAllocationSection({
                     </div>
                   )}
 
-                  {showAdvancedFields && (
-                    <div className="mt-3 border-t border-border-subtle pt-3">
-                      <label className="mb-1 block text-xs text-text-subtle">
-                        {t("rebalance.coingeckoIdLabel")}
-                      </label>
-                      <Input
-                        placeholder={t("rebalance.coingeckoPlaceholder")}
-                        value={row.coingeckoId}
-                        onChange={(e) =>
-                          updateRow(index, "coingeckoId", e.target.value)
-                        }
-                        className="w-full"
-                      />
-                    </div>
-                  )}
                 </div>
               );
             })}

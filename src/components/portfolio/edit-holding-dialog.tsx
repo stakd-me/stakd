@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
 import { toLocalDatetimeString } from "@/lib/utils";
+import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { BreakdownItem } from "@/components/portfolio/types";
 
 interface EditHoldingDialogProps {
@@ -21,19 +23,24 @@ export function EditHoldingDialog({
   onCancel,
 }: EditHoldingDialogProps) {
   const { t } = useTranslation();
-  const [coingeckoId, setCoingeckoId] = useState(item.coingeckoId ?? "");
+  const suggestedId = BINANCE_SYMBOL_TO_COINGECKO_ID[item.symbol.trim().toUpperCase()] ?? null;
+  const effectiveId = item.coingeckoId ?? suggestedId ?? "";
+  const [coingeckoId, setCoingeckoId] = useState(effectiveId);
   const [firstBuyDate, setFirstBuyDate] = useState(
     item.firstBuyDate ? toLocalDatetimeString(new Date(item.firstBuyDate)) : ""
   );
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Reset state when item changes
   const [prevKey, setPrevKey] = useState(item.holdingKey);
   if (prevKey !== item.holdingKey) {
     setPrevKey(item.holdingKey);
-    setCoingeckoId(item.coingeckoId ?? "");
+    const newSuggested = BINANCE_SYMBOL_TO_COINGECKO_ID[item.symbol.trim().toUpperCase()] ?? null;
+    setCoingeckoId(item.coingeckoId ?? newSuggested ?? "");
     setFirstBuyDate(
       item.firstBuyDate ? toLocalDatetimeString(new Date(item.firstBuyDate)) : ""
     );
+    setShowAdvanced(false);
   }
 
   if (!open) return null;
@@ -67,20 +74,6 @@ export function EditHoldingDialog({
         <div className="mt-4 space-y-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-text-subtle">
-              {t("portfolio.editCoingeckoId")}
-            </label>
-            <Input
-              value={coingeckoId}
-              onChange={(e) => setCoingeckoId(e.target.value)}
-              placeholder="e.g. bitcoin, ethereum"
-            />
-            <p className="mt-1 text-xs text-text-dim">
-              {t("portfolio.editCoingeckoIdHint")}
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-text-subtle">
               {t("portfolio.editFirstBuyDate")}
             </label>
             <Input
@@ -91,6 +84,32 @@ export function EditHoldingDialog({
             <p className="mt-1 text-xs text-text-dim">
               {t("portfolio.editFirstBuyDateHint")}
             </p>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs text-text-subtle hover:text-text-primary"
+              onClick={() => setShowAdvanced((v) => !v)}
+            >
+              {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              {t("portfolio.editCoingeckoId")}
+              {coingeckoId && (
+                <span className="ml-1 text-text-dim">({coingeckoId})</span>
+              )}
+            </button>
+            {showAdvanced && (
+              <div className="mt-2">
+                <Input
+                  value={coingeckoId}
+                  onChange={(e) => setCoingeckoId(e.target.value)}
+                  placeholder="e.g. bitcoin, ethereum"
+                />
+                <p className="mt-1 text-xs text-text-dim">
+                  {t("portfolio.editCoingeckoIdHint")}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

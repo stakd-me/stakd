@@ -1,5 +1,6 @@
 import type { VaultData } from "@/lib/crypto/vault-types";
 import { expandTransactionForBalance } from "@/lib/transactions";
+import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -61,13 +62,32 @@ function normalizeCoingeckoId(
   return normalized.length > 0 ? normalized : null;
 }
 
+/**
+ * Auto-resolve coingeckoId from symbol when missing.
+ * Uses the curated BINANCE_SYMBOL_TO_COINGECKO_ID map for top assets.
+ */
+function resolveCoingeckoId(
+  coingeckoId: string | null | undefined,
+  symbol: string
+): string | null {
+  const normalized = normalizeCoingeckoId(coingeckoId);
+  if (normalized) return normalized;
+  return BINANCE_SYMBOL_TO_COINGECKO_ID[symbol.trim().toUpperCase()] ?? null;
+}
+
 function getPriceByCoingeckoId(
   priceMap: Record<string, PriceData>,
-  coingeckoId: string | null | undefined
+  coingeckoId: string | null | undefined,
+  symbol?: string
 ): PriceData | null {
   const normalized = normalizeCoingeckoId(coingeckoId);
-  if (!normalized) return null;
-  return priceMap[normalized] ?? null;
+  if (normalized && priceMap[normalized]) return priceMap[normalized];
+  // Fallback: look up by uppercase symbol (priceMap is dual-keyed)
+  if (symbol) {
+    const upper = symbol.trim().toUpperCase();
+    if (upper && priceMap[upper]) return priceMap[upper];
+  }
+  return null;
 }
 
 // ── Core: compute holdings from vault data + prices ──────────────────
@@ -93,7 +113,7 @@ export function getHoldings(
   }> = {};
 
   for (const tx of allTx) {
-    const normalizedCoingeckoId = normalizeCoingeckoId(tx.coingeckoId);
+    const normalizedCoingeckoId = resolveCoingeckoId(tx.coingeckoId, tx.tokenSymbol);
     const key = `${tx.tokenSymbol.toUpperCase()}:${normalizedCoingeckoId ?? ""}`;
     if (!groups[key]) {
       groups[key] = {
@@ -134,7 +154,7 @@ export function getHoldings(
   for (const g of Object.values(groups)) {
     const currentQty = g.buyQty + g.receiveQty - g.sellQty - g.sendQty;
     const avgCostBasis = g.buyQty > 0 ? g.totalBuyCost / g.buyQty : 0;
-    const priceData = getPriceByCoingeckoId(priceMap, g.coingeckoId);
+    const priceData = getPriceByCoingeckoId(priceMap, g.coingeckoId, g.symbol);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
 
@@ -169,14 +189,14 @@ export function getHoldings(
 
   // Merge manual entries
   for (const entry of vault.manualEntries) {
-    const normalizedEntryId = normalizeCoingeckoId(entry.coingeckoId);
+    const normalizedEntryId = resolveCoingeckoId(entry.coingeckoId, entry.tokenSymbol);
     const existing = holdings.find(
       (h) =>
         h.symbol.toUpperCase() === entry.tokenSymbol.toUpperCase() &&
         (h.coingeckoId ?? "") === (normalizedEntryId ?? "")
     );
 
-    const priceData = getPriceByCoingeckoId(priceMap, normalizedEntryId);
+    const priceData = getPriceByCoingeckoId(priceMap, normalizedEntryId, entry.tokenSymbol);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
     const entryQty = toSafeNumber(entry.quantity);

@@ -31,6 +31,7 @@ import { useVaultStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
+import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
 import {
   calculateFeeAmountFromPercent,
   calculateFeePercentFromAmount,
@@ -408,7 +409,9 @@ export default function PortfolioPage() {
 
       const normalizedSymbol = data.tokenSymbol.trim().toUpperCase();
       const normalizedName = data.tokenName.trim();
-      const normalizedCoingeckoId = data.coingeckoId.trim();
+      const normalizedCoingeckoId = data.coingeckoId.trim()
+        || BINANCE_SYMBOL_TO_COINGECKO_ID[normalizedSymbol]
+        || "";
       const initialPriceRaw = data.initialPrice.trim();
       const initialPrice = initialPriceRaw.length > 0 ? parseFloat(initialPriceRaw) : null;
 
@@ -1911,7 +1914,7 @@ export default function PortfolioPage() {
           search={search}
           meSymbol={meSymbol}
           meName={meName}
-          meCoingeckoId={meCoingeckoId}
+
           meQuantity={meQuantity}
           meInitialPrice={meInitialPrice}
           meNote={meNote}
@@ -1930,7 +1933,7 @@ export default function PortfolioPage() {
           onSetShowManualSymbolSuggestions={setShowManualSymbolSuggestions}
           onSelectManualSymbolSuggestion={selectManualSymbolSuggestion}
           onSetMeName={setMeName}
-          onSetMeCoingeckoId={setMeCoingeckoId}
+
           onSetMeQuantity={setMeQuantity}
           onSetMeInitialPrice={setMeInitialPrice}
           onSetMeNote={setMeNote}
@@ -1950,7 +1953,7 @@ export default function PortfolioPage() {
             handleAddManualEntry({
               tokenSymbol: meSymbol,
               tokenName: meName,
-              coingeckoId: meCoingeckoId,
+              coingeckoId: meCoingeckoId ?? "",
               quantity: meQuantity,
               initialPrice: meInitialPrice,
               note: meNote,
