@@ -6,7 +6,10 @@ import {
   COINGECKO_FALLBACK_FETCHES_PER_DAY,
   splitByCoinGeckoCooldown,
 } from "./coingecko-fallback";
-import { resolveBinanceSymbol } from "./binance-symbol-resolver";
+import {
+  resolveBinanceSymbol,
+  COINGECKO_TO_BINANCE_SYMBOL,
+} from "./binance-symbol-resolver";
 import { fetchSecondaryExchangePrices } from "./secondary-exchanges";
 
 const COINGECKO_BATCH_SIZE = 50;
@@ -431,6 +434,36 @@ export async function ensurePricesExist(
   }
   if (historyRows.length > 0) {
     await db.insert(schema.priceHistory).values(historyRows);
+  }
+
+  // Subscribe new Binance-eligible tokens to WebSocket for real-time updates
+  try {
+    const { getBinanceWsManager } = await import("@/lib/pricing/binance-ws");
+    const manager = getBinanceWsManager();
+    if (manager) {
+      const newBinanceSymbols = missing
+        .map((t) => COINGECKO_TO_BINANCE_SYMBOL[t.coingeckoId])
+        .filter((s): s is string => !!s);
+      if (newBinanceSymbols.length > 0) {
+        manager.subscribe(newBinanceSymbols);
+      }
+      // Merge non-Binance tokens into in-memory cache for SSE broadcast
+      const nonBinanceRows = priceRows.filter(
+        (r) => !COINGECKO_TO_BINANCE_SYMBOL[r.coingeckoId]
+      );
+      if (nonBinanceRows.length > 0) {
+        manager.mergeNonBinancePrices(
+          nonBinanceRows.map((r) => ({
+            coingeckoId: r.coingeckoId,
+            priceUsd: r.priceUsd,
+            change24h: r.change24h,
+            updatedAt: r.updatedAt,
+          }))
+        );
+      }
+    }
+  } catch {
+    // WS manager may not be initialized yet
   }
 }
 
