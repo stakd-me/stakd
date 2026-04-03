@@ -67,7 +67,6 @@ type SettingsSection =
   | "strategy"
   | "risk"
   | "trading"
-  | "refresh"
   | "alerts"
   | "danger"
   | "about"
@@ -579,12 +578,6 @@ export default function SettingsPage() {
         count: tradingFieldsCount,
       },
       {
-        value: "refresh" as const,
-        label: t("settings.sectionRefresh"),
-        description: t("settings.autoRefresh"),
-        count: 1,
-      },
-      {
         value: "alerts" as const,
         label: t("settings.sectionAlerts"),
         description: t("settings.alertRulesDescription"),
@@ -611,7 +604,6 @@ export default function SettingsPage() {
           strategyFieldsCount +
           3 +
           tradingFieldsCount +
-          1 +
           alertRulesCount +
           1 +
           1,
@@ -638,8 +630,6 @@ export default function SettingsPage() {
   const showRiskSection = activeSection === "all" || activeSection === "risk";
   const showTradingSection =
     activeSection === "all" || activeSection === "trading";
-  const showRefreshSection =
-    activeSection === "all" || activeSection === "refresh";
   const showAlertsSection =
     activeSection === "all" || activeSection === "alerts";
   const showDangerSection =
@@ -650,8 +640,7 @@ export default function SettingsPage() {
     activeSection === "all" ||
     activeSection === "strategy" ||
     activeSection === "risk" ||
-    activeSection === "trading" ||
-    activeSection === "refresh";
+    activeSection === "trading";
   const sessionModeText =
     sessionKeyPersistent === null
       ? t("common.loading")
@@ -841,8 +830,7 @@ export default function SettingsPage() {
 
       {(showStrategySection ||
         showRiskSection ||
-        showTradingSection ||
-        showRefreshSection) && (
+        showTradingSection) && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           {showStrategySection && (
             <Card>
@@ -1211,86 +1199,59 @@ export default function SettingsPage() {
                     className="w-full max-w-[8rem]"
                   />
                 </FormField>
-
-                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium text-text-primary">
-                        {t("settings.slippageFees")}
-                      </p>
-                      <p className="mt-1 text-xs text-text-dim">
-                        {t("settings.slippageFeesDesc")}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <FormField
-                        label={t("settings.slippage")}
-                        htmlFor="settings-slippage"
-                      >
-                        <Input
-                          id="settings-slippage"
-                          type="number"
-                          min={0}
-                          max={10}
-                          step={0.1}
-                          value={slippagePercent}
-                          onChange={(e) => setSlippagePercent(e.target.value)}
-                          placeholder="0.5"
-                          className="w-full max-w-[8rem]"
-                        />
-                      </FormField>
-                      <FormField
-                        label={t("settings.tradingFee")}
-                        htmlFor="settings-trading-fee"
-                      >
-                        <Input
-                          id="settings-trading-fee"
-                          type="number"
-                          min={0}
-                          max={10}
-                          step={0.1}
-                          value={tradingFeePercent}
-                          onChange={(e) =>
-                            setTradingFeePercent(e.target.value)
-                          }
-                          placeholder="0.1"
-                          className="w-full max-w-[8rem]"
-                        />
-                      </FormField>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           )}
 
-          {showRefreshSection && (
+          {showTradingSection && (
             <Card>
               <CardHeader>
-                <CardTitle>{t("settings.sectionRefresh")}</CardTitle>
+                <CardTitle>{t("settings.slippageFees")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
-                  <p className="text-sm font-medium text-text-primary">
-                    {t("settings.rebalanceSettings")}
-                  </p>
-                  <p className="mt-1 text-xs text-text-dim">
-                    {t("settings.rebalanceDesc")}
-                  </p>
+                <p className="text-sm text-text-subtle">
+                  {t("settings.slippageFeesDesc")}
+                </p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <FormField
+                    label={t("settings.slippage")}
+                    htmlFor="settings-slippage"
+                  >
+                    <Input
+                      id="settings-slippage"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={slippagePercent}
+                      onChange={(e) => setSlippagePercent(e.target.value)}
+                      placeholder="0.5"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
+                  <FormField
+                    label={t("settings.tradingFee")}
+                    htmlFor="settings-trading-fee"
+                  >
+                    <Input
+                      id="settings-trading-fee"
+                      type="number"
+                      min={0}
+                      max={10}
+                      step={0.1}
+                      value={tradingFeePercent}
+                      onChange={(e) =>
+                        setTradingFeePercent(e.target.value)
+                      }
+                      placeholder="0.1"
+                      className="w-full max-w-[8rem]"
+                    />
+                  </FormField>
                 </div>
-
-                <Button
-                  onClick={handleSaveRebalanceSettings}
-                  disabled={rebalanceSaving}
-                >
-                  <Save className="mr-2 h-4 w-4" />
-                  {rebalanceSaving
-                    ? t("common.saving")
-                    : t("settings.saveRebalanceSettings")}
-                </Button>
               </CardContent>
             </Card>
           )}
+
         </div>
       )}
 

@@ -1691,7 +1691,7 @@ export function useRebalance() {
     categories.length;
   const analysisPhaseCount =
     targetedSuggestions.length +
-    allAlerts.length +
+    concentrationAlerts.length +
     (suggestionsData?.dcaChunks?.length ?? 0) +
     logs.length;
   const executionPhaseCount =

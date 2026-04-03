@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useMarketSignal } from "@/hooks/use-market-signal";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn, formatUsd } from "@/lib/utils";
-import { Activity, TrendingDown, TrendingUp, AlertTriangle, Loader2 } from "lucide-react";
+import { Activity, TrendingDown, TrendingUp, AlertTriangle, Loader2, ChevronDown } from "lucide-react";
 
 const PHASE_CONFIG = {
   accumulate: {
@@ -60,6 +61,7 @@ function SubSignal({ label, value, detail }: { label: string; value: string; det
 export function MarketSignalBanner() {
   const { data, isLoading, isError } = useMarketSignal();
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
 
   if (isLoading) {
     return (
@@ -78,13 +80,18 @@ export function MarketSignalBanner() {
 
   return (
     <div className={cn("rounded-lg border px-4 py-3", config.bgClass)}>
-      {/* Header row */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {/* Header row — always visible */}
+      <button
+        type="button"
+        className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+      >
         <div className="flex items-center gap-3">
           <div className={cn("flex items-center justify-center rounded-full p-1.5", config.badgeClass)}>
             <Icon className="h-4 w-4" />
           </div>
-          <div>
+          <div className="text-left">
             <div className="flex items-center gap-2">
               <span className={cn("text-sm font-bold uppercase tracking-wide", config.textClass)}>
                 {t(`marketSignal.phase.${phase}`)}
@@ -96,35 +103,45 @@ export function MarketSignalBanner() {
             <p className="text-xs text-text-subtle">{t(`marketSignal.phaseDesc.${phase}`)}</p>
           </div>
         </div>
-        <SignalMeter value={data.composite.score} className="w-full sm:w-32" />
-      </div>
+        <div className="flex items-center gap-3">
+          <SignalMeter value={data.composite.score} className="w-full sm:w-32" />
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-text-subtle transition-transform",
+              expanded && "rotate-180"
+            )}
+          />
+        </div>
+      </button>
 
-      {/* Sub-signals */}
-      <div className="mt-3 grid grid-cols-3 gap-4 border-t border-border-subtle pt-3">
-        {data.fearGreed && (
-          <SubSignal
-            label={t("marketSignal.fearGreed")}
-            value={`${data.fearGreed.value}/100`}
-            detail={data.fearGreed.label}
-          />
-        )}
-        {data.btc200wMa && (
-          <SubSignal
-            label={t("marketSignal.btc200wMa")}
-            value={`${((data.btc200wMa.ratio - 1) * 100).toFixed(0)}%`}
-            detail={`${t("marketSignal.maValue")}: ${formatUsd(data.btc200wMa.ma)}`}
-          />
-        )}
-        {data.cyclePosition && (
-          <SubSignal
-            label={t("marketSignal.cyclePosition")}
-            value={`${data.cyclePosition.percent.toFixed(0)}%`}
-            detail={t("marketSignal.daysSinceHalving", {
-              days: data.cyclePosition.daysSinceHalving.toString(),
-            })}
-          />
-        )}
-      </div>
+      {/* Sub-signals — collapsible */}
+      {expanded && (
+        <div className="mt-3 grid grid-cols-3 gap-4 border-t border-border-subtle pt-3">
+          {data.fearGreed && (
+            <SubSignal
+              label={t("marketSignal.fearGreed")}
+              value={`${data.fearGreed.value}/100`}
+              detail={data.fearGreed.label}
+            />
+          )}
+          {data.btc200wMa && (
+            <SubSignal
+              label={t("marketSignal.btc200wMa")}
+              value={`${((data.btc200wMa.ratio - 1) * 100).toFixed(0)}%`}
+              detail={`${t("marketSignal.maValue")}: ${formatUsd(data.btc200wMa.ma)}`}
+            />
+          )}
+          {data.cyclePosition && (
+            <SubSignal
+              label={t("marketSignal.cyclePosition")}
+              value={`${data.cyclePosition.percent.toFixed(0)}%`}
+              detail={t("marketSignal.daysSinceHalving", {
+                days: data.cyclePosition.daysSinceHalving.toString(),
+              })}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

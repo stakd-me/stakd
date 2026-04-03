@@ -16,7 +16,6 @@ import { useRebalance } from "@/hooks/use-rebalance";
 
 // Critical sections - imported directly
 import { TargetAllocationSection } from "@/components/rebalance/target-allocation-section";
-import { AlertsSection } from "@/components/rebalance/alerts-section";
 import { SummarySection } from "@/components/rebalance/summary-section";
 import { CurrentVsTargetSection } from "@/components/rebalance/current-vs-target-section";
 import { ExecutionPlanSection } from "@/components/rebalance/execution-plan-section";
@@ -233,16 +232,7 @@ export default function RebalancePage() {
         );
       })()}
 
-      {rb.showAnalysisPhase && rb.suggestionsData ? (
-        <AlertsSection
-          alertsError={false}
-          concentrationAlerts={rb.concentrationAlerts}
-          deviationAlerts={rb.deviationAlerts}
-          concentrationThresholdLabel={rb.concentrationThresholdLabel}
-          severityLabels={severityLabels}
-        />
-      ) : null}
-
+      {/* ── 5. Summary ──────────────────────────────────────── */}
       {rb.showAnalysisPhase && rb.suggestionsData?.summary ? (
         <SummarySection
           summary={rb.suggestionsData.summary}
@@ -252,25 +242,28 @@ export default function RebalancePage() {
         />
       ) : null}
 
-      {/* ── 5. Chart ─────────────────────────────────────────── */}
+      {/* ── 6. Current vs Target Table (with inline alerts) ── */}
+      {rb.showAnalysisPhase && rb.suggestionsData && rb.targetedSuggestions.length > 0 && !rb.suggestionsData.summary?.isWellBalanced && (
+        <CurrentVsTargetSection
+          totalValue={rb.suggestionsData.totalValue}
+          suggestionsLoading={rb.suggestionsLoading}
+          suggestions={rb.targetedSuggestionsSorted}
+          concentrationAlerts={rb.concentrationAlerts}
+          concentrationThresholdLabel={rb.concentrationThresholdLabel}
+          severityLabels={severityLabels}
+          onExportReport={rb.handleExportReport}
+          onExportCsv={rb.handleExportCsv}
+          formatSuggestionTradeQuantity={rb.formatSuggestionTradeQuantity}
+        />
+      )}
+
+      {/* ── 7. Chart ─────────────────────────────────────────── */}
       {rb.showAnalysisPhase ? (
         <TargetVsCurrentChartSection
           chartData={rb.chartData}
           summary={rb.targetVsCurrentChartSummary}
         />
       ) : null}
-
-      {/* ── 6. Current vs Target Table ───────────────────────── */}
-      {rb.showAnalysisPhase && rb.suggestionsData && rb.targetedSuggestions.length > 0 && !rb.suggestionsData.summary?.isWellBalanced && (
-        <CurrentVsTargetSection
-          totalValue={rb.suggestionsData.totalValue}
-          suggestionsLoading={rb.suggestionsLoading}
-          suggestions={rb.targetedSuggestionsSorted}
-          onExportReport={rb.handleExportReport}
-          onExportCsv={rb.handleExportCsv}
-          formatSuggestionTradeQuantity={rb.formatSuggestionTradeQuantity}
-        />
-      )}
 
       {/* ── 7. Execution Plan ────────────────────────────────── */}
       {rb.showExecutionPhase && rb.suggestionsData?.executionSteps && rb.suggestionsData.executionSteps.length > 0 && !rb.suggestionsData.summary?.isWellBalanced && (

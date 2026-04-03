@@ -7,7 +7,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
-import { SummaryStrip } from "@/components/ui/summary-strip";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PriceFlash } from "@/components/ui/price-flash";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
@@ -418,6 +417,7 @@ export default function DashboardPage() {
               : undefined
           }
           secondaryTone={isPriceStale ? "warning" : "muted"}
+          tertiary={`${t("dashboard.totalInvested")}: ${formatUsd(analytics.totalInvested)} · ${breakdown.length} ${t("dashboard.assets").toLowerCase()}`}
           className="xl:col-span-2"
         />
 
@@ -428,6 +428,7 @@ export default function DashboardPage() {
           valueSize="3xl"
           secondary={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
           secondaryTone={analytics.totalReturnPercent >= 0 ? "positive" : "negative"}
+          tertiary={totals.totalFeesPaid > 0 ? `${t("dashboard.totalFees")}: ${formatUsd(totals.totalFeesPaid)}` : undefined}
         />
 
         <KpiCard
@@ -480,7 +481,7 @@ export default function DashboardPage() {
       >
         {hasAlerts ? (
           <div className="flex flex-wrap gap-2">
-            {mergedAlertBadges.slice(0, 8).map((alert) => (
+            {mergedAlertBadges.slice(0, 5).map((alert) => (
               <div key={alert.tokenSymbol} className="flex flex-col gap-0.5">
                 <StatusPill
                   tone={
@@ -502,10 +503,10 @@ export default function DashboardPage() {
                 )}
               </div>
             ))}
-            {mergedAlertBadges.length > 8 ? (
+            {mergedAlertBadges.length > 5 ? (
               <span className="text-xs text-text-subtle">
                 {t("common.more", {
-                  count: (mergedAlertBadges.length - 8).toString(),
+                  count: (mergedAlertBadges.length - 5).toString(),
                 })}
               </span>
             ) : null}
@@ -601,42 +602,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                {t("dashboard.performance")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <SummaryStrip
-                items={[
-                  {
-                    key: "invested",
-                    label: t("dashboard.totalInvested"),
-                    value: formatUsd(analytics.totalInvested),
-                  },
-                  {
-                    key: "roi",
-                    label: t("dashboard.simpleROI"),
-                    value: `${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}%`,
-                    tone: analytics.totalReturnPercent >= 0 ? "positive" : "negative",
-                  },
-                  {
-                    key: "fees",
-                    label: t("dashboard.totalFees"),
-                    value: formatUsd(totals.totalFeesPaid),
-                  },
-                  {
-                    key: "assets",
-                    label: t("dashboard.assets"),
-                    value: breakdown.length,
-                  },
-                ]}
-                columnsClassName="grid-cols-2"
-              />
-            </CardContent>
-          </Card>
         </div>
       </div>
 
