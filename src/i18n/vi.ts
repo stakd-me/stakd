@@ -947,6 +947,19 @@ const vi: Record<TranslationKeys, string> = {
   "alertRules.allDismissed": "Đã bỏ qua tất cả cảnh báo. Chúng sẽ xuất hiện lại khi dữ liệu được cập nhật.",
   "alertRules.configureRules": "Cấu hình quy tắc",
   "alertRules.assetNotInHoldings": "Tài sản này không có trong danh mục hiện tại",
+
+  // Alert Engine Messages
+  "alertEngine.takeProfitHeadline": "{asset} +{pl}%",
+  "alertEngine.takeProfitExplanation": "{asset} đã tăng {pl}% so với giá mua trung bình, vượt ngưỡng chốt lời {threshold}% của bạn.",
+  "alertEngine.takeProfitAction": "Cân nhắc chốt lời một phần (ví dụ bán 20-30% vị thế {asset}).",
+  "alertEngine.buyOnFearHeadline": "Sợ hãi & Tham lam: {value}",
+  "alertEngine.buyOnFearExplanation": "Chỉ số Sợ hãi & Tham lam đang ở {value}, dưới ngưỡng {threshold} của bạn. Điều kiện thị trường có thể thuận lợi để tích lũy.",
+  "alertEngine.buyOnFearAction": "Điều kiện thuận lợi để tích lũy theo quy tắc của bạn. Cân nhắc triển khai vốn vào các tài sản mục tiêu.",
+  "alertEngine.reserveHeadline": "Dự trữ: {current}% / {target}%",
+  "alertEngine.reserveExplanation": "Dự trữ stablecoin của bạn ({current}%) thấp hơn mức khuyến nghị {target}% cho điều kiện thị trường \"{phase}\".",
+  "alertEngine.reserveExplanationEstimated": "Tín hiệu thị trường không khả dụng. Sử dụng mức dự trữ mặc định \"{phase}\" ({target}%). Stablecoin của bạn ({current}%) đang dưới mức này.",
+  "alertEngine.reserveAction": "Cân nhắc tăng tỷ lệ stablecoin thêm ~{gap}% để đạt mức dự trữ khuyến nghị.",
+
   "settings.sectionAlerts": "Cảnh báo",
   "settings.alertRulesDescription": "Chốt lời, mua khi sợ hãi, cảnh báo dự trữ",
   "dashboard.smartHintOverweightProfit": "{symbol} thừa cân và có lời (+{pl}%). Cân nhắc cắt giảm về mục tiêu.",

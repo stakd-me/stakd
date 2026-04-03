@@ -918,8 +918,21 @@ const de: Record<TranslationKeys, string> = {
   "alertRules.dismissAll": "Dismiss all",
   "alertRules.allDismissed": "All alerts dismissed. They will reappear on next data refresh.",
   "alertRules.configureRules": "Configure rules",
-  "alertRules.assetNotInHoldings": "This asset is not in your current holdings",
-  "settings.sectionAlerts": "Alerts",
+  "alertRules.assetNotInHoldings": "Dieses Asset ist nicht in Ihren aktuellen Beständen",
+
+  // Alert Engine Messages
+  "alertEngine.takeProfitHeadline": "{asset} +{pl}%",
+  "alertEngine.takeProfitExplanation": "{asset} ist um {pl}% gegenüber Ihrem durchschnittlichen Kaufpreis gestiegen und überschreitet Ihre Gewinnmitnahme-Schwelle von {threshold}%.",
+  "alertEngine.takeProfitAction": "Erwägen Sie eine teilweise Gewinnmitnahme (z.B. 20-30% Ihrer {asset}-Position verkaufen).",
+  "alertEngine.buyOnFearHeadline": "Angst & Gier: {value}",
+  "alertEngine.buyOnFearExplanation": "Der Angst-und-Gier-Index liegt bei {value}, unter Ihrer Schwelle von {threshold}. Die Marktbedingungen könnten eine Akkumulation begünstigen.",
+  "alertEngine.buyOnFearAction": "Die Bedingungen begünstigen eine Akkumulation gemäß Ihrer Regel. Erwägen Sie, Kapital in Ihre Ziel-Assets einzusetzen.",
+  "alertEngine.reserveHeadline": "Reserve: {current}% / {target}%",
+  "alertEngine.reserveExplanation": "Ihre Stablecoin-Reserve ({current}%) liegt unter den empfohlenen {target}% für \"{phase}\"-Marktbedingungen.",
+  "alertEngine.reserveExplanationEstimated": "Marktsignal nicht verfügbar. Verwende Standard-Reserve \"{phase}\" ({target}%). Ihre Stablecoins ({current}%) liegen unter diesem Niveau.",
+  "alertEngine.reserveAction": "Erwägen Sie, Ihre Stablecoin-Allokation um ~{gap}% zu erhöhen, um das empfohlene Reserveniveau zu erreichen.",
+
+  "settings.sectionAlerts": "Warnungen",
   "settings.alertRulesDescription": "Take profit, buy on fear, reserve alerts",
   "dashboard.smartHintOverweightProfit": "{symbol} is overweight and in profit (+{pl}%). Consider trimming to target.",
   "dashboard.smartHintOverweightLoss": "{symbol} is overweight but at a loss (-{pl}%). Pause new buys, redirect capital to underweight assets.",

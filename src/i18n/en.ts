@@ -945,6 +945,19 @@ const en = {
   "alertRules.allDismissed": "All alerts dismissed. They will reappear on next data refresh.",
   "alertRules.configureRules": "Configure rules",
   "alertRules.assetNotInHoldings": "This asset is not in your current holdings",
+
+  // Alert Engine Messages (evaluated at render time)
+  "alertEngine.takeProfitHeadline": "{asset} +{pl}%",
+  "alertEngine.takeProfitExplanation": "{asset} is up {pl}% from your average buy price, exceeding your {threshold}% take-profit threshold.",
+  "alertEngine.takeProfitAction": "Consider taking partial profit (e.g. sell 20-30% of your {asset} position).",
+  "alertEngine.buyOnFearHeadline": "Fear & Greed: {value}",
+  "alertEngine.buyOnFearExplanation": "Fear & Greed index is at {value}, below your threshold of {threshold}. Market conditions may favor accumulation.",
+  "alertEngine.buyOnFearAction": "Conditions favor accumulation per your rule. Consider deploying capital into your target assets.",
+  "alertEngine.reserveHeadline": "Reserve: {current}% / {target}%",
+  "alertEngine.reserveExplanation": "Your stablecoin reserve ({current}%) is below the recommended {target}% for \"{phase}\" market conditions.",
+  "alertEngine.reserveExplanationEstimated": "Market signal unavailable. Using default \"{phase}\" reserve ({target}%). Your stablecoins ({current}%) are below this level.",
+  "alertEngine.reserveAction": "Consider increasing your stablecoin allocation by ~{gap}% to match the recommended reserve level.",
+
   "settings.sectionAlerts": "Alerts",
   "settings.alertRulesDescription": "Take profit, buy on fear, reserve alerts",
 

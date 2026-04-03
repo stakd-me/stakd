@@ -918,8 +918,21 @@ const es: Record<TranslationKeys, string> = {
   "alertRules.dismissAll": "Dismiss all",
   "alertRules.allDismissed": "All alerts dismissed. They will reappear on next data refresh.",
   "alertRules.configureRules": "Configure rules",
-  "alertRules.assetNotInHoldings": "This asset is not in your current holdings",
-  "settings.sectionAlerts": "Alerts",
+  "alertRules.assetNotInHoldings": "Este activo no está en tus tenencias actuales",
+
+  // Alert Engine Messages
+  "alertEngine.takeProfitHeadline": "{asset} +{pl}%",
+  "alertEngine.takeProfitExplanation": "{asset} ha subido {pl}% desde tu precio promedio de compra, superando tu umbral de toma de ganancias de {threshold}%.",
+  "alertEngine.takeProfitAction": "Considera tomar ganancias parciales (ej. vender 20-30% de tu posición en {asset}).",
+  "alertEngine.buyOnFearHeadline": "Miedo y Codicia: {value}",
+  "alertEngine.buyOnFearExplanation": "El índice de Miedo y Codicia está en {value}, por debajo de tu umbral de {threshold}. Las condiciones del mercado pueden favorecer la acumulación.",
+  "alertEngine.buyOnFearAction": "Las condiciones favorecen la acumulación según tu regla. Considera desplegar capital en tus activos objetivo.",
+  "alertEngine.reserveHeadline": "Reserva: {current}% / {target}%",
+  "alertEngine.reserveExplanation": "Tu reserva de stablecoins ({current}%) está por debajo del {target}% recomendado para condiciones de mercado \"{phase}\".",
+  "alertEngine.reserveExplanationEstimated": "Señal de mercado no disponible. Usando reserva predeterminada \"{phase}\" ({target}%). Tus stablecoins ({current}%) están por debajo de este nivel.",
+  "alertEngine.reserveAction": "Considera aumentar tu asignación de stablecoins en ~{gap}% para alcanzar el nivel de reserva recomendado.",
+
+  "settings.sectionAlerts": "Alertas",
   "settings.alertRulesDescription": "Take profit, buy on fear, reserve alerts",
   "dashboard.smartHintOverweightProfit": "{symbol} is overweight and in profit (+{pl}%). Consider trimming to target.",
   "dashboard.smartHintOverweightLoss": "{symbol} is overweight but at a loss (-{pl}%). Pause new buys, redirect capital to underweight assets.",

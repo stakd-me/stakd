@@ -2,8 +2,9 @@
 
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
-import type { ActiveAlert, AlertSeverity } from "@/lib/alert-rules";
+import type { ActiveAlert, AlertMessage, AlertSeverity } from "@/lib/alert-rules";
 import { ALERT_RULE_TYPE_ICONS } from "@/lib/alert-rules";
+import type { TranslationKeys } from "@/i18n";
 import { X, XCircle, Bell } from "lucide-react";
 import Link from "next/link";
 
@@ -25,6 +26,17 @@ const SEVERITY_STYLES: Record<AlertSeverity, { card: string; icon: string; badge
   },
 };
 
+function useAlertMessage(msg: AlertMessage): string {
+  const { t } = useTranslation();
+  // Translate phase names if present in params
+  const params = { ...msg.params };
+  if (params.phase) {
+    const phaseKey = `marketSignal.phase.${params.phase}` as TranslationKeys;
+    params.phase = t(phaseKey);
+  }
+  return t(msg.key as TranslationKeys, params);
+}
+
 function AlertCard({
   alert,
   onDismiss,
@@ -35,6 +47,9 @@ function AlertCard({
   const { t } = useTranslation();
   const styles = SEVERITY_STYLES[alert.severity];
   const Icon = ALERT_RULE_TYPE_ICONS[alert.ruleType];
+  const headline = useAlertMessage(alert.headline);
+  const explanation = useAlertMessage(alert.explanation);
+  const suggestedAction = useAlertMessage(alert.suggestedAction);
 
   return (
     <div className={cn("rounded-lg border p-4", styles.card)}>
@@ -46,15 +61,15 @@ function AlertCard({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className={cn("text-sm font-bold", styles.icon)}>
-                {alert.headline}
+                {headline}
               </span>
               <span className="rounded bg-bg-hover px-1.5 py-0.5 text-[10px] font-medium text-text-subtle">
                 {t(`alertRules.type.${alert.ruleType}`)}
               </span>
             </div>
-            <p className="text-sm text-text-secondary">{alert.explanation}</p>
+            <p className="text-sm text-text-secondary">{explanation}</p>
             <p className="text-xs font-medium text-text-primary">
-              {alert.suggestedAction}
+              {suggestedAction}
             </p>
           </div>
         </div>

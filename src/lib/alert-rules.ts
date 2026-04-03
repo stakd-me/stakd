@@ -39,15 +39,21 @@ export type AlertRule = TakeProfitRule | BuyOnFearRule | StablecoinReserveRule;
 
 export type AlertSeverity = "info" | "warning" | "critical";
 
+/** i18n-ready message: a translation key + interpolation params */
+export interface AlertMessage {
+  key: string;
+  params: Record<string, string>;
+}
+
 export interface ActiveAlert {
   id: string;
   ruleId: string;
   ruleType: AlertRuleType;
   severity: AlertSeverity;
   asset: string | null; // null for non-asset-specific alerts
-  headline: string;
-  explanation: string;
-  suggestedAction: string;
+  headline: AlertMessage;
+  explanation: AlertMessage;
+  suggestedAction: AlertMessage;
 }
 
 // Phase → recommended stablecoin reserve %
@@ -98,16 +104,27 @@ export function evaluateAlertRules(
       case "take-profit": {
         const holding = ctx.holdingsPL[rule.asset.toUpperCase()];
         if (holding && holding.unrealizedPLPercent >= rule.thresholdPercent) {
+          const asset = rule.asset.toUpperCase();
           const actualPL = holding.unrealizedPLPercent.toFixed(1);
+          const threshold = rule.thresholdPercent.toString();
           alerts.push({
-            id: `${rule.id}:${rule.asset}`,
+            id: `${rule.id}:${asset}`,
             ruleId: rule.id,
             ruleType: "take-profit",
             severity: holding.unrealizedPLPercent >= rule.thresholdPercent * 1.5 ? "critical" : "warning",
-            asset: rule.asset.toUpperCase(),
-            headline: `${rule.asset.toUpperCase()} +${actualPL}%`,
-            explanation: `${rule.asset.toUpperCase()} is up ${actualPL}% from your average buy price, exceeding your ${rule.thresholdPercent}% take-profit threshold.`,
-            suggestedAction: `Consider taking partial profit (e.g. sell 20-30% of your ${rule.asset.toUpperCase()} position).`,
+            asset,
+            headline: {
+              key: "alertEngine.takeProfitHeadline",
+              params: { asset, pl: actualPL },
+            },
+            explanation: {
+              key: "alertEngine.takeProfitExplanation",
+              params: { asset, pl: actualPL, threshold },
+            },
+            suggestedAction: {
+              key: "alertEngine.takeProfitAction",
+              params: { asset },
+            },
           });
         }
         break;
@@ -115,15 +132,26 @@ export function evaluateAlertRules(
 
       case "buy-on-fear": {
         if (ctx.fearGreedValue !== null && ctx.fearGreedValue <= rule.thresholdValue) {
+          const value = ctx.fearGreedValue.toString();
+          const threshold = rule.thresholdValue.toString();
           alerts.push({
             id: rule.id,
             ruleId: rule.id,
             ruleType: "buy-on-fear",
             severity: ctx.fearGreedValue <= 15 ? "critical" : "warning",
             asset: null,
-            headline: `Fear & Greed: ${ctx.fearGreedValue}`,
-            explanation: `Fear & Greed index is at ${ctx.fearGreedValue}, below your threshold of ${rule.thresholdValue}. Market conditions may favor accumulation.`,
-            suggestedAction: "Conditions favor accumulation per your rule. Consider deploying capital into your target assets.",
+            headline: {
+              key: "alertEngine.buyOnFearHeadline",
+              params: { value },
+            },
+            explanation: {
+              key: "alertEngine.buyOnFearExplanation",
+              params: { value, threshold },
+            },
+            suggestedAction: {
+              key: "alertEngine.buyOnFearAction",
+              params: {},
+            },
           });
         }
         break;
@@ -135,17 +163,29 @@ export function evaluateAlertRules(
         if (ctx.stablecoinPercent < recommended) {
           const deficit = recommended - ctx.stablecoinPercent;
           const isEstimated = !ctx.marketPhase;
+          const current = ctx.stablecoinPercent.toFixed(1);
+          const target = recommended.toString();
+          const gap = deficit.toFixed(1);
           alerts.push({
             id: rule.id,
             ruleId: rule.id,
             ruleType: "stablecoin-reserve",
             severity: deficit > 15 ? "critical" : deficit > 5 ? "warning" : "info",
             asset: null,
-            headline: `Reserve: ${ctx.stablecoinPercent.toFixed(1)}% / ${recommended}%`,
-            explanation: isEstimated
-              ? `Market signal unavailable. Using default "${phase}" reserve (${recommended}%). Your stablecoins (${ctx.stablecoinPercent.toFixed(1)}%) are below this level.`
-              : `Your stablecoin reserve (${ctx.stablecoinPercent.toFixed(1)}%) is below the recommended ${recommended}% for "${phase}" market conditions.`,
-            suggestedAction: `Consider increasing your stablecoin allocation by ~${deficit.toFixed(1)}% to match the recommended reserve level.`,
+            headline: {
+              key: "alertEngine.reserveHeadline",
+              params: { current, target },
+            },
+            explanation: {
+              key: isEstimated
+                ? "alertEngine.reserveExplanationEstimated"
+                : "alertEngine.reserveExplanation",
+              params: { current, target, phase },
+            },
+            suggestedAction: {
+              key: "alertEngine.reserveAction",
+              params: { gap },
+            },
           });
         }
         break;
