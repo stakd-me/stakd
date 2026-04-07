@@ -1,6 +1,7 @@
 import type { VaultData } from "@/lib/crypto/vault-types";
 import { expandTransactionForBalance } from "@/lib/transactions";
 import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
+import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -102,6 +103,7 @@ export function getHoldings(
   priceMap: Record<string, PriceData>
 ): TokenHolding[] {
   const allTx = vault.transactions.flatMap(expandTransactionForBalance);
+  const stablecoinSymbols = buildStablecoinSymbolSet(vault.tokenCategories);
 
   // Group by (tokenSymbol upper + coingeckoId)
   const groups: Record<string, {
@@ -158,19 +160,21 @@ export function getHoldings(
 
   for (const g of Object.values(groups)) {
     const currentQty = g.buyQty + g.receiveQty - g.sellQty - g.sendQty;
-    const avgCostBasis = g.buyQty > 0 ? g.totalBuyCost / g.buyQty : 0;
+    const isStablecoin = stablecoinSymbols.has(g.symbol.toUpperCase());
+    const avgCostBasis = isStablecoin ? 1 : (g.buyQty > 0 ? g.totalBuyCost / g.buyQty : 0);
     const priceData = getPrice(priceMap, g.symbol, g.coingeckoId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
 
     const currentValue = Math.max(currentQty, 0) * currentPrice;
-    const unrealizedPL = Math.max(currentQty, 0) * (currentPrice - avgCostBasis);
+    // Stablecoins are the unit of account — P&L is not meaningful.
+    const unrealizedPL = isStablecoin ? 0 : Math.max(currentQty, 0) * (currentPrice - avgCostBasis);
     // "send" transfers reduce inventory but do not realize P/L.
     const costBasisForSold = g.sellQty * avgCostBasis;
-    const realizedPL = g.totalSellRevenue - costBasisForSold;
-    const unrealizedPLPercent = avgCostBasis > 0 && currentQty > 0
+    const realizedPL = isStablecoin ? 0 : g.totalSellRevenue - costBasisForSold;
+    const unrealizedPLPercent = isStablecoin ? 0 : (avgCostBasis > 0 && currentQty > 0
       ? ((currentPrice - avgCostBasis) / avgCostBasis) * 100
-      : 0;
+      : 0);
 
     holdings.push({
       symbol: g.symbol,
