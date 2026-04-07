@@ -322,6 +322,7 @@ export default function PortfolioPage() {
         quantity: b.quantity,
         avgCost: b.avgCost,
         currentPrice: b.currentPrice,
+        change24h: b.change24h,
         unrealizedPL: b.unrealizedPL,
         unrealizedPLPercent: b.unrealizedPLPercent,
         realizedPL: b.realizedPL,

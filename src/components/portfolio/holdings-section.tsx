@@ -27,6 +27,21 @@ interface HoldingsSectionProps {
   onOpenManualSection: () => void;
 }
 
+function Change24hBadge({ value }: { value: number | null }) {
+  if (value === null) return null;
+  return (
+    <span
+      className={cn(
+        "text-xs",
+        value >= 0 ? "text-status-positive" : "text-status-negative"
+      )}
+    >
+      {value >= 0 ? "+" : ""}
+      {value.toFixed(1)}%
+    </span>
+  );
+}
+
 export function HoldingsSection({
   breakdown,
   filteredBreakdown,
@@ -71,6 +86,7 @@ export function HoldingsSection({
           </p>
         ) : (
           <>
+            {/* ── Mobile cards ── */}
             <div className="space-y-3 md:hidden">
               {filteredBreakdown.map((item) => {
                 const holdingKey = getHoldingKey(item);
@@ -81,6 +97,7 @@ export function HoldingsSection({
                     key={holdingKey}
                     className="rounded-lg border border-border-subtle bg-bg-card p-4"
                   >
+                    {/* Header: token + holdings value */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-text-primary">{item.symbol}</p>
@@ -92,17 +109,19 @@ export function HoldingsSection({
                         <p className="font-semibold text-text-primary">
                           <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                         </p>
-                        <p className="text-xs text-text-subtle">
-                          {item.percent.toFixed(1)}%
+                        <p className="font-mono text-xs text-text-subtle">
+                          {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
                         </p>
                       </div>
                     </div>
 
+                    {/* Details grid */}
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.qty")}</p>
-                        <p className="font-mono text-text-primary">
-                          {formatCrypto(item.quantity)}
+                        <p className="text-xs text-text-subtle">{t("portfolio.price")}</p>
+                        <p className="text-text-primary">
+                          <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
+                          <span className="ml-1"><Change24hBadge value={item.change24h} /></span>
                         </p>
                       </div>
                       <div>
@@ -110,16 +129,6 @@ export function HoldingsSection({
                         <p className="text-text-primary">
                           {formatUsdPrice(item.avgCost)}
                         </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.price")}</p>
-                        <p className="text-text-primary">
-                          <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.held")}</p>
-                        <div className="pt-1">{getHeldDurationBadge(item.firstBuyDate)}</div>
                       </div>
                       <div>
                         <p className="text-xs text-text-subtle">
@@ -155,14 +164,19 @@ export function HoldingsSection({
                           {formatUsd(item.realizedPL)}
                         </p>
                       </div>
-                      <div className="col-span-2">
+                      <div>
                         <p className="text-xs text-text-subtle">{t("portfolio.fees")}</p>
                         <p className="text-status-caution">
                           {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
                         </p>
                       </div>
+                      <div>
+                        <p className="text-xs text-text-subtle">{t("portfolio.held")}</p>
+                        <div className="pt-1">{getHeldDurationBadge(item.firstBuyDate)}</div>
+                      </div>
                     </div>
 
+                    {/* Actions */}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <Button
                         variant="outline"
@@ -219,6 +233,7 @@ export function HoldingsSection({
               })}
             </div>
 
+            {/* ── Desktop table ── */}
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full text-left text-sm">
                 <caption className="sr-only">{t("portfolio.holdings")}</caption>
@@ -228,16 +243,13 @@ export function HoldingsSection({
                       {t("portfolio.token")}
                     </th>
                     <th scope="col" className="pb-3 pr-4 text-right font-medium">
-                      {t("portfolio.qty")}
-                    </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
-                      {t("portfolio.avgCost")}
-                    </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
                       {t("portfolio.price")}
                     </th>
                     <th scope="col" className="pb-3 pr-4 text-right font-medium">
-                      {t("portfolio.value")}
+                      {t("portfolio.holdings")}
+                    </th>
+                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                      {t("portfolio.avgCost")}
                     </th>
                     <th scope="col" className="pb-3 pr-4 text-right font-medium">
                       {t("portfolio.unrealizedPL")}
@@ -267,17 +279,22 @@ export function HoldingsSection({
                           <th scope="row" className="py-3 pr-4 text-left font-medium">
                             {item.symbol}
                           </th>
-                          <td className="py-3 pr-4 text-right font-mono">
-                            {formatCrypto(item.quantity)}
+                          {/* Price + 24h change */}
+                          <td className="py-3 pr-4 text-right">
+                            <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
+                            <div><Change24hBadge value={item.change24h} /></div>
+                          </td>
+                          {/* Holdings: value + amount + allocation */}
+                          <td className="py-3 pr-4 text-right">
+                            <div className="font-medium">
+                              <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
+                            </div>
+                            <div className="font-mono text-xs text-text-subtle">
+                              {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
+                            </div>
                           </td>
                           <td className="py-3 pr-4 text-right">
                             {formatUsdPrice(item.avgCost)}
-                          </td>
-                          <td className="py-3 pr-4 text-right">
-                            <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
-                          </td>
-                          <td className="py-3 pr-4 text-right font-medium">
-                            <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                           </td>
                           <td
                             className={cn(
@@ -367,7 +384,7 @@ export function HoldingsSection({
 
                         {isExpanded ? (
                           <tr className="bg-bg-card">
-                            <td colSpan={10} className="px-4 py-4">
+                            <td colSpan={9} className="px-4 py-4">
                               {renderHoldingInlineForm(item)}
                             </td>
                           </tr>

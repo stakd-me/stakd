@@ -25,6 +25,7 @@ export interface PortfolioBreakdownItem {
   quantity: number;
   avgCost: number;
   currentPrice: number;
+  change24h: number | null;
   unrealizedPL: number;
   unrealizedPLPercent: number;
   realizedPL: number;
@@ -79,6 +80,7 @@ export function usePortfolio() {
         quantity: h.currentQty,
         avgCost: h.avgCostBasis,
         currentPrice: h.currentPrice,
+        change24h: h.change24h,
         unrealizedPL: h.unrealizedPL,
         unrealizedPLPercent: h.unrealizedPLPercent,
         realizedPL: h.realizedPL,

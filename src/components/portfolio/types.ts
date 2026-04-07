@@ -14,6 +14,7 @@ export interface BreakdownItem {
   quantity: number;
   avgCost: number;
   currentPrice: number;
+  change24h: number | null;
   unrealizedPL: number;
   unrealizedPLPercent: number;
   realizedPL: number;
