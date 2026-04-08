@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       try {
         // Attempt token refresh
-        const res = await fetch("/api/auth/refresh", { method: "POST" });
+        const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "same-origin" });
         if (!res.ok) {
           setLoading(false);
           return;
