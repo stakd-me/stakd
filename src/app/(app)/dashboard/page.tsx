@@ -668,6 +668,19 @@ export default function DashboardPage() {
                     <div className="text-left sm:text-right">
                       <p className="font-medium text-text-primary">
                         {formatValue(item.value)}
+                        {item.change24h !== null && (
+                          <span
+                            className={cn(
+                              "ml-2 text-xs font-normal",
+                              item.change24h >= 0
+                                ? "text-status-positive"
+                                : "text-status-negative"
+                            )}
+                          >
+                            {item.change24h >= 0 ? "+" : ""}
+                            {item.change24h.toFixed(1)}%
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-text-subtle">
                         {item.percent.toFixed(1)}%
@@ -685,6 +698,19 @@ export default function DashboardPage() {
                         {item.unrealizedPLPercent >= 0 ? "+" : ""}
                         {item.unrealizedPLPercent.toFixed(1)}%)
                       </p>
+                      {item.realizedPL !== 0 && (
+                        <p
+                          className={cn(
+                            "text-xs",
+                            item.realizedPL >= 0
+                              ? "text-status-positive"
+                              : "text-status-negative"
+                          )}
+                        >
+                          {t("portfolio.realizedPL")}: {item.realizedPL >= 0 ? "+" : ""}
+                          {formatUsd(item.realizedPL)}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

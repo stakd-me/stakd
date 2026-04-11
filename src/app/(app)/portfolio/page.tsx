@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HoldingsSection } from "@/components/portfolio/holdings-section";
 import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
@@ -21,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { cn, formatUsd, toLocalDatetimeString, formatTimeAgo } from "@/lib/utils";
-import { Plus, Search, Download, Upload, Package } from "lucide-react";
+import { Plus, Search, Download, Upload } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -30,9 +29,10 @@ import { usePrices } from "@/hooks/use-prices";
 import { useVaultStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
+import { withAutoStablecoinCategory, buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
 import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
 import {
+  buildTradeSettlement,
   calculateFeeAmountFromPercent,
   calculateFeePercentFromAmount,
   createVaultTransaction,
@@ -205,7 +205,7 @@ export default function PortfolioPage() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { ensurePrices } = usePrices();
-  const { holdings, breakdown: rawBreakdown, totals, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
+  const { holdings, breakdown: rawBreakdown, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
   const { data: coinList } = useQuery<CoinListItem[]>({
     queryKey: ["coins-list"],
     queryFn: async () => {
@@ -218,6 +218,23 @@ export default function PortfolioPage() {
 
   const vaultTransactions = useVaultStore((s) => s.vault.transactions);
   const vaultManualEntries = useVaultStore((s) => s.vault.manualEntries);
+  const vaultTokenCategories = useVaultStore((s) => s.vault.tokenCategories);
+
+  const stablecoinSymbols = useMemo(
+    () => buildStablecoinSymbolSet(vaultTokenCategories),
+    [vaultTokenCategories]
+  );
+
+  // Default settlement stablecoin: highest-qty stablecoin in holdings, or USDT
+  const defaultSettlement = useMemo(() => {
+    const stableHoldings = holdings
+      .filter((h) => stablecoinSymbols.has(h.symbol.toUpperCase()) && h.currentQty > 0)
+      .sort((a, b) => b.currentValue - a.currentValue);
+    const best = stableHoldings[0];
+    return best
+      ? { symbol: best.symbol, name: best.tokenName, coingeckoId: best.coingeckoId }
+      : { symbol: "USDT", name: "Tether", coingeckoId: "tether" };
+  }, [holdings, stablecoinSymbols]);
 
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -767,6 +784,21 @@ export default function PortfolioPage() {
     try {
       const id = crypto.randomUUID();
       const nowIso = new Date().toISOString();
+      const isStable = stablecoinSymbols.has(item.symbol.toUpperCase());
+      const settlement =
+        !isStable && (txType === "buy" || txType === "sell")
+          ? buildTradeSettlement({
+              settlement: {
+                tokenSymbol: defaultSettlement.symbol,
+                tokenName: defaultSettlement.name,
+                coingeckoId: defaultSettlement.coingeckoId,
+              },
+              type: txType,
+              totalCost: qty * price,
+              fee: 0,
+              pricePerUnit: 1,
+            })
+          : undefined;
       useVaultStore.getState().updateVault((prev) => ({
         ...prev,
         transactions: [...prev.transactions, createVaultTransaction({
@@ -782,6 +814,7 @@ export default function PortfolioPage() {
           note: inlineNote,
           transactedAt: parsedInlineDate.toISOString(),
           createdAt: nowIso,
+          settlement,
         })],
         tokenCategories: withAutoStablecoinCategory(
           prev.tokenCategories,
@@ -807,11 +840,13 @@ export default function PortfolioPage() {
     }
   }, [
     closeInlineForm,
+    defaultSettlement,
     ensurePrices,
     inlineDate,
     inlineNote,
     inlinePrice,
     inlineQty,
+    stablecoinSymbols,
     t,
     toast,
     txType,
@@ -1772,75 +1807,6 @@ export default function PortfolioPage() {
         columnsClassName="grid-cols-2 xl:grid-cols-4"
       />
 
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div>
-            <p className="text-sm font-medium text-text-primary">
-              {t("portfolio.actionCenter")}
-            </p>
-            <p className="text-xs text-text-dim">
-              {t("portfolio.actionCenterDesc")}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            <Link
-              href="/portfolio/add"
-              className="rounded-xl border border-border-subtle bg-bg-card p-4 transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
-            >
-              <div className="mb-3 inline-flex rounded-lg bg-status-positive-soft p-2 text-status-positive">
-                <Plus className="h-4 w-4" />
-              </div>
-              <p className="text-sm font-semibold text-text-primary">
-                {t("portfolio.actionAddTitle")}
-              </p>
-              <p className="mt-1 text-sm text-text-subtle">
-                {t("portfolio.actionAddDesc")}
-              </p>
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => openImportModal(true)}
-              className="rounded-xl border border-border-subtle bg-bg-card p-4 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
-            >
-              <div className="mb-3 inline-flex rounded-lg bg-status-info-soft p-2 text-status-info">
-                <Upload className="h-4 w-4" />
-              </div>
-              <p className="text-sm font-semibold text-text-primary">
-                {t("portfolio.actionImportTitle")}
-              </p>
-              <p className="mt-1 text-sm text-text-subtle">
-                {t("portfolio.actionImportDesc")}
-              </p>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveSection("manual");
-                setShowManualEntries(true);
-              }}
-              className="rounded-xl border border-border-subtle bg-bg-card p-4 text-left transition-colors hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
-            >
-              <div className="mb-3 inline-flex rounded-lg bg-status-caution-soft p-2 text-status-caution">
-                <Package className="h-4 w-4" />
-              </div>
-              <p className="text-sm font-semibold text-text-primary">
-                {t("portfolio.actionQuickAddTitle")}
-              </p>
-              <p className="mt-1 text-sm text-text-subtle">
-                {t("portfolio.actionQuickAddDesc")}
-              </p>
-            </button>
-          </div>
-
-          <p className="text-xs text-text-dim">
-            {t("portfolio.actionCenterHint")}
-          </p>
-        </div>
-      </Card>
-
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
 
       {canSearchCurrentSection && (
@@ -1857,54 +1823,6 @@ export default function PortfolioPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.totalValue")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-text-primary">
-              {formatUsd(totals.totalValue)}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("dashboard.totalPL")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${totals.totalUnrealizedPL >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-              {totals.totalUnrealizedPL >= 0 ? "+" : ""}
-              {formatUsd(totals.totalUnrealizedPL)}
-            </p>
-            <p className="mt-1 text-xs text-text-dim">{t("portfolio.unrealizedPL")}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("portfolio.realizedPL")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${totals.totalRealizedPL >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-              {totals.totalRealizedPL >= 0 ? "+" : ""}
-              {formatUsd(totals.totalRealizedPL)}
-            </p>
-            <p className="mt-1 text-xs text-text-dim">{t("portfolio.realizedPL")}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm text-text-subtle">{t("portfolio.change24h")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className={`text-2xl font-bold ${totals.change24h >= 0 ? "text-status-positive" : "text-status-negative"}`}>
-              {totals.change24h >= 0 ? "+" : ""}
-              {totals.change24h.toFixed(2)}%
-            </p>
-            <p className="mt-1 text-xs text-text-dim">{t("portfolio.weightedChangeDesc")}</p>
-          </CardContent>
-        </Card>
-      </div>
       {showManualSection && (
         <ManualEntriesSection
           isAllSectionsView={activeSection === "all"}
