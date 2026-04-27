@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
+import { useNow } from "@/hooks/use-now";
 import { useRiskParityVolatility } from "@/hooks/use-risk-parity-volatility";
 import { buildTransactionsFromExecutedTrades } from "@/lib/services/rebalance-recording";
 import {
@@ -1617,12 +1618,13 @@ export function useRebalance() {
   );
 
   const suggestionsLoading = pricesLoading;
+  const now = useNow(30_000);
 
   const isPriceStale = useMemo(() => {
     const oldest = suggestionsData?.oldestPriceUpdate;
     if (!oldest) return false;
-    return Date.now() - new Date(oldest).getTime() > 60 * 1000;
-  }, [suggestionsData?.oldestPriceUpdate]);
+    return now - new Date(oldest).getTime() > 60 * 1000;
+  }, [suggestionsData?.oldestPriceUpdate, now]);
 
   const activeSessions = allSessions.filter(
     (s) => s.status === "in_progress"

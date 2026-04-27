@@ -542,6 +542,7 @@ const vi: Record<TranslationKeys, string> = {
   "history.noSnapshotsHelp": "Hãy thêm giao dịch và cập nhật giá định kỳ để bắt đầu tạo chuỗi ảnh chụp.",
   "history.valueChartSummary": "{count} điểm dữ liệu từ {start} đến {end}. Giá trị mới nhất là {latest}.",
   "history.realizedChartSummary": "Có {count} sự kiện chốt lãi lỗ. P&L lũy kế mới nhất vào {date} là {latest}.",
+  "history.cumulativePL": "P&L lũy kế",
   "history.snapshots": "Ảnh chụp",
 
   // Reports

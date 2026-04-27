@@ -24,6 +24,7 @@ import { Plus, Search, Download, Upload } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
 import { useVaultStore } from "@/lib/store";
@@ -206,6 +207,7 @@ export default function PortfolioPage() {
   const { t } = useTranslation();
   const { ensurePrices } = usePrices();
   const { holdings, breakdown: rawBreakdown, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
+  const now = useNow(30_000);
   const { data: coinList } = useQuery<CoinListItem[]>({
     queryKey: ["coins-list"],
     queryFn: async () => {
@@ -1763,8 +1765,8 @@ export default function PortfolioPage() {
           <>
             <p>
               {t("portfolio.subtitle")}
-              {lastPriceUpdate && Date.now() - new Date(lastPriceUpdate).getTime() > 60_000 && (
-                <span className="ml-2 text-xs text-warning">
+              {lastPriceUpdate && now - new Date(lastPriceUpdate).getTime() > 60_000 && (
+                <span className="ml-2 text-xs text-status-warning">
                   · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
                 </span>
               )}

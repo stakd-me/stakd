@@ -540,6 +540,7 @@ const en = {
   "history.noSnapshotsHelp": "Add transactions and keep prices updated to start building a snapshot trail.",
   "history.valueChartSummary": "{count} data points from {start} to {end}. Latest value {latest}.",
   "history.realizedChartSummary": "{count} realized events. Latest cumulative P&L on {date}: {latest}.",
+  "history.cumulativePL": "Cumulative P&L",
   "history.snapshots": "Snapshots",
 
   // Reports

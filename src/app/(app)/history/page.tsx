@@ -15,35 +15,20 @@ const PortfolioLineChart = dynamic(
   () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
   { ssr: false }
 );
+const RealizedPlLineChart = dynamic(
+  () => import("@/components/charts/realized-pl-line").then((m) => ({ default: m.RealizedPlLineChart })),
+  { ssr: false }
+);
 import { cn, formatUsd } from "@/lib/utils";
 import { ChartSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
-import { useChartTheme } from "@/hooks/use-chart-theme";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import type { VaultTransaction } from "@/lib/crypto/vault-types";
 import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
 import { expandTransactionForBalance } from "@/lib/transactions";
 import Link from "next/link";
-import {
-  Chart as ChartJS,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Tooltip as ChartTooltip,
-  Filler,
-} from "chart.js";
-import { Line } from "react-chartjs-2";
-
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, ChartTooltip, Filler);
-
-interface PLPoint {
-  date: string;
-  cumulativePL: number;
-  symbol: string;
-  pl: number;
-}
+import type { RealizedPlPoint as PLPoint } from "@/components/charts/realized-pl-line";
 
 type HistorySection = "overview" | "realized" | "snapshots" | "all";
 
@@ -118,7 +103,6 @@ export default function HistoryPage() {
   const sectionsBaseId = "history-sections";
   const [activeSection, setActiveSection] = useState<HistorySection>("overview");
   const { t } = useTranslation();
-  const chartTheme = useChartTheme();
   const vault = useVaultStore((s) => s.vault);
   const { isLoading, priceMap } = usePrices({ refetchInterval: 300_000 });
 
@@ -318,73 +302,11 @@ export default function HistoryPage() {
               <AccessibleChartFrame
                 summary={realizedChartSummary}
               >
-                <div className="h-64">
-                  <Line
-                    data={{
-                      labels: plData.timeline.map((p) => {
-                        const d = new Date(p.date);
-                        return `${d.getMonth() + 1}/${d.getDate()}`;
-                      }),
-                      datasets: [
-                        {
-                          data: plData.timeline.map((p) => p.cumulativePL),
-                          borderColor:
-                            plData.totalRealizedPL >= 0 ? "#22c55e" : "#ef4444",
-                          borderWidth: 2,
-                          fill: true,
-                          backgroundColor:
-                            plData.totalRealizedPL >= 0
-                              ? "rgba(34, 197, 94, 0.1)"
-                              : "rgba(239, 68, 68, 0.1)",
-                          tension: 0.3,
-                          pointRadius: 0,
-                          pointHitRadius: 10,
-                        },
-                      ],
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        tooltip: {
-                          backgroundColor: chartTheme.tooltipBg,
-                          titleColor: chartTheme.tooltipText,
-                          bodyColor: chartTheme.tooltipText,
-                          borderColor: chartTheme.tooltipBorder,
-                          borderWidth: 1,
-                          cornerRadius: 8,
-                          callbacks: {
-                            title: (items) => {
-                              const idx = items[0].dataIndex;
-                              const p = plData.timeline[idx];
-                              return `${new Date(p.date).toLocaleDateString()} — ${p.symbol}`;
-                            },
-                            label: (item) =>
-                              `Cumulative P&L: ${formatUsd(item.raw as number)}`,
-                          },
-                        },
-                      },
-                      scales: {
-                        x: {
-                          grid: { color: chartTheme.gridColor },
-                          ticks: {
-                            color: chartTheme.tickColor,
-                            font: { size: 12 },
-                            maxTicksLimit: 8,
-                          },
-                        },
-                        y: {
-                          grid: { color: chartTheme.gridColor },
-                          ticks: {
-                            color: chartTheme.tickColor,
-                            font: { size: 12 },
-                            callback: (value) => `$${value}`,
-                          },
-                        },
-                      },
-                    }}
-                  />
-                </div>
+                <RealizedPlLineChart
+                  timeline={plData.timeline}
+                  totalRealizedPL={plData.totalRealizedPL}
+                  cumulativeLabel={t("history.cumulativePL")}
+                />
               </AccessibleChartFrame>
             ) : (
               <EmptyState

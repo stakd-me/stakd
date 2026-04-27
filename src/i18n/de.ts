@@ -526,6 +526,7 @@ const de: Record<TranslationKeys, string> = {
   "history.noSnapshotsHelp": "Add transactions and keep prices updated to start building a snapshot trail.",
   "history.valueChartSummary": "{count} Datenpunkte von {start} bis {end}. Der neueste Wert ist {latest}.",
   "history.realizedChartSummary": "{count} realisierte Ereignisse. Das neueste kumulierte P&L am {date} ist {latest}.",
+  "history.cumulativePL": "Kumuliertes P&L",
   "history.snapshots": "Snapshots",
   "reports.title": "Reports",
   "reports.subtitle": "Weekly, monthly, quarterly, yearly, and all-time performance and risk.",

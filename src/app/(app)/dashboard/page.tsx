@@ -12,6 +12,7 @@ import { PriceFlash } from "@/components/ui/price-flash";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
+import { useNow } from "@/hooks/use-now";
 import { useTranslation } from "@/hooks/use-translation";
 import dynamic from "next/dynamic";
 
@@ -274,7 +275,7 @@ export default function DashboardPage() {
     [breakdown]
   );
   const remainingHoldingsCount = Math.max(0, breakdown.length - topHoldings.length);
-  const [now] = useState(() => Date.now());
+  const now = useNow(30_000);
   const isPriceStale = useMemo(() => {
     if (!lastPriceUpdate) return true;
     return now - new Date(lastPriceUpdate).getTime() > 60 * 1000;
