@@ -1,15 +1,28 @@
 import { NextRequest } from "next/server";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-const transactionMock = vi.fn();
 const signAccessTokenMock = vi.fn();
+const updateReturningMock = vi.fn();
+const updateWhereMock = vi.fn(() => ({ returning: updateReturningMock }));
+const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
+const updateMock = vi.fn(() => ({ set: updateSetMock }));
+
+vi.mock("drizzle-orm", () => ({
+  and: vi.fn(() => ({})),
+  eq: vi.fn(() => ({})),
+  gt: vi.fn(() => ({})),
+}));
 
 vi.mock("@/lib/db", () => ({
   db: {
-    transaction: (...args: unknown[]) => transactionMock(...args),
+    update: (...args: unknown[]) => updateMock(...args),
   },
   schema: {
-    sessions: {},
+    sessions: {
+      userId: "user_id",
+      refreshTokenHash: "refresh_token_hash",
+      expiresAt: "expires_at",
+    },
   },
 }));
 
@@ -19,12 +32,15 @@ vi.mock("@/lib/auth/jwt", () => ({
 
 describe("POST /api/auth/refresh", () => {
   beforeEach(() => {
-    transactionMock.mockReset();
     signAccessTokenMock.mockReset();
+    updateReturningMock.mockReset();
+    updateWhereMock.mockClear();
+    updateSetMock.mockClear();
+    updateMock.mockClear();
   });
 
-  it("returns 401 and clears cookies when token rotation fails", async () => {
-    transactionMock.mockResolvedValue(null);
+  it("returns 401 without mutating cookies when the refresh session is invalid", async () => {
+    updateReturningMock.mockResolvedValue([]);
 
     const { POST } = await import("@/app/api/auth/refresh/route");
     const req = new NextRequest("http://localhost/api/auth/refresh", {
@@ -35,15 +51,18 @@ describe("POST /api/auth/refresh", () => {
     const body = await res.json();
 
     expect(res.status).toBe(401);
-    expect(body.error).toMatch(/Invalid or expired refresh token|No refresh token/);
-    expect(res.headers.get("set-cookie")).toContain("Max-Age=0");
+    expect(body.error).toMatch(
+      /Invalid or expired refresh token|No refresh token/
+    );
+    expect(res.headers.get("set-cookie")).toBeNull();
   });
 
-  it("returns new access token when rotation succeeds", async () => {
-    transactionMock.mockResolvedValue({
-      userId: "user-1",
-      newRefreshToken: "new-refresh-token",
-    });
+  it("returns a new access token and refreshes the active session", async () => {
+    updateReturningMock.mockResolvedValue([
+      {
+        userId: "user-1",
+      },
+    ]);
     signAccessTokenMock.mockResolvedValue("new-access-token");
 
     const { POST } = await import("@/app/api/auth/refresh/route");
@@ -59,6 +78,12 @@ describe("POST /api/auth/refresh", () => {
       accessToken: "new-access-token",
       userId: "user-1",
     });
+    expect(updateSetMock).toHaveBeenCalledWith({
+      expiresAt: expect.any(Date),
+    });
     expect(signAccessTokenMock).toHaveBeenCalledWith("user-1");
+    expect(res.headers.get("set-cookie")).toContain("refreshToken=old-token");
+    expect(res.headers.get("set-cookie")).toContain("rememberMe=1");
+    expect(res.headers.get("set-cookie")).toContain("Max-Age=2592000");
   });
 });

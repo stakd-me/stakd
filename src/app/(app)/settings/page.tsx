@@ -141,6 +141,7 @@ export default function SettingsPage() {
       // 4. Re-encrypt vault with new enc key
       const { vault } = useVaultStore.getState();
       const { ciphertext, iv } = await encryptVault(vault, newEncKey);
+      const rememberCurrentDevice = isEncKeyPersistent();
 
       // 5. Send to server
       const newSaltHex = Array.from(newSalt)
@@ -156,6 +157,7 @@ export default function SettingsPage() {
           newSalt: newSaltHex,
           encryptedVault: ciphertext,
           iv,
+          rememberMe: rememberCurrentDevice,
         }),
       });
 
@@ -167,7 +169,7 @@ export default function SettingsPage() {
       const data: { vaultVersion?: number } = await res.json();
 
       // 6. Keep existing key persistence mode after passphrase rotation.
-      await storeEncKey(newEncKey, { persist: isEncKeyPersistent() });
+      await storeEncKey(newEncKey, { persist: rememberCurrentDevice });
 
       // 7. Sync local vault version to avoid optimistic-lock conflict on next save.
       if (typeof data.vaultVersion === "number") {

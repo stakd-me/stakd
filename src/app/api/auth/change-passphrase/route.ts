@@ -1,21 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, timingSafeEqual } from "crypto";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
 import { isHexOfByteLength } from "@/lib/auth/input-validation";
 
+const REFRESH_TOKEN_EXPIRY_DAYS = 30;
 const REFRESH_COOKIE_PATH = "/api/auth/refresh";
 const REMEMBER_ME_COOKIE = "rememberMe";
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10MB
+
+function getRefreshCookieMaxAge(rememberMe: boolean): number | undefined {
+  if (!rememberMe) return undefined;
+  return REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60;
+}
+
+function getRefreshExpiryDate(): Date {
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
+  return expiresAt;
+}
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await authenticateRequest(req);
     if (!payload) return authError();
 
-    const { oldAuthKeyHex, newAuthKeyHex, newSalt, encryptedVault, iv } =
-      await req.json();
+    const {
+      oldAuthKeyHex,
+      newAuthKeyHex,
+      newSalt,
+      encryptedVault,
+      iv,
+      rememberMe,
+    } = await req.json();
+    const shouldRememberCurrentDevice = rememberMe === true;
 
     if (
       !isHexOfByteLength(oldAuthKeyHex, 32) ||
@@ -103,29 +122,47 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // Invalidate all refresh sessions (force refresh-token re-login).
+      // Invalidate other refresh sessions and issue a fresh one for this device.
       await tx
         .delete(schema.sessions)
         .where(eq(schema.sessions.userId, payload.sub));
 
-      return { vaultVersion };
+      const refreshToken = randomBytes(32).toString("hex");
+      const refreshTokenHash = createHash("sha256")
+        .update(refreshToken)
+        .digest("hex");
+
+      await tx.insert(schema.sessions).values({
+        userId: payload.sub,
+        refreshTokenHash,
+        expiresAt: getRefreshExpiryDate(),
+      });
+
+      return { vaultVersion, refreshToken };
     });
 
-    const response = NextResponse.json({ success: true, vaultVersion: result.vaultVersion });
-    response.cookies.set("refreshToken", "", {
+    const response = NextResponse.json({
+      success: true,
+      vaultVersion: result.vaultVersion,
+    });
+    response.cookies.set("refreshToken", result.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: REFRESH_COOKIE_PATH,
-      maxAge: 0,
+      maxAge: getRefreshCookieMaxAge(shouldRememberCurrentDevice),
     });
-    response.cookies.set(REMEMBER_ME_COOKIE, "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      path: REFRESH_COOKIE_PATH,
-      maxAge: 0,
-    });
+    response.cookies.set(
+      REMEMBER_ME_COOKIE,
+      shouldRememberCurrentDevice ? "1" : "0",
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        path: REFRESH_COOKIE_PATH,
+        maxAge: getRefreshCookieMaxAge(shouldRememberCurrentDevice),
+      }
+    );
     return response;
   } catch (error) {
     console.error("[auth/change-passphrase]", error);
