@@ -262,6 +262,7 @@ export default function PortfolioPage() {
         color: b.color,
         quantity: b.quantity,
         avgCost: b.avgCost,
+        avgCostOverride: b.avgCostOverride,
         currentPrice: b.currentPrice,
         change24h: b.change24h,
         unrealizedPL: b.unrealizedPL,
@@ -479,26 +480,69 @@ export default function PortfolioPage() {
 
   // --- Edit holding info ---
   const handleEditHoldingSave = useCallback(
-    async (data: { coingeckoId: string; firstBuyDate: string | null }) => {
+    async (data: {
+      coingeckoId: string;
+      firstBuyDate: string | null;
+      avgCostUsd: number | null;
+    }) => {
       if (!editingHolding) return;
-      const symbol = editingHolding.symbol;
+      const symbol = editingHolding.symbol.toUpperCase();
       const oldCoingeckoId = editingHolding.coingeckoId;
 
       try {
         useVaultStore.getState().updateVault((prev) => {
           const newCoingeckoId = data.coingeckoId || null;
+          const nowIso = new Date().toISOString();
+          const costBasisOverrides = prev.costBasisOverrides ?? [];
+          const sameHolding = (
+            value: { tokenSymbol: string; coingeckoId: string | null },
+            coingeckoId: string | null
+          ) =>
+            value.tokenSymbol.toUpperCase() === symbol &&
+            (value.coingeckoId ?? null) === coingeckoId;
 
           // Update coingeckoId across all matching transactions
           const updatedTransactions = prev.transactions.map((tx) => {
-            if (tx.tokenSymbol !== symbol || tx.coingeckoId !== oldCoingeckoId) return tx;
+            if (
+              tx.tokenSymbol.toUpperCase() !== symbol ||
+              tx.coingeckoId !== oldCoingeckoId
+            ) {
+              return tx;
+            }
             return { ...tx, coingeckoId: newCoingeckoId };
           });
 
           // Update coingeckoId across all matching manual entries
           const updatedManualEntries = prev.manualEntries.map((e) => {
-            if (e.tokenSymbol !== symbol || e.coingeckoId !== oldCoingeckoId) return e;
-            return { ...e, coingeckoId: newCoingeckoId, updatedAt: new Date().toISOString() };
+            if (
+              e.tokenSymbol.toUpperCase() !== symbol ||
+              e.coingeckoId !== oldCoingeckoId
+            ) {
+              return e;
+            }
+            return { ...e, coingeckoId: newCoingeckoId, updatedAt: nowIso };
           });
+
+          const existingOverride = costBasisOverrides.find(
+            (override) =>
+              sameHolding(override, oldCoingeckoId) ||
+              sameHolding(override, newCoingeckoId)
+          );
+          const updatedCostBasisOverrides = costBasisOverrides.filter(
+            (override) =>
+              !sameHolding(override, oldCoingeckoId) &&
+              !sameHolding(override, newCoingeckoId)
+          );
+
+          if (data.avgCostUsd !== null) {
+            updatedCostBasisOverrides.push({
+              id: existingOverride?.id ?? crypto.randomUUID(),
+              tokenSymbol: symbol,
+              coingeckoId: newCoingeckoId,
+              avgCostUsd: data.avgCostUsd,
+              updatedAt: nowIso,
+            });
+          }
 
           // Update first buy date: find the earliest transaction and adjust it
           if (data.firstBuyDate) {
@@ -506,7 +550,11 @@ export default function PortfolioPage() {
             if (!Number.isNaN(newDate.getTime())) {
               const matchingTxs = updatedTransactions
                 .map((tx, idx) => ({ tx, idx }))
-                .filter(({ tx }) => tx.tokenSymbol === symbol && tx.coingeckoId === newCoingeckoId);
+                .filter(
+                  ({ tx }) =>
+                    tx.tokenSymbol.toUpperCase() === symbol &&
+                    tx.coingeckoId === newCoingeckoId
+                );
 
               if (matchingTxs.length > 0) {
                 // Find the earliest transaction
@@ -525,6 +573,7 @@ export default function PortfolioPage() {
             ...prev,
             transactions: updatedTransactions,
             manualEntries: updatedManualEntries,
+            costBasisOverrides: updatedCostBasisOverrides,
           };
         });
 

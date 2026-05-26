@@ -269,7 +269,9 @@ const es: Record<TranslationKeys, string> = {
   // Edit holding info
   "portfolio.editHolding": "Editar info del token",
   "portfolio.editHoldingTitle": "Editar Info del Token",
-  "portfolio.editHoldingDesc": "Actualizar CoinGecko ID o fecha de primera compra para {symbol}. Los cambios aplican a todas las transacciones y entradas manuales de este token.",
+  "portfolio.editHoldingDesc": "Actualizar avg cost, CoinGecko ID o fecha de primera compra para {symbol}. Los cambios aplican a esta posicion del token.",
+  "portfolio.editAvgCost": "Avg Cost (USD)",
+  "portfolio.editAvgCostHint": "Leave blank to use the calculated transaction cost basis.",
   "portfolio.editCoingeckoId": "CoinGecko ID",
   "portfolio.editCoingeckoIdHint": "Usado para seguimiento de precios. Dejar vacío si desconocido.",
   "portfolio.editFirstBuyDate": "Fecha de primera compra",

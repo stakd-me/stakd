@@ -278,7 +278,9 @@ const en = {
   // Edit holding info
   "portfolio.editHolding": "Edit token info",
   "portfolio.editHoldingTitle": "Edit Token Info",
-  "portfolio.editHoldingDesc": "Update CoinGecko ID or first buy date for {symbol}. Changes apply to all transactions and manual entries for this token.",
+  "portfolio.editHoldingDesc": "Update avg cost, CoinGecko ID, or first buy date for {symbol}. Changes apply to this token holding.",
+  "portfolio.editAvgCost": "Avg Cost (USD)",
+  "portfolio.editAvgCostHint": "Leave blank to use the calculated transaction cost basis.",
   "portfolio.editCoingeckoId": "CoinGecko ID",
   "portfolio.editCoingeckoIdHint": "Used for price tracking. Leave empty if unknown.",
   "portfolio.editFirstBuyDate": "First Buy Date",

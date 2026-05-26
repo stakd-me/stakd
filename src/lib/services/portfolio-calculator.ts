@@ -37,6 +37,7 @@ export interface TokenHolding {
   totalSellRevenue: number;
   totalFees: number;
   avgCostBasis: number;
+  avgCostOverrideUsd: number | null;
   currentPrice: number;
   change24h: number | null;
   currentValue: number;
@@ -76,6 +77,43 @@ function resolveCoingeckoId(
   return BINANCE_SYMBOL_TO_COINGECKO_ID[symbol.trim().toUpperCase()] ?? null;
 }
 
+function getHoldingKey(
+  symbol: string,
+  coingeckoId: string | null | undefined
+): string {
+  return `${symbol.trim().toUpperCase()}:${normalizeCoingeckoId(coingeckoId) ?? ""}`;
+}
+
+function buildCostBasisOverrideMap(vault: VaultData): Map<string, number> {
+  const overrides = new Map<string, number>();
+
+  for (const override of vault.costBasisOverrides ?? []) {
+    if (
+      !override.tokenSymbol ||
+      !Number.isFinite(override.avgCostUsd) ||
+      override.avgCostUsd < 0
+    ) {
+      continue;
+    }
+
+    overrides.set(
+      getHoldingKey(override.tokenSymbol, override.coingeckoId),
+      override.avgCostUsd
+    );
+  }
+
+  return overrides;
+}
+
+function getCostBasisOverride(
+  overrides: Map<string, number>,
+  symbol: string,
+  coingeckoId: string | null | undefined
+): number | null {
+  const exact = overrides.get(getHoldingKey(symbol, coingeckoId));
+  return exact ?? null;
+}
+
 /**
  * Look up price by symbol first (CEX/Binance), then coingeckoId (CoinGecko fallback).
  * priceMap is dual-keyed: both "BTC" and "bitcoin" point to the same price data.
@@ -104,6 +142,7 @@ export function getHoldings(
 ): TokenHolding[] {
   const allTx = vault.transactions.flatMap(expandTransactionForBalance);
   const stablecoinSymbols = buildStablecoinSymbolSet(vault.tokenCategories);
+  const costBasisOverrides = buildCostBasisOverrideMap(vault);
 
   // Group by (tokenSymbol upper + coingeckoId)
   const groups: Record<string, {
@@ -177,7 +216,13 @@ export function getHoldings(
     // Include explicit receive cost basis when available (weighted by qty that brought cost)
     const totalCostForBasis = g.totalBuyCost + g.receiveCostBasis;
     const qtyWithBasis = g.buyQty + g.receiveQtyWithBasis;
-    const avgCostBasis = isStablecoin ? 1 : (qtyWithBasis > 0 ? totalCostForBasis / qtyWithBasis : 0);
+    const calculatedAvgCostBasis = isStablecoin ? 1 : (qtyWithBasis > 0 ? totalCostForBasis / qtyWithBasis : 0);
+    const avgCostOverrideUsd = getCostBasisOverride(
+      costBasisOverrides,
+      g.symbol,
+      g.coingeckoId
+    );
+    const avgCostBasis = avgCostOverrideUsd ?? calculatedAvgCostBasis;
     const priceData = getPrice(priceMap, g.symbol, g.coingeckoId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
@@ -203,6 +248,7 @@ export function getHoldings(
       totalSellRevenue: g.totalSellRevenue,
       totalFees: g.totalFees,
       avgCostBasis,
+      avgCostOverrideUsd,
       currentPrice,
       change24h,
       currentValue,
@@ -225,8 +271,14 @@ export function getHoldings(
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
     const entryQty = toSafeNumber(entry.quantity);
+    const entryAvgCostOverrideUsd = getCostBasisOverride(
+      costBasisOverrides,
+      entry.tokenSymbol,
+      normalizedEntryId
+    );
 
     if (existing) {
+      const isStablecoin = stablecoinSymbols.has(existing.symbol.toUpperCase());
       const existingQty = existing.currentQty;
       const existingCostBasis = existing.avgCostBasis * existingQty;
 
@@ -244,19 +296,25 @@ export function getHoldings(
       }
 
       existing.currentQty += entryQty;
-      existing.avgCostBasis = newAvgCostBasis;
+      existing.avgCostBasis = entryAvgCostOverrideUsd ?? newAvgCostBasis;
+      existing.avgCostOverrideUsd = entryAvgCostOverrideUsd;
       existing.currentValue = existing.currentQty * existing.currentPrice;
-      existing.unrealizedPL = existing.currentQty * (existing.currentPrice - newAvgCostBasis);
-      existing.unrealizedPLPercent = newAvgCostBasis > 0 && existing.currentQty > 0
-        ? ((existing.currentPrice - newAvgCostBasis) / newAvgCostBasis) * 100
+      existing.unrealizedPL = isStablecoin
+        ? 0
+        : existing.currentQty * (existing.currentPrice - existing.avgCostBasis);
+      existing.realizedPL = isStablecoin ? 0 : existing.totalSellRevenue - existing.sellQty * existing.avgCostBasis;
+      existing.unrealizedPLPercent = !isStablecoin && existing.avgCostBasis > 0 && existing.currentQty > 0
+        ? ((existing.currentPrice - existing.avgCostBasis) / existing.avgCostBasis) * 100
         : 0;
     } else {
+      const isStablecoin = stablecoinSymbols.has(entry.tokenSymbol.toUpperCase());
       const currentValue = entryQty * currentPrice;
 
       // New: respect explicit cost basis on manual entry if provided
-      const manualAvgCost = entry.costBasisUsd != null && entryQty > 0
+      const calculatedManualAvgCost = entry.costBasisUsd != null && entryQty > 0
         ? entry.costBasisUsd / entryQty
         : 0;
+      const manualAvgCost = entryAvgCostOverrideUsd ?? calculatedManualAvgCost;
 
       holdings.push({
         symbol: entry.tokenSymbol,
@@ -269,11 +327,12 @@ export function getHoldings(
         totalSellRevenue: 0,
         totalFees: 0,
         avgCostBasis: manualAvgCost,
+        avgCostOverrideUsd: entryAvgCostOverrideUsd,
         currentPrice,
         change24h,
         currentValue,
-        unrealizedPL: entryQty * (currentPrice - manualAvgCost),
-        unrealizedPLPercent: manualAvgCost > 0
+        unrealizedPL: isStablecoin ? 0 : entryQty * (currentPrice - manualAvgCost),
+        unrealizedPLPercent: !isStablecoin && manualAvgCost > 0
           ? ((currentPrice - manualAvgCost) / manualAvgCost) * 100
           : 0,
         realizedPL: 0,

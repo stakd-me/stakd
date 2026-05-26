@@ -12,8 +12,16 @@ import type { BreakdownItem } from "@/components/portfolio/types";
 interface EditHoldingDialogProps {
   open: boolean;
   item: BreakdownItem;
-  onSave: (data: { coingeckoId: string; firstBuyDate: string | null }) => void;
+  onSave: (data: {
+    coingeckoId: string;
+    firstBuyDate: string | null;
+    avgCostUsd: number | null;
+  }) => void;
   onCancel: () => void;
+}
+
+function getAvgCostOverrideInput(item: BreakdownItem): string {
+  return item.avgCostOverride !== null ? item.avgCostOverride.toString() : "";
 }
 
 export function EditHoldingDialog({
@@ -29,6 +37,8 @@ export function EditHoldingDialog({
   const [firstBuyDate, setFirstBuyDate] = useState(
     item.firstBuyDate ? toLocalDatetimeString(new Date(item.firstBuyDate)) : ""
   );
+  const [avgCost, setAvgCost] = useState(getAvgCostOverrideInput(item));
+  const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Reset state when item changes
@@ -40,15 +50,30 @@ export function EditHoldingDialog({
     setFirstBuyDate(
       item.firstBuyDate ? toLocalDatetimeString(new Date(item.firstBuyDate)) : ""
     );
+    setAvgCost(getAvgCostOverrideInput(item));
+    setError(null);
     setShowAdvanced(false);
   }
 
   if (!open) return null;
 
   const handleSave = () => {
+    const normalizedAvgCost = avgCost.trim();
+    let avgCostUsd: number | null = null;
+
+    if (normalizedAvgCost.length > 0) {
+      const parsedAvgCost = Number.parseFloat(normalizedAvgCost);
+      if (!Number.isFinite(parsedAvgCost) || parsedAvgCost < 0) {
+        setError(t("portfolio.validationPriceNonNegative"));
+        return;
+      }
+      avgCostUsd = parsedAvgCost;
+    }
+
     onSave({
       coingeckoId: coingeckoId.trim(),
       firstBuyDate: firstBuyDate || null,
+      avgCostUsd,
     });
   };
 
@@ -87,6 +112,26 @@ export function EditHoldingDialog({
           </div>
 
           <div>
+            <label className="mb-1 block text-xs font-medium text-text-subtle">
+              {t("portfolio.editAvgCost")}
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="any"
+              value={avgCost}
+              onChange={(event) => {
+                setAvgCost(event.target.value);
+                setError(null);
+              }}
+              placeholder={item.avgCost > 0 ? item.avgCost.toString() : "0.00"}
+            />
+            <p className="mt-1 text-xs text-text-dim">
+              {t("portfolio.editAvgCostHint")}
+            </p>
+          </div>
+
+          <div>
             <button
               type="button"
               className="flex items-center gap-1 text-xs text-text-subtle hover:text-text-primary"
@@ -112,6 +157,12 @@ export function EditHoldingDialog({
             )}
           </div>
         </div>
+
+        {error ? (
+          <p className="mt-3 text-xs text-status-negative" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="outline" size="sm" onClick={onCancel}>

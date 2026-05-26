@@ -24,6 +24,7 @@ export interface PortfolioBreakdownItem {
   color: string;
   quantity: number;
   avgCost: number;
+  avgCostOverride: number | null;
   currentPrice: number;
   change24h: number | null;
   unrealizedPL: number;
@@ -79,6 +80,7 @@ export function usePortfolio() {
         color: COLORS[i % COLORS.length],
         quantity: h.currentQty,
         avgCost: h.avgCostBasis,
+        avgCostOverride: h.avgCostOverrideUsd,
         currentPrice: h.currentPrice,
         change24h: h.change24h,
         unrealizedPL: h.unrealizedPL,

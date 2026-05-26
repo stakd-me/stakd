@@ -13,6 +13,7 @@ export interface BreakdownItem {
   color: string;
   quantity: number;
   avgCost: number;
+  avgCostOverride: number | null;
   currentPrice: number;
   change24h: number | null;
   unrealizedPL: number;

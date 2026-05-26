@@ -103,6 +103,14 @@ export interface VaultTokenCategory {
   updatedAt: string;
 }
 
+export interface VaultCostBasisOverride {
+  id: string;
+  tokenSymbol: string;
+  coingeckoId: string | null;
+  avgCostUsd: number;
+  updatedAt: string;
+}
+
 export interface VaultData {
   version: 1;
   transactions: VaultTransaction[];
@@ -113,6 +121,7 @@ export interface VaultData {
   portfolioSnapshots: VaultPortfolioSnapshot[];
   tokenGroups: VaultTokenGroup[];
   tokenCategories: VaultTokenCategory[];
+  costBasisOverrides: VaultCostBasisOverride[];
   settings: Record<string, string>;
 }
 
@@ -127,6 +136,7 @@ export function createEmptyVault(): VaultData {
     portfolioSnapshots: [],
     tokenGroups: [],
     tokenCategories: [],
+    costBasisOverrides: [],
     settings: {
       rebalanceStrategy: "percent-of-portfolio",
       autoRefreshMinutes: "15",

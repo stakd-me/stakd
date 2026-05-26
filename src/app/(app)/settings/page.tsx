@@ -335,7 +335,8 @@ export default function SettingsPage() {
     vault.rebalanceLogs.length +
     vault.portfolioSnapshots.length +
     vault.tokenGroups.length +
-    vault.tokenCategories.length;
+    vault.tokenCategories.length +
+    vault.costBasisOverrides.length;
   const settingsRecordsCount = Object.keys(vault.settings).length;
   const selectedDangerCount =
     dangerAction === "portfolio"
@@ -438,6 +439,7 @@ export default function SettingsPage() {
           portfolioSnapshots: [],
           tokenGroups: [],
           tokenCategories: [],
+          costBasisOverrides: [],
         }));
         await saveVaultToServer();
         toast(t("settings.wipePortfolioSuccess"), "success");

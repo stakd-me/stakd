@@ -16,6 +16,7 @@ function createHolding(
     totalSellRevenue: partial.totalSellRevenue ?? 0,
     totalFees: partial.totalFees ?? 0,
     avgCostBasis: partial.avgCostBasis ?? 0,
+    avgCostOverrideUsd: partial.avgCostOverrideUsd ?? null,
     currentPrice: partial.currentPrice ?? 0,
     change24h: partial.change24h ?? null,
     currentValue: partial.currentValue ?? 0,

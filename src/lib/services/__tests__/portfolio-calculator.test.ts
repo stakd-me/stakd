@@ -309,6 +309,100 @@ describe("portfolio-calculator", () => {
     expect(eth?.unrealizedPL).toBeCloseTo(1000); // 2 * (2500 - 2000)
   });
 
+  it("uses cost basis override for avg cost and P&L", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "buy-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "bitcoin",
+        type: "buy",
+        quantity: "2",
+        pricePerUnit: "100",
+        totalCost: "200",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "sell-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "bitcoin",
+        type: "sell",
+        quantity: "0.5",
+        pricePerUnit: "150",
+        totalCost: "75",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-02T00:00:00.000Z",
+        createdAt: "2026-01-02T00:00:00.000Z",
+      },
+    ];
+    vault.costBasisOverrides = [
+      {
+        id: "override-btc",
+        tokenSymbol: "BTC",
+        coingeckoId: "bitcoin",
+        avgCostUsd: 80,
+        updatedAt: "2026-01-03T00:00:00.000Z",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      bitcoin: { usd: 120, change24h: null },
+    });
+
+    const btc = holdings.find((h) => h.symbol === "BTC");
+    expect(btc?.currentQty).toBeCloseTo(1.5);
+    expect(btc?.avgCostBasis).toBeCloseTo(80);
+    expect(btc?.avgCostOverrideUsd).toBeCloseTo(80);
+    expect(btc?.unrealizedPL).toBeCloseTo(60);
+    expect(btc?.realizedPL).toBeCloseTo(35);
+  });
+
+  it("ignores invalid cost basis overrides", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "buy-btc",
+        tokenSymbol: "BTC",
+        tokenName: "Bitcoin",
+        chain: "bitcoin",
+        type: "buy",
+        quantity: "2",
+        pricePerUnit: "100",
+        totalCost: "200",
+        fee: "0",
+        coingeckoId: "bitcoin",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    vault.costBasisOverrides = [
+      {
+        id: "override-btc-invalid",
+        tokenSymbol: "BTC",
+        coingeckoId: "bitcoin",
+        avgCostUsd: -1,
+        updatedAt: "2026-01-03T00:00:00.000Z",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      bitcoin: { usd: 120, change24h: null },
+    });
+
+    const btc = holdings.find((h) => h.symbol === "BTC");
+    expect(btc?.avgCostBasis).toBeCloseTo(100);
+    expect(btc?.avgCostOverrideUsd).toBeNull();
+  });
+
   it("only weights receive quantity that has explicit cost basis", () => {
     const vault = createEmptyVault();
     vault.transactions = [

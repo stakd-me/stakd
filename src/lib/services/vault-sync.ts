@@ -27,7 +27,7 @@ export async function loadVaultFromServer(): Promise<void> {
     encKey
   );
 
-  const vault = decrypted as VaultData;
+  const vault = normalizeVaultShape(decrypted as Partial<VaultData>);
   const patched = patchMissingCoingeckoIds(vault);
 
   useVaultStore.getState().setVault(
@@ -39,6 +39,24 @@ export async function loadVaultFromServer(): Promise<void> {
   if (patched.changed) {
     useVaultStore.setState({ isDirty: true });
   }
+}
+
+function normalizeVaultShape(vault: Partial<VaultData>): VaultData {
+  const emptyVault = createEmptyVault();
+  return {
+    ...emptyVault,
+    ...vault,
+    transactions: vault.transactions ?? [],
+    manualEntries: vault.manualEntries ?? [],
+    rebalanceTargets: vault.rebalanceTargets ?? [],
+    rebalanceSessions: vault.rebalanceSessions ?? [],
+    rebalanceLogs: vault.rebalanceLogs ?? [],
+    portfolioSnapshots: vault.portfolioSnapshots ?? [],
+    tokenGroups: vault.tokenGroups ?? [],
+    tokenCategories: vault.tokenCategories ?? [],
+    costBasisOverrides: vault.costBasisOverrides ?? [],
+    settings: vault.settings ?? emptyVault.settings,
+  };
 }
 
 /**

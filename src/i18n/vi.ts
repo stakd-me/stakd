@@ -280,7 +280,9 @@ const vi: Record<TranslationKeys, string> = {
   // Edit holding info
   "portfolio.editHolding": "Sửa thông tin token",
   "portfolio.editHoldingTitle": "Sửa thông tin Token",
-  "portfolio.editHoldingDesc": "Cập nhật CoinGecko ID hoặc ngày mua đầu tiên cho {symbol}. Thay đổi áp dụng cho tất cả giao dịch và mục thủ công của token này.",
+  "portfolio.editHoldingDesc": "Cập nhật giá vốn trung bình, CoinGecko ID hoặc ngày mua đầu tiên cho {symbol}. Thay đổi áp dụng cho vị thế token này.",
+  "portfolio.editAvgCost": "Giá TB (USD)",
+  "portfolio.editAvgCostHint": "Để trống để dùng giá vốn tự tính từ lịch sử giao dịch.",
   "portfolio.editCoingeckoId": "CoinGecko ID",
   "portfolio.editCoingeckoIdHint": "Dùng để theo dõi giá. Để trống nếu không biết.",
   "portfolio.editFirstBuyDate": "Ngày mua đầu tiên",
