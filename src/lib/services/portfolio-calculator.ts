@@ -38,6 +38,7 @@ export interface TokenHolding {
   totalFees: number;
   avgCostBasis: number;
   avgCostOverrideUsd: number | null;
+  investedCostBasis: number;
   currentPrice: number;
   change24h: number | null;
   currentValue: number;
@@ -223,6 +224,9 @@ export function getHoldings(
       g.coingeckoId
     );
     const avgCostBasis = avgCostOverrideUsd ?? calculatedAvgCostBasis;
+    const investedCostBasis = avgCostOverrideUsd !== null
+      ? avgCostBasis * Math.max(currentQty + g.sellQty, 0)
+      : totalCostForBasis;
     const priceData = getPrice(priceMap, g.symbol, g.coingeckoId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
@@ -249,6 +253,7 @@ export function getHoldings(
       totalFees: g.totalFees,
       avgCostBasis,
       avgCostOverrideUsd,
+      investedCostBasis,
       currentPrice,
       change24h,
       currentValue,
@@ -281,12 +286,13 @@ export function getHoldings(
       const isStablecoin = stablecoinSymbols.has(existing.symbol.toUpperCase());
       const existingQty = existing.currentQty;
       const existingCostBasis = existing.avgCostBasis * existingQty;
+      const incomingCostBasis =
+        entry.costBasisUsd != null && entryQty > 0 ? entry.costBasisUsd : 0;
 
       // If the incoming manual entry brings its own explicit cost basis, do a proper weighted average
       let newAvgCostBasis: number;
 
       if (entry.costBasisUsd != null && entryQty > 0) {
-        const incomingCostBasis = entry.costBasisUsd;
         const totalCostBasis = existingCostBasis + incomingCostBasis;
         const totalQty = existingQty + entryQty;
         newAvgCostBasis = totalQty > 0 ? totalCostBasis / totalQty : 0;
@@ -298,6 +304,9 @@ export function getHoldings(
       existing.currentQty += entryQty;
       existing.avgCostBasis = entryAvgCostOverrideUsd ?? newAvgCostBasis;
       existing.avgCostOverrideUsd = entryAvgCostOverrideUsd;
+      existing.investedCostBasis = entryAvgCostOverrideUsd !== null
+        ? existing.avgCostBasis * Math.max(existing.currentQty + existing.sellQty, 0)
+        : existing.investedCostBasis + incomingCostBasis;
       existing.currentValue = existing.currentQty * existing.currentPrice;
       existing.unrealizedPL = isStablecoin
         ? 0
@@ -315,6 +324,9 @@ export function getHoldings(
         ? entry.costBasisUsd / entryQty
         : 0;
       const manualAvgCost = entryAvgCostOverrideUsd ?? calculatedManualAvgCost;
+      const investedCostBasis = entryAvgCostOverrideUsd !== null
+        ? manualAvgCost * entryQty
+        : entry.costBasisUsd ?? 0;
 
       holdings.push({
         symbol: entry.tokenSymbol,
@@ -328,6 +340,7 @@ export function getHoldings(
         totalFees: 0,
         avgCostBasis: manualAvgCost,
         avgCostOverrideUsd: entryAvgCostOverrideUsd,
+        investedCostBasis,
         currentPrice,
         change24h,
         currentValue,

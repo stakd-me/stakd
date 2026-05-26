@@ -19,6 +19,7 @@ function makeHolding(overrides: Partial<TokenHolding>): TokenHolding {
     totalFees: 0,
     avgCostBasis: 1000,
     avgCostOverrideUsd: null,
+    investedCostBasis: 1000,
     currentPrice: 1200,
     change24h: 3,
     currentValue: 1200,

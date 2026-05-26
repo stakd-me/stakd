@@ -16,13 +16,20 @@ function roundToTwo(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
+function getInvestedCostBasis(holding: TokenHolding): number {
+  if (!Number.isFinite(holding.investedCostBasis) || holding.investedCostBasis < 0) {
+    return 0;
+  }
+  return holding.investedCostBasis;
+}
+
 export function computePerformanceMetrics(
   holdings: TokenHolding[]
 ): PerformanceMetrics {
   const activeHoldings = holdings.filter((holding) => holding.currentQty > 0);
   const positions = holdings.filter(
     (holding) =>
-      holding.totalBuyCost > 0 ||
+      getInvestedCostBasis(holding) > 0 ||
       holding.totalSellRevenue > 0 ||
       holding.currentQty > 0
   );
@@ -37,19 +44,21 @@ export function computePerformanceMetrics(
   let worst: { symbol: string; returnPercent: number } | null = null;
 
   for (const holding of positions) {
-    totalInvested += holding.totalBuyCost;
+    const investedCostBasis = getInvestedCostBasis(holding);
+
+    totalInvested += investedCostBasis;
     totalValue += holding.currentValue;
 
     const holdingReturn = holding.realizedPL + holding.unrealizedPL;
     totalReturn += holdingReturn;
 
-    if (holding.totalBuyCost > 0) {
+    if (investedCostBasis > 0) {
       positionsWithCost += 1;
       if (holdingReturn > 0) {
         winners += 1;
       }
 
-      const returnPercent = (holdingReturn / holding.totalBuyCost) * 100;
+      const returnPercent = (holdingReturn / investedCostBasis) * 100;
       if (!best || returnPercent > best.returnPercent) {
         best = {
           symbol: holding.symbol,

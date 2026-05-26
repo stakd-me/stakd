@@ -17,6 +17,7 @@ function createHolding(
     totalFees: partial.totalFees ?? 0,
     avgCostBasis: partial.avgCostBasis ?? 0,
     avgCostOverrideUsd: partial.avgCostOverrideUsd ?? null,
+    investedCostBasis: partial.investedCostBasis ?? partial.totalBuyCost ?? 0,
     currentPrice: partial.currentPrice ?? 0,
     change24h: partial.change24h ?? null,
     currentValue: partial.currentValue ?? 0,
@@ -99,5 +100,32 @@ describe("analytics service", () => {
     expect(metrics.worstPerformer).toBeNull();
     expect(metrics.numberOfTokens).toBe(1);
     expect(metrics.avgHoldingValue).toBe(50);
+  });
+
+  it("uses effective invested cost basis for avg cost overrides", () => {
+    const metrics = computePerformanceMetrics([
+      createHolding({
+        symbol: "BTC",
+        tokenName: "Bitcoin",
+        currentQty: 1.5,
+        buyQty: 2,
+        sellQty: 0.5,
+        totalBuyCost: 200,
+        totalSellRevenue: 75,
+        avgCostBasis: 80,
+        avgCostOverrideUsd: 80,
+        investedCostBasis: 160,
+        currentPrice: 120,
+        currentValue: 180,
+        unrealizedPL: 60,
+        unrealizedPLPercent: 50,
+        realizedPL: 35,
+      }),
+    ]);
+
+    expect(metrics.totalInvested).toBe(160);
+    expect(metrics.totalReturn).toBe(95);
+    expect(metrics.totalReturnPercent).toBeCloseTo(59.38, 2);
+    expect(metrics.bestPerformer?.returnPercent).toBeCloseTo(59.38, 2);
   });
 });

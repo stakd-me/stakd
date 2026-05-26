@@ -273,6 +273,7 @@ describe("portfolio-calculator", () => {
     const eth = holdings.find((h) => h.symbol === "ETH");
     expect(eth?.currentQty).toBe(2);
     expect(eth?.avgCostBasis).toBeCloseTo(1500);
+    expect(eth?.investedCostBasis).toBeCloseTo(3000);
     expect(eth?.unrealizedPL).toBeCloseTo(1000); // 2 * (2000 - 1500)
     expect(eth?.unrealizedPLPercent).toBeCloseTo(33.33);
   });
@@ -306,6 +307,7 @@ describe("portfolio-calculator", () => {
     const eth = holdings.find((h) => h.symbol === "ETH");
     expect(eth?.currentQty).toBe(2);
     expect(eth?.avgCostBasis).toBeCloseTo(2000);
+    expect(eth?.investedCostBasis).toBeCloseTo(4000);
     expect(eth?.unrealizedPL).toBeCloseTo(1000); // 2 * (2500 - 2000)
   });
 
@@ -361,6 +363,7 @@ describe("portfolio-calculator", () => {
     expect(btc?.currentQty).toBeCloseTo(1.5);
     expect(btc?.avgCostBasis).toBeCloseTo(80);
     expect(btc?.avgCostOverrideUsd).toBeCloseTo(80);
+    expect(btc?.investedCostBasis).toBeCloseTo(160);
     expect(btc?.unrealizedPL).toBeCloseTo(60);
     expect(btc?.realizedPL).toBeCloseTo(35);
   });
