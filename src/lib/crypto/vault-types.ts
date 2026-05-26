@@ -30,6 +30,8 @@ export interface VaultTransaction {
   transactedAt: string; // ISO string
   createdAt: string;    // ISO string
   settlement?: VaultTransactionSettlement;
+  costBasisUsd?: number | null;   // Optional: explicit total USD cost for this tx (especially useful for "receive")
+  costSource?: string | null;      // e.g. "transfer", "airdrop", "staking-reward"
 }
 
 export interface VaultManualEntry {
@@ -39,6 +41,8 @@ export interface VaultManualEntry {
   coingeckoId: string | null;
   quantity: number;
   note: string | null;
+  costBasisUsd?: number | null;   // Optional: total USD cost basis for this manual position
+  costSource?: string | null;      // e.g. "transfer", "airdrop", "manual-snapshot"
   createdAt: string;
   updatedAt: string;
 }

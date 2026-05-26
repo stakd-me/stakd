@@ -21,6 +21,9 @@ export interface BalanceImpactTransaction {
   createdAt: string;
   isSettlement: boolean;
   sourceTransactionId: string;
+  // Forwarded from VaultTransaction for accounting improvements (e.g. explicit cost basis on receives)
+  costBasisUsd?: number | null;
+  costSource?: string | null;
 }
 
 export interface CreateVaultTransactionInput {
@@ -230,6 +233,8 @@ export function expandTransactionForBalance(
     createdAt: tx.createdAt,
     isSettlement: false,
     sourceTransactionId: tx.id,
+    costBasisUsd: tx.costBasisUsd ?? null,
+    costSource: tx.costSource ?? null,
   };
 
   const settlement = normalizeSettlement(tx.settlement);
@@ -258,6 +263,8 @@ export function expandTransactionForBalance(
       createdAt: tx.createdAt,
       isSettlement: true,
       sourceTransactionId: tx.id,
+      costBasisUsd: tx.costBasisUsd ?? null,
+      costSource: tx.costSource ?? null,
     },
   ];
 }

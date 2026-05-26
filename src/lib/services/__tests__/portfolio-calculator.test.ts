@@ -248,4 +248,195 @@ describe("portfolio-calculator", () => {
     expect(usdt?.currentQty).toBeCloseTo(48500);
     expect(usdt?.avgCostBasis).toBeCloseTo(1);
   });
+
+  it("respects explicit costBasisUsd on manual entries", () => {
+    const vault = createEmptyVault();
+    vault.manualEntries = [
+      {
+        id: "manual-eth-with-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        coingeckoId: "ethereum",
+        quantity: 2,
+        note: "Transferred from another wallet",
+        costBasisUsd: 3000, // $1500 per ETH
+        costSource: "transfer",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      ethereum: { usd: 2000, change24h: null },
+    });
+
+    const eth = holdings.find((h) => h.symbol === "ETH");
+    expect(eth?.currentQty).toBe(2);
+    expect(eth?.avgCostBasis).toBeCloseTo(1500);
+    expect(eth?.unrealizedPL).toBeCloseTo(1000); // 2 * (2000 - 1500)
+    expect(eth?.unrealizedPLPercent).toBeCloseTo(33.33);
+  });
+
+  it("respects explicit costBasisUsd on receive transactions", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "receive-eth-with-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "ethereum",
+        type: "receive",
+        quantity: "2",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: "Incoming transfer with known basis",
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        costBasisUsd: 4000, // $2000 per ETH
+        costSource: "transfer",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      ethereum: { usd: 2500, change24h: null },
+    });
+
+    const eth = holdings.find((h) => h.symbol === "ETH");
+    expect(eth?.currentQty).toBe(2);
+    expect(eth?.avgCostBasis).toBeCloseTo(2000);
+    expect(eth?.unrealizedPL).toBeCloseTo(1000); // 2 * (2500 - 2000)
+  });
+
+  it("only weights receive quantity that has explicit cost basis", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "receive-eth-with-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "ethereum",
+        type: "receive",
+        quantity: "2",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: "Incoming transfer with known basis",
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        costBasisUsd: 4000,
+        costSource: "transfer",
+      },
+      {
+        id: "receive-eth-without-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "ethereum",
+        type: "receive",
+        quantity: "2",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: "Incoming transfer without known basis",
+        transactedAt: "2026-01-02T00:00:00.000Z",
+        createdAt: "2026-01-02T00:00:00.000Z",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      ethereum: { usd: 2500, change24h: null },
+    });
+
+    const eth = holdings.find((h) => h.symbol === "ETH");
+    expect(eth?.currentQty).toBe(4);
+    expect(eth?.avgCostBasis).toBeCloseTo(2000);
+    expect(eth?.unrealizedPL).toBeCloseTo(2000);
+  });
+
+  it("includes zero-cost receive quantities in explicit cost basis weighting", () => {
+    const vault = createEmptyVault();
+    vault.transactions = [
+      {
+        id: "receive-airdrop-zero-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "ethereum",
+        type: "receive",
+        quantity: "2",
+        pricePerUnit: "0",
+        totalCost: "0",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: "Airdrop with zero basis",
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        costBasisUsd: 0,
+        costSource: "airdrop",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      ethereum: { usd: 2500, change24h: null },
+    });
+
+    const eth = holdings.find((h) => h.symbol === "ETH");
+    expect(eth?.currentQty).toBe(2);
+    expect(eth?.avgCostBasis).toBe(0);
+    expect(eth?.unrealizedPL).toBeCloseTo(5000);
+  });
+
+  it("computes proper weighted average when manual entry with cost basis merges with existing buys", () => {
+    const vault = createEmptyVault();
+
+    // Existing buy: 2 ETH @ $1000 each = $2000 total cost
+    vault.transactions = [
+      {
+        id: "buy-eth",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        chain: "ethereum",
+        type: "buy",
+        quantity: "2",
+        pricePerUnit: "1000",
+        totalCost: "2000",
+        fee: "0",
+        coingeckoId: "ethereum",
+        note: null,
+        transactedAt: "2026-01-01T00:00:00.000Z",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+
+    // Later manual entry: 1 ETH with known higher basis of $3000
+    vault.manualEntries = [
+      {
+        id: "manual-eth-higher-basis",
+        tokenSymbol: "ETH",
+        tokenName: "Ethereum",
+        coingeckoId: "ethereum",
+        quantity: 1,
+        note: "Additional ETH from transfer",
+        costBasisUsd: 3000,
+        costSource: "transfer",
+        createdAt: "2026-01-10T00:00:00.000Z",
+        updatedAt: "2026-01-10T00:00:00.000Z",
+      },
+    ];
+
+    const holdings = getHoldings(vault, {
+      ethereum: { usd: 2500, change24h: null },
+    });
+
+    const eth = holdings.find((h) => h.symbol === "ETH");
+    expect(eth?.currentQty).toBe(3);
+
+    // Weighted average: (2 * 1000 + 1 * 3000) / 3 = 5000 / 3 ≈ 1666.67
+    expect(eth?.avgCostBasis).toBeCloseTo(1666.67);
+
+    // Unrealized: 3 * (2500 - 1666.67) ≈ 2500
+    expect(eth?.unrealizedPL).toBeCloseTo(2500);
+  });
 });

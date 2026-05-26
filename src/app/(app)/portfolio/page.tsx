@@ -9,7 +9,6 @@ import { ManualEntriesSection } from "@/components/portfolio/manual-entries-sect
 import { TransactionsSection } from "@/components/portfolio/transactions-section";
 import type {
   BreakdownItem,
-  ImportPreviewRow,
   ManualEntry,
   PortfolioCoinListItem as CoinListItem,
   PortfolioTransaction as Transaction,
@@ -27,6 +26,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
+import { useCsvImport } from "@/hooks/use-csv-import";
 import { useVaultStore } from "@/lib/store";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -39,94 +39,11 @@ import {
   createVaultTransaction,
   rebuildTradeSettlement,
 } from "@/lib/transactions";
+import { escapeCsvField } from "@/lib/portfolio/csv-parser";
 
 type TxType = PortfolioTxType;
-type CsvRequiredColumn = "date" | "symbol" | "quantity" | "price";
 type PortfolioSection = "holdings" | "transactions" | "manual" | "all";
-
-const CSV_HEADER_ALIASES: Record<string, string[]> = {
-  date: ["date", "transactedat", "timestamp", "datetime"],
-  type: ["type", "txtype", "transactiontype"],
-  symbol: ["symbol", "tokensymbol", "token"],
-  name: ["name", "tokenname"],
-  quantity: ["quantity", "qty", "amount"],
-  price: ["price", "priceperunit", "unitprice", "priceusd"],
-  fee: ["fee", "fees"],
-  note: ["note", "notes"],
-  coingeckoId: ["coingeckoid", "coingecko"],
-};
-
-const REQUIRED_CSV_COLUMNS: CsvRequiredColumn[] = ["date", "symbol", "quantity", "price"];
 const TRANSACTION_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-
-function normalizeCsvHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-}
-
-function parseCsvMatrix(content: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < content.length; i++) {
-    const ch = content[i];
-    if (ch === '"') {
-      const next = content[i + 1];
-      if (inQuotes && next === '"') {
-        field += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (ch === "," && !inQuotes) {
-      row.push(field);
-      field = "";
-      continue;
-    }
-
-    if ((ch === "\n" || ch === "\r") && !inQuotes) {
-      if (ch === "\r" && content[i + 1] === "\n") {
-        i++;
-      }
-      row.push(field);
-      field = "";
-      if (row.some((cell) => cell.trim().length > 0)) {
-        rows.push(row);
-      }
-      row = [];
-      continue;
-    }
-
-    field += ch;
-  }
-
-  if (inQuotes) {
-    throw new Error("CSV_UNCLOSED_QUOTES");
-  }
-
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    if (row.some((cell) => cell.trim().length > 0)) {
-      rows.push(row);
-    }
-  }
-
-  return rows;
-}
-
-function getCsvField(row: Record<string, string>, aliases: string[]): string {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeCsvHeader(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias].trim();
-    }
-  }
-  return "";
-}
 
 function getTxTypeToggleClass(type: TxType, isActive: boolean): string {
   if (!isActive) {
@@ -156,13 +73,6 @@ function getTxTypeActionButtonClass(type: TxType): string {
     return "bg-status-info text-bg-page hover:opacity-90";
   }
   return "bg-status-caution text-bg-page hover:opacity-90";
-}
-
-function escapeCsvField(field: string): string {
-  if (field.includes(",") || field.includes('"') || field.includes("\n")) {
-    return `"${field.replace(/"/g, '""')}"`;
-  }
-  return field;
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -269,13 +179,25 @@ export default function PortfolioPage() {
   const [editType, setEditType] = useState<TxType>("buy");
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Import modal state
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFileName, setImportFileName] = useState("");
-  const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
-  const [importValidationErrors, setImportValidationErrors] = useState<string[]>([]);
-  const [importError, setImportError] = useState<string | null>(null);
-  const [importing, setImporting] = useState(false);
+  // Import modal state + controls (skeleton from useCsvImport hook — see plan.md §9)
+  const {
+    showImportModal,
+    importFileName,
+    importPreview,
+    importValidationErrors,
+    importError,
+    importing,
+    importReadyCount,
+    importIssueCount,
+    importHasReviewState,
+    importIsReady,
+    setImportError,
+    setImporting,
+    resetImportState,
+    openImportModal,
+    closeImportModal,
+    parseCsvFile,
+  } = useCsvImport();
 
   // Manual entries state
   const [showManualEntries, setShowManualEntries] = useState(false);
@@ -930,183 +852,6 @@ export default function PortfolioPage() {
     }
   };
 
-  const resetImportState = useCallback(() => {
-    setImportFileName("");
-    setImportPreview([]);
-    setImportValidationErrors([]);
-    setImportError(null);
-  }, []);
-
-  const openImportModal = useCallback((resetState = false) => {
-    if (resetState) {
-      resetImportState();
-    }
-    setShowImportModal(true);
-  }, [resetImportState]);
-
-  const closeImportModal = useCallback(() => {
-    setShowImportModal(false);
-  }, []);
-
-  const parseCsvFile = (file: File) => {
-    setImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = String(e.target?.result ?? "");
-        const matrix = parseCsvMatrix(text);
-        if (matrix.length < 2) {
-          setImportPreview([]);
-          setImportValidationErrors([]);
-          setImportError(t("portfolio.csvError"));
-          return;
-        }
-
-        const normalizedHeaders = matrix[0].map((header) =>
-          normalizeCsvHeader(header)
-        );
-
-        const missingColumns = REQUIRED_CSV_COLUMNS.filter((required) => {
-          const aliases = CSV_HEADER_ALIASES[required];
-          return !normalizedHeaders.some((header) => aliases.includes(header));
-        });
-
-        if (missingColumns.length > 0) {
-          const missingLabels = missingColumns
-            .map((col) => {
-              if (col === "date") return t("common.date");
-              if (col === "symbol") return t("portfolio.symbol");
-              if (col === "quantity") return t("portfolio.quantity");
-              return t("portfolio.price");
-            })
-            .join(", ");
-          setImportPreview([]);
-          setImportValidationErrors([]);
-          setImportError(t("portfolio.csvMissingHeaders", { headers: missingLabels }));
-          return;
-        }
-
-        const rows: ImportPreviewRow[] = [];
-        const issues: string[] = [];
-
-        for (let i = 1; i < matrix.length; i++) {
-          const rowNumber = i + 1;
-          const values = matrix[i];
-          const rowMap: Record<string, string> = {};
-          normalizedHeaders.forEach((header, idx) => {
-            if (!header) return;
-            rowMap[header] = values[idx] ?? "";
-          });
-
-          const symbol = getCsvField(rowMap, CSV_HEADER_ALIASES.symbol).toUpperCase();
-          if (!symbol) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssueSymbolRequired"),
-              })
-            );
-            continue;
-          }
-
-          const rawType = getCsvField(rowMap, CSV_HEADER_ALIASES.type).toLowerCase() || "buy";
-          if (!["buy", "sell", "receive", "send"].includes(rawType)) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssueTypeInvalid"),
-              })
-            );
-            continue;
-          }
-
-          const quantity = parseFloat(getCsvField(rowMap, CSV_HEADER_ALIASES.quantity));
-          if (!Number.isFinite(quantity) || quantity <= 0) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssueQuantityInvalid"),
-              })
-            );
-            continue;
-          }
-
-          const pricePerUnit = parseFloat(getCsvField(rowMap, CSV_HEADER_ALIASES.price));
-          if (!Number.isFinite(pricePerUnit) || pricePerUnit <= 0) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssuePriceInvalid"),
-              })
-            );
-            continue;
-          }
-
-          const rawDate = getCsvField(rowMap, CSV_HEADER_ALIASES.date);
-          const date = new Date(rawDate);
-          if (!rawDate || Number.isNaN(date.getTime())) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssueDateInvalid"),
-              })
-            );
-            continue;
-          }
-
-          const feeRaw = getCsvField(rowMap, CSV_HEADER_ALIASES.fee);
-          const fee = feeRaw.length > 0 ? parseFloat(feeRaw) : 0;
-          if (!Number.isFinite(fee) || fee < 0) {
-            issues.push(
-              t("portfolio.csvRowIssue", {
-                row: rowNumber,
-                message: t("portfolio.csvIssueFeeInvalid"),
-              })
-            );
-            continue;
-          }
-
-          rows.push({
-            rowNumber,
-            dateIso: date.toISOString(),
-            type: rawType as TxType,
-            symbol,
-            name: getCsvField(rowMap, CSV_HEADER_ALIASES.name) || symbol,
-            quantity,
-            pricePerUnit,
-            fee,
-            note: getCsvField(rowMap, CSV_HEADER_ALIASES.note) || null,
-            coingeckoId: getCsvField(rowMap, CSV_HEADER_ALIASES.coingeckoId) || null,
-          });
-        }
-
-        if (issues.length > 0) {
-          setImportPreview([]);
-          setImportValidationErrors(issues);
-          setImportError(
-            t("portfolio.csvInvalidRows", {
-              count: issues.length,
-              details: issues.slice(0, 3).join(" | "),
-            })
-          );
-          return;
-        }
-
-        setImportPreview(rows);
-        setImportValidationErrors([]);
-        setImportError(null);
-      } catch (err) {
-        const message = err instanceof Error && err.message === "CSV_UNCLOSED_QUOTES"
-          ? t("portfolio.csvUnclosedQuotes")
-          : t("portfolio.failedImport");
-        setImportPreview([]);
-        setImportValidationErrors([]);
-        setImportError(message);
-      }
-    };
-    reader.readAsText(file);
-  };
-
   const handleImportSubmit = useCallback(async () => {
     if (importPreview.length === 0 || importValidationErrors.length > 0) return;
     setImporting(true);
@@ -1177,6 +922,8 @@ export default function PortfolioPage() {
     importPreview,
     importValidationErrors.length,
     resetImportState,
+    setImportError,
+    setImporting,
     t,
     toast,
   ]);
@@ -1442,16 +1189,6 @@ export default function PortfolioPage() {
     if (activeSection === "manual") return manualEntries.length > 0;
     return breakdown.length > 0 || transactions.length > 0 || manualEntries.length > 0;
   })();
-  const importReadyCount = importPreview.length;
-  const importIssueCount = importValidationErrors.length;
-  const importHasReviewState =
-    importFileName.length > 0 ||
-    importReadyCount > 0 ||
-    importIssueCount > 0 ||
-    importError !== null;
-  const importIsReady =
-    importReadyCount > 0 && importIssueCount === 0 && importError === null;
-
   const getHeldDurationBadge = (firstBuyDate: string | null) => {
     if (!firstBuyDate) return "-";
     const heldDuration = getHeldDuration(firstBuyDate);

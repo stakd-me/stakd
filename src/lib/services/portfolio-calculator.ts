@@ -117,6 +117,8 @@ export function getHoldings(
     totalBuyCost: number;
     totalSellRevenue: number;
     totalFees: number;
+    receiveCostBasis: number;
+    receiveQtyWithBasis: number;
   }> = {};
 
   for (const tx of allTx) {
@@ -134,6 +136,8 @@ export function getHoldings(
         totalBuyCost: 0,
         totalSellRevenue: 0,
         totalFees: 0,
+        receiveCostBasis: 0,
+        receiveQtyWithBasis: 0,
       };
     }
 
@@ -148,6 +152,14 @@ export function getHoldings(
       groups[key].totalBuyCost += cost + fee;
     } else if (tx.type === "receive") {
       groups[key].receiveQty += qty;
+      if (
+        typeof tx.costBasisUsd === "number" &&
+        Number.isFinite(tx.costBasisUsd) &&
+        tx.costBasisUsd >= 0
+      ) {
+        groups[key].receiveCostBasis += tx.costBasisUsd;
+        groups[key].receiveQtyWithBasis += qty;
+      }
     } else if (tx.type === "sell") {
       groups[key].sellQty += qty;
       groups[key].totalSellRevenue += cost - fee;
@@ -161,7 +173,11 @@ export function getHoldings(
   for (const g of Object.values(groups)) {
     const currentQty = g.buyQty + g.receiveQty - g.sellQty - g.sendQty;
     const isStablecoin = stablecoinSymbols.has(g.symbol.toUpperCase());
-    const avgCostBasis = isStablecoin ? 1 : (g.buyQty > 0 ? g.totalBuyCost / g.buyQty : 0);
+
+    // Include explicit receive cost basis when available (weighted by qty that brought cost)
+    const totalCostForBasis = g.totalBuyCost + g.receiveCostBasis;
+    const qtyWithBasis = g.buyQty + g.receiveQtyWithBasis;
+    const avgCostBasis = isStablecoin ? 1 : (qtyWithBasis > 0 ? totalCostForBasis / qtyWithBasis : 0);
     const priceData = getPrice(priceMap, g.symbol, g.coingeckoId);
     const currentPrice = toSafeNumber(priceData?.usd);
     const change24h = priceData?.change24h ?? null;
@@ -211,14 +227,37 @@ export function getHoldings(
     const entryQty = toSafeNumber(entry.quantity);
 
     if (existing) {
+      const existingQty = existing.currentQty;
+      const existingCostBasis = existing.avgCostBasis * existingQty;
+
+      // If the incoming manual entry brings its own explicit cost basis, do a proper weighted average
+      let newAvgCostBasis: number;
+
+      if (entry.costBasisUsd != null && entryQty > 0) {
+        const incomingCostBasis = entry.costBasisUsd;
+        const totalCostBasis = existingCostBasis + incomingCostBasis;
+        const totalQty = existingQty + entryQty;
+        newAvgCostBasis = totalQty > 0 ? totalCostBasis / totalQty : 0;
+      } else {
+        // No explicit basis on the manual entry → keep the existing blended avg cost
+        newAvgCostBasis = existing.avgCostBasis;
+      }
+
       existing.currentQty += entryQty;
+      existing.avgCostBasis = newAvgCostBasis;
       existing.currentValue = existing.currentQty * existing.currentPrice;
-      existing.unrealizedPL = existing.currentQty * (existing.currentPrice - existing.avgCostBasis);
-      existing.unrealizedPLPercent = existing.avgCostBasis > 0 && existing.currentQty > 0
-        ? ((existing.currentPrice - existing.avgCostBasis) / existing.avgCostBasis) * 100
+      existing.unrealizedPL = existing.currentQty * (existing.currentPrice - newAvgCostBasis);
+      existing.unrealizedPLPercent = newAvgCostBasis > 0 && existing.currentQty > 0
+        ? ((existing.currentPrice - newAvgCostBasis) / newAvgCostBasis) * 100
         : 0;
     } else {
       const currentValue = entryQty * currentPrice;
+
+      // New: respect explicit cost basis on manual entry if provided
+      const manualAvgCost = entry.costBasisUsd != null && entryQty > 0
+        ? entry.costBasisUsd / entryQty
+        : 0;
+
       holdings.push({
         symbol: entry.tokenSymbol,
         tokenName: entry.tokenName,
@@ -229,12 +268,14 @@ export function getHoldings(
         totalBuyCost: 0,
         totalSellRevenue: 0,
         totalFees: 0,
-        avgCostBasis: 0,
+        avgCostBasis: manualAvgCost,
         currentPrice,
         change24h,
         currentValue,
-        unrealizedPL: 0,
-        unrealizedPLPercent: 0,
+        unrealizedPL: entryQty * (currentPrice - manualAvgCost),
+        unrealizedPLPercent: manualAvgCost > 0
+          ? ((currentPrice - manualAvgCost) / manualAvgCost) * 100
+          : 0,
         realizedPL: 0,
       });
     }
