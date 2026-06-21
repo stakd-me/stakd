@@ -15,6 +15,7 @@ import {
   X,
   BookOpen,
   FileText,
+  Table2,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useTranslation } from "@/hooks/use-translation";
@@ -30,6 +31,7 @@ const navKeys = [
   { href: "/rebalance", labelKey: "nav.rebalance" as const, icon: Scale },
   { href: "/reports", labelKey: "nav.reports" as const, icon: FileText },
   { href: "/history", labelKey: "nav.history" as const, icon: Clock },
+  { href: "/allocation-history", labelKey: "nav.allocationHistory" as const, icon: Table2 },
   { href: "/guide", labelKey: "nav.guide" as const, icon: BookOpen },
   { href: "/settings", labelKey: "nav.settings" as const, icon: Settings },
 ];

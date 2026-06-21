@@ -52,6 +52,7 @@ function normalizeVaultShape(vault: Partial<VaultData>): VaultData {
     rebalanceSessions: vault.rebalanceSessions ?? [],
     rebalanceLogs: vault.rebalanceLogs ?? [],
     portfolioSnapshots: vault.portfolioSnapshots ?? [],
+    allocationSnapshots: vault.allocationSnapshots ?? [],
     tokenGroups: vault.tokenGroups ?? [],
     tokenCategories: vault.tokenCategories ?? [],
     costBasisOverrides: vault.costBasisOverrides ?? [],

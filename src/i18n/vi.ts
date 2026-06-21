@@ -7,6 +7,7 @@ const vi: Record<TranslationKeys, string> = {
   "nav.portfolio": "Danh mục đầu tư",
   "nav.rebalance": "Tái cân bằng",
   "nav.history": "Lịch sử",
+  "nav.allocationHistory": "Lịch sử phân bổ",
   "nav.settings": "Cài đặt",
   "nav.lock": "Khóa",
   "nav.openMenu": "Mở menu",
@@ -140,6 +141,18 @@ const vi: Record<TranslationKeys, string> = {
   "dashboard.failedToRefresh": "Không thể làm mới giá",
   "dashboard.failedToDownload": "Không thể tải báo cáo",
   "dashboard.avg": "TB",
+
+  // Allocation History
+  "allocationHistory.title": "Lịch sử phân bổ",
+  "allocationHistory.subtitle": "Theo dõi % nắm giữ hàng tuần, ghi nhận sau 00:01 UTC thứ 2.",
+  "allocationHistory.tableTitle": "Bảng phân bổ hàng tuần",
+  "allocationHistory.update": "Update",
+  "allocationHistory.totalUpdates": "Lần update",
+  "allocationHistory.trackedCoins": "Coin theo dõi",
+  "allocationHistory.latestUpdate": "Update mới nhất",
+  "allocationHistory.emptyTitle": "Chưa có lịch sử phân bổ",
+  "allocationHistory.emptyDescription": "Snapshot hàng tuần đầu tiên sẽ được tạo sau 00:01 UTC thứ 2 khi app đang mở và giá đã sẵn sàng.",
+  "allocationHistory.range": "Hiển thị {from}-{to} trên tổng {total} tuần",
 
   // Portfolio
   "portfolio.title": "Danh mục đầu tư",
@@ -753,7 +766,7 @@ const vi: Record<TranslationKeys, string> = {
   "settings.dangerActionSettings": "Chỉ xóa cài đặt ứng dụng",
   "settings.dangerActionAll": "Xóa toàn bộ dữ liệu vault",
   "settings.dangerActionAccount": "Xóa tài khoản và toàn bộ dữ liệu",
-  "settings.dangerActionDescPortfolio": "Xóa giao dịch, mục thủ công, mục tiêu/phiên/nhật ký tái cân bằng, snapshots, groups và categories.",
+  "settings.dangerActionDescPortfolio": "Xóa giao dịch, mục thủ công, mục tiêu/phiên/nhật ký tái cân bằng, snapshots, lịch sử phân bổ, groups và categories.",
   "settings.dangerActionDescSettings": "Xóa toàn bộ cài đặt đã lưu và khôi phục mặc định.",
   "settings.dangerActionDescAll": "Xóa toàn bộ vault rồi đăng xuất ngay lập tức.",
   "settings.dangerActionDescAccount": "Xóa vĩnh viễn tài khoản người dùng và toàn bộ dữ liệu mã hóa liên quan.",

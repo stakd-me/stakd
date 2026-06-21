@@ -334,6 +334,7 @@ export default function SettingsPage() {
     vault.rebalanceSessions.length +
     vault.rebalanceLogs.length +
     vault.portfolioSnapshots.length +
+    vault.allocationSnapshots.length +
     vault.tokenGroups.length +
     vault.tokenCategories.length +
     vault.costBasisOverrides.length;
@@ -437,6 +438,7 @@ export default function SettingsPage() {
           rebalanceSessions: [],
           rebalanceLogs: [],
           portfolioSnapshots: [],
+          allocationSnapshots: [],
           tokenGroups: [],
           tokenCategories: [],
           costBasisOverrides: [],

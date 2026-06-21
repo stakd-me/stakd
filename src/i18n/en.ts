@@ -5,6 +5,7 @@ const en = {
   "nav.portfolio": "Portfolio",
   "nav.rebalance": "Rebalance",
   "nav.history": "History",
+  "nav.allocationHistory": "Allocation History",
   "nav.settings": "Settings",
   "nav.lock": "Lock",
   "nav.openMenu": "Open menu",
@@ -138,6 +139,18 @@ const en = {
   "dashboard.failedToRefresh": "Failed to refresh prices",
   "dashboard.failedToDownload": "Failed to download report",
   "dashboard.avg": "avg",
+
+  // Allocation History
+  "allocationHistory.title": "Allocation History",
+  "allocationHistory.subtitle": "Weekly holding percentages captured after Monday 00:01 UTC.",
+  "allocationHistory.tableTitle": "Weekly allocation table",
+  "allocationHistory.update": "Update",
+  "allocationHistory.totalUpdates": "Updates",
+  "allocationHistory.trackedCoins": "Tracked coins",
+  "allocationHistory.latestUpdate": "Latest update",
+  "allocationHistory.emptyTitle": "No allocation history yet",
+  "allocationHistory.emptyDescription": "The first weekly snapshot will be created after Monday 00:01 UTC when the app is open and prices are ready.",
+  "allocationHistory.range": "Showing {from}-{to} of {total} weekly updates",
 
   // Portfolio
   "portfolio.title": "Portfolio",
@@ -751,7 +764,7 @@ const en = {
   "settings.dangerActionSettings": "Delete app settings only",
   "settings.dangerActionAll": "Delete all vault data",
   "settings.dangerActionAccount": "Delete account and all data",
-  "settings.dangerActionDescPortfolio": "Removes transactions, manual entries, rebalance targets/sessions/logs, snapshots, groups, and categories.",
+  "settings.dangerActionDescPortfolio": "Removes transactions, manual entries, rebalance targets/sessions/logs, snapshots, allocation history, groups, and categories.",
   "settings.dangerActionDescSettings": "Removes all saved settings and restores defaults.",
   "settings.dangerActionDescAll": "Wipes the entire vault, then signs you out immediately.",
   "settings.dangerActionDescAccount": "Permanently deletes your user account and all associated encrypted data.",

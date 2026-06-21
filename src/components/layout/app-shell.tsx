@@ -6,6 +6,7 @@ import { AuthScreen } from "@/components/auth-screen";
 import { Sidebar } from "@/components/layout/sidebar";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultAutosave } from "@/hooks/use-vault-autosave";
+import { WeeklyAllocationSnapshotRecorder } from "@/hooks/use-weekly-allocation-snapshots";
 import { loadVaultFromServer } from "@/lib/services/vault-sync";
 import { hasEncKey } from "@/lib/crypto/key-store";
 import { apiFetch } from "@/lib/api-client";
@@ -76,6 +77,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-bg-page text-text-secondary">
+      <WeeklyAllocationSnapshotRecorder />
       <Sidebar />
       <main className="flex-1 overflow-auto p-6 pt-16 md:pt-6">{children}</main>
     </div>

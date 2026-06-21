@@ -89,6 +89,23 @@ export interface VaultPortfolioSnapshot {
   snapshotAt: string;
 }
 
+export interface VaultAllocationSnapshotItem {
+  symbol: string;
+  tokenName: string;
+  coingeckoId: string | null;
+  valueUsd: number;
+  percent: number;
+}
+
+export interface VaultAllocationSnapshot {
+  id: string;
+  weekStart: string; // YYYY-MM-DD, Monday UTC
+  updatedAt: string; // Scheduled update time, Monday 00:01 UTC
+  capturedAt: string; // Actual client capture time
+  totalValueUsd: number;
+  allocations: VaultAllocationSnapshotItem[];
+}
+
 export interface VaultTokenGroup {
   id: string;
   name: string;
@@ -119,6 +136,7 @@ export interface VaultData {
   rebalanceSessions: VaultRebalanceSession[];
   rebalanceLogs: VaultRebalanceLog[];
   portfolioSnapshots: VaultPortfolioSnapshot[];
+  allocationSnapshots: VaultAllocationSnapshot[];
   tokenGroups: VaultTokenGroup[];
   tokenCategories: VaultTokenCategory[];
   costBasisOverrides: VaultCostBasisOverride[];
@@ -134,6 +152,7 @@ export function createEmptyVault(): VaultData {
     rebalanceSessions: [],
     rebalanceLogs: [],
     portfolioSnapshots: [],
+    allocationSnapshots: [],
     tokenGroups: [],
     tokenCategories: [],
     costBasisOverrides: [],
