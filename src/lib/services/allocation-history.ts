@@ -188,6 +188,32 @@ export function getAllocationPercentMap(
   return map;
 }
 
+export function getAllocationPercentChange(
+  currentSnapshot: VaultAllocationSnapshot,
+  previousSnapshot: VaultAllocationSnapshot | null | undefined,
+  symbol: string
+): number | null {
+  if (!previousSnapshot) {
+    return null;
+  }
+
+  const normalizedSymbol = normalizeSymbol(symbol);
+  const currentPercent = getAllocationPercentMap(currentSnapshot)[
+    normalizedSymbol
+  ];
+  if (typeof currentPercent !== "number" || !Number.isFinite(currentPercent)) {
+    return null;
+  }
+
+  const previousPercent =
+    getAllocationPercentMap(previousSnapshot)[normalizedSymbol] ?? 0;
+  if (!Number.isFinite(previousPercent)) {
+    return null;
+  }
+
+  return roundPercent(currentPercent - previousPercent);
+}
+
 export function formatAllocationUpdateDate(
   snapshot: VaultAllocationSnapshot
 ): string {

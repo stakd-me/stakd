@@ -9,10 +9,12 @@ import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
 import {
   ALLOCATION_HISTORY_ROWS_PER_PAGE,
   formatAllocationUpdateDate,
   getAllocationHistorySymbols,
+  getAllocationPercentChange,
   getAllocationPercentMap,
   sortAllocationSnapshotsDesc,
 } from "@/lib/services/allocation-history";
@@ -22,6 +24,16 @@ function formatPercent(value: number | undefined): string {
     return "-";
   }
   return `${value.toFixed(2)}%`;
+}
+
+function getPercentChangeClass(change: number | null): string {
+  if (change === null || change === 0) {
+    return "text-text-secondary";
+  }
+
+  return change > 0
+    ? "font-medium text-status-positive"
+    : "font-medium text-status-negative";
 }
 
 export default function AllocationHistoryPage() {
@@ -48,7 +60,12 @@ export default function AllocationHistoryPage() {
   const currentPage = Math.min(page, totalPages);
   const paginatedSnapshots = useMemo(() => {
     const start = (currentPage - 1) * ALLOCATION_HISTORY_ROWS_PER_PAGE;
-    return sortedSnapshots.slice(start, start + ALLOCATION_HISTORY_ROWS_PER_PAGE);
+    return sortedSnapshots
+      .slice(start, start + ALLOCATION_HISTORY_ROWS_PER_PAGE)
+      .map((snapshot, index) => ({
+        snapshot,
+        previousSnapshot: sortedSnapshots[start + index + 1] ?? null,
+      }));
   }, [currentPage, sortedSnapshots]);
   const range = useMemo(() => {
     if (sortedSnapshots.length === 0) {
@@ -140,7 +157,7 @@ export default function AllocationHistoryPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {paginatedSnapshots.map((snapshot) => {
+                    {paginatedSnapshots.map(({ snapshot, previousSnapshot }) => {
                       const percentMap = getAllocationPercentMap(snapshot);
 
                       return (
@@ -154,7 +171,16 @@ export default function AllocationHistoryPage() {
                           {symbols.map((symbol) => (
                             <td
                               key={symbol}
-                              className="whitespace-nowrap px-4 py-3 text-right font-mono text-text-secondary"
+                              className={cn(
+                                "whitespace-nowrap px-4 py-3 text-right font-mono",
+                                getPercentChangeClass(
+                                  getAllocationPercentChange(
+                                    snapshot,
+                                    previousSnapshot,
+                                    symbol
+                                  )
+                                )
+                              )}
                             >
                               {formatPercent(percentMap[symbol])}
                             </td>

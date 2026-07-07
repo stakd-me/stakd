@@ -9,6 +9,7 @@ import {
   createWeeklyAllocationSnapshot,
   formatAllocationUpdateDate,
   getAllocationHistorySymbols,
+  getAllocationPercentChange,
   getAllocationPercentMap,
   getMissingAllocationPriceTokens,
   getWeeklyAllocationUpdateTime,
@@ -157,6 +158,87 @@ describe("allocation-history", () => {
       "BTC",
       "ETH",
     ]);
+  });
+
+  it("computes percent changes against the previous snapshot", () => {
+    const previous: VaultAllocationSnapshot = {
+      id: "previous",
+      weekStart: "2026-06-15",
+      updatedAt: "2026-06-15T00:01:00.000Z",
+      capturedAt: "2026-06-15T00:01:00.000Z",
+      totalValueUsd: 100,
+      allocations: [
+        {
+          symbol: "BTC",
+          tokenName: "Bitcoin",
+          coingeckoId: "bitcoin",
+          valueUsd: 40,
+          percent: 40,
+        },
+        {
+          symbol: "ETH",
+          tokenName: "Ethereum",
+          coingeckoId: "ethereum",
+          valueUsd: 50,
+          percent: 50,
+        },
+        {
+          symbol: "SOL",
+          tokenName: "Solana",
+          coingeckoId: "solana",
+          valueUsd: 10,
+          percent: 10,
+        },
+      ],
+    };
+    const current: VaultAllocationSnapshot = {
+      ...previous,
+      id: "current",
+      weekStart: "2026-06-22",
+      updatedAt: "2026-06-22T00:01:00.000Z",
+      allocations: [
+        {
+          symbol: "BTC",
+          tokenName: "Bitcoin",
+          coingeckoId: "bitcoin",
+          valueUsd: 55,
+          percent: 55,
+        },
+        {
+          symbol: "ETH",
+          tokenName: "Ethereum",
+          coingeckoId: "ethereum",
+          valueUsd: 35,
+          percent: 35,
+        },
+        {
+          symbol: "TAO",
+          tokenName: "Bittensor",
+          coingeckoId: "bittensor",
+          valueUsd: 10,
+          percent: 10,
+        },
+      ],
+    };
+    const unchanged: VaultAllocationSnapshot = {
+      ...current,
+      allocations: [
+        {
+          symbol: "BTC",
+          tokenName: "Bitcoin",
+          coingeckoId: "bitcoin",
+          valueUsd: 40,
+          percent: 40,
+        },
+      ],
+    };
+
+    expect(getAllocationPercentChange(current, previous, "btc")).toBe(15);
+    expect(getAllocationPercentChange(current, previous, "ETH")).toBe(-15);
+    expect(getAllocationPercentChange(current, previous, "TAO")).toBe(10);
+    expect(getAllocationPercentChange(current, previous, "SOL")).toBeNull();
+    expect(getAllocationPercentChange(current, null, "BTC")).toBeNull();
+    expect(getAllocationPercentChange(unchanged, previous, "BTC")).toBe(0);
   });
 
   it("detects active holdings with missing prices", () => {
