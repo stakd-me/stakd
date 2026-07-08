@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, memo } from "react";
+import { useRef, useEffect, useMemo, memo } from "react";
 import {
   Chart as ChartJS,
   LineElement,
@@ -13,6 +13,7 @@ import {
 import { Line } from "react-chartjs-2";
 import { formatUsd, formatCompactUsd } from "@/lib/utils";
 import { useChartTheme } from "@/hooks/use-chart-theme";
+import { useTranslation } from "@/hooks/use-translation";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler);
 
@@ -23,12 +24,17 @@ interface HistoryData {
 
 export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { data: HistoryData[] }) {
   const chartTheme = useChartTheme();
+  const { t, formatDate } = useTranslation();
   const chartRef = useRef<ChartJS<"line">>(null);
-  const sanitizedData = data.filter(
-    (point) =>
-      typeof point.date === "string" &&
-      point.date.length > 0 &&
-      Number.isFinite(point.value)
+  const sanitizedData = useMemo(
+    () =>
+      data.filter(
+        (point) =>
+          typeof point.date === "string" &&
+          point.date.length > 0 &&
+          Number.isFinite(point.value)
+      ),
+    [data]
   );
   const compactSeries = sanitizedData.length <= 2;
 
@@ -46,14 +52,20 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
     chart.update("none");
   }, [sanitizedData]);
 
-  const labels = sanitizedData.map((d) => {
-    const date = new Date(d.date);
-    const now = new Date();
-    const sameYear = date.getFullYear() === now.getFullYear();
-    return sameYear
-      ? `${date.getMonth() + 1}/${date.getDate()}`
-      : `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(2)}`;
-  });
+  const labels = useMemo(
+    () =>
+      sanitizedData.map((d) => {
+        const date = new Date(d.date);
+        const sameYear = date.getFullYear() === new Date().getFullYear();
+        return formatDate(
+          date,
+          sameYear
+            ? { month: "numeric", day: "numeric" }
+            : { month: "numeric", day: "numeric", year: "2-digit" }
+        );
+      }),
+    [sanitizedData, formatDate]
+  );
 
   return (
     <div className="h-64">
@@ -63,7 +75,7 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
           labels,
           datasets: [
             {
-              label: "Portfolio Value",
+              label: t("charts.portfolioValue"),
               data: sanitizedData.map((d) => d.value),
               borderColor: "#3b82f6",
               borderWidth: 2,
@@ -100,14 +112,14 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
                   const idx = items[0].dataIndex;
                   const point = sanitizedData[idx];
                   if (!point) return "";
-                  const d = new Date(point.date);
-                  return d.toLocaleDateString("en-US", {
+                  return formatDate(new Date(point.date), {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
                   });
                 },
-                label: (item) => `Value: ${formatUsd(item.raw as number)}`,
+                label: (item) =>
+                  `${t("charts.value")}: ${formatUsd(item.raw as number)}`,
               },
             },
           },

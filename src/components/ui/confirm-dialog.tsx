@@ -1,8 +1,10 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useCallback, useId } from "react";
+import { type ReactNode, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -22,71 +24,15 @@ export function ConfirmDialog({
   onCancel,
   title,
   description,
-  confirmLabel = "Confirm",
-  cancelLabel = "Cancel",
+  confirmLabel,
+  cancelLabel,
   variant = "default",
   children,
 }: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const { t } = useTranslation();
+  const dialogRef = useFocusTrap<HTMLDivElement>(open, onCancel);
   const titleId = useId();
   const descriptionId = useId();
-
-  // Focus trap + ESC close
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onCancel();
-        return;
-      }
-      if (e.key !== "Tab" || !dialogRef.current) return;
-
-      const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    },
-    [onCancel]
-  );
-
-  useEffect(() => {
-    if (!open) return;
-
-    previousFocusRef.current = document.activeElement as HTMLElement;
-    document.addEventListener("keydown", handleKeyDown);
-
-    // Focus first focusable element in dialog
-    requestAnimationFrame(() => {
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable && focusable.length > 0) {
-        focusable[0].focus();
-      } else {
-        dialogRef.current?.focus();
-      }
-    });
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, [open, handleKeyDown]);
 
   if (!open) return null;
 
@@ -130,14 +76,14 @@ export function ConfirmDialog({
 
         <div className="mt-6 flex justify-end gap-3">
           <Button variant="outline" size="sm" onClick={onCancel}>
-            {cancelLabel}
+            {cancelLabel ?? t("common.cancel")}
           </Button>
           <Button
             variant={variant === "danger" ? "destructive" : "default"}
             size="sm"
             onClick={onConfirm}
           >
-            {confirmLabel}
+            {confirmLabel ?? t("common.confirm")}
           </Button>
         </div>
       </div>

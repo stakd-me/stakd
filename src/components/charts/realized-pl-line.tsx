@@ -13,6 +13,7 @@ import {
 import { Line } from "react-chartjs-2";
 import { formatUsd, formatCompactUsd } from "@/lib/utils";
 import { useChartTheme } from "@/hooks/use-chart-theme";
+import { useTranslation } from "@/hooks/use-translation";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler);
 
@@ -35,6 +36,7 @@ export const RealizedPlLineChart = memo(function RealizedPlLineChart({
   cumulativeLabel,
 }: Props) {
   const chartTheme = useChartTheme();
+  const { formatDate } = useTranslation();
   const isPositive = totalRealizedPL >= 0;
   const lineColor = isPositive ? "#22c55e" : "#ef4444";
   const fillColor = isPositive ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)";
@@ -76,7 +78,7 @@ export const RealizedPlLineChart = memo(function RealizedPlLineChart({
                   const idx = items[0].dataIndex;
                   const point = timeline[idx];
                   if (!point) return "";
-                  return `${new Date(point.date).toLocaleDateString()} — ${point.symbol}`;
+                  return `${formatDate(new Date(point.date))} — ${point.symbol}`;
                 },
                 label: (item) => `${cumulativeLabel}: ${formatUsd(item.raw as number)}`,
               },

@@ -23,6 +23,7 @@ import { Plus, Search, Download, Upload } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
@@ -150,8 +151,6 @@ export default function PortfolioPage() {
 
   const [search, setSearch] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const importDialogRef = useRef<HTMLDivElement>(null);
-  const previousImportFocusRef = useRef<HTMLElement | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsPerPage, setTransactionsPerPage] = useState<number>(
@@ -198,6 +197,11 @@ export default function PortfolioPage() {
     closeImportModal,
     parseCsvFile,
   } = useCsvImport();
+
+  const importDialogRef = useFocusTrap<HTMLDivElement>(
+    showImportModal,
+    closeImportModal
+  );
 
   // Manual entries state
   const [showManualEntries, setShowManualEntries] = useState(false);
@@ -1173,51 +1177,6 @@ export default function PortfolioPage() {
     submittingEdit,
     submittingInline,
   ]);
-
-  useEffect(() => {
-    if (!showImportModal) return;
-
-    previousImportFocusRef.current = document.activeElement as HTMLElement;
-
-    const handleImportModalKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Tab" || !importDialogRef.current) return;
-
-      const focusable = importDialogRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable.length === 0) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (event.shiftKey) {
-        if (document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        }
-      } else if (document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleImportModalKeyDown);
-    requestAnimationFrame(() => {
-      const focusable = importDialogRef.current?.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      if (focusable && focusable.length > 0) {
-        focusable[0].focus();
-      } else {
-        importDialogRef.current?.focus();
-      }
-    });
-
-    return () => {
-      document.removeEventListener("keydown", handleImportModalKeyDown);
-      previousImportFocusRef.current?.focus();
-    };
-  }, [showImportModal]);
 
   const manualEntryQuantityValid =
     Number.isFinite(parseFloat(meQuantity)) && parseFloat(meQuantity) > 0;

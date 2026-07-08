@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useTranslation } from "@/hooks/use-translation";
 import { toLocalDatetimeString } from "@/lib/utils";
 import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
@@ -31,6 +32,8 @@ export function EditHoldingDialog({
   onCancel,
 }: EditHoldingDialogProps) {
   const { t } = useTranslation();
+  const dialogRef = useFocusTrap<HTMLDivElement>(open, onCancel);
+  const titleId = useId();
   const suggestedId = BINANCE_SYMBOL_TO_COINGECKO_ID[item.symbol.trim().toUpperCase()] ?? null;
   const effectiveId = item.coingeckoId ?? suggestedId ?? "";
   const [coingeckoId, setCoingeckoId] = useState(effectiveId);
@@ -85,11 +88,14 @@ export function EditHoldingDialog({
         aria-hidden="true"
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className="relative mx-4 w-full max-w-md rounded-lg border border-border bg-bg-sidebar p-6 shadow-xl animate-fade-in-scale"
       >
-        <h3 className="text-lg font-semibold text-text-primary">
+        <h3 id={titleId} className="text-lg font-semibold text-text-primary">
           {t("portfolio.editHoldingTitle")}
         </h3>
         <p className="mt-1 text-sm text-text-subtle">
