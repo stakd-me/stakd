@@ -5,6 +5,8 @@ import type {
 } from "@/lib/crypto/vault-types";
 import type { PriceData } from "@/lib/services/portfolio-calculator";
 import { getHoldings } from "@/lib/services/portfolio-calculator";
+import { normalizeSymbol } from "@/lib/asset-key";
+import { roundToTwo } from "@/lib/num";
 
 export const ALLOCATION_HISTORY_ROWS_PER_PAGE = 52;
 export const MAX_ALLOCATION_SNAPSHOTS = 1040;
@@ -45,17 +47,8 @@ export function getWeeklyAllocationWeekStartKey(now: Date): string {
   return toUtcDateKey(getUtcWeekStart(now));
 }
 
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function roundPercent(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
-function normalizeSymbol(symbol: string): string {
-  return symbol.trim().toUpperCase();
-}
+const roundMoney = roundToTwo;
+const roundPercent = roundToTwo;
 
 export function getMissingAllocationPriceTokens(
   vault: VaultData,

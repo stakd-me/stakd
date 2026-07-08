@@ -1,4 +1,6 @@
 import { normalizeTokenSymbol } from "@/lib/constants/stablecoins";
+import { normalizeCoingeckoId } from "@/lib/asset-key";
+import { toSafeNumber as toFiniteNumber } from "@/lib/num";
 import type {
   VaultTransaction,
   VaultTransactionSettlement,
@@ -51,22 +53,6 @@ interface TradeSettlementInput {
   totalCost: number;
   fee: number;
   pricePerUnit?: number | string | null;
-}
-
-function toFiniteNumber(value: number | string | null | undefined): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function normalizeCoingeckoId(value: string | null | undefined): string | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized.length > 0 ? normalized : null;
 }
 
 function normalizeTokenName(

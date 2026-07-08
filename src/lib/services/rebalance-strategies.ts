@@ -2,6 +2,7 @@ import { getSymbolValues, type PriceData } from "@/lib/services/portfolio-calcul
 import type { VaultData } from "@/lib/crypto/vault-types";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
 import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
+import { roundToTwo } from "@/lib/num";
 
 export type VolatilityMap = Record<string, { volatility: number }>;
 
@@ -103,10 +104,6 @@ function mergeTargetsBySymbol(
     ...target,
     targetPercent: roundToTwo(target.targetPercent),
   }));
-}
-
-function roundToTwo(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 function allocateRoundedPercents(weights: number[], totalPercent: number): number[] {

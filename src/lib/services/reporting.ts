@@ -1,6 +1,8 @@
 import type { VaultData, VaultTransaction } from "@/lib/crypto/vault-types";
 import type { TokenHolding } from "@/lib/services/portfolio-calculator";
 import { expandTransactionForBalance } from "@/lib/transactions";
+import { makeAssetKey, normalizeCoingeckoId, normalizeSymbol } from "@/lib/asset-key";
+import { roundTo, toSafeNumber } from "@/lib/num";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const WEEK_DAYS = 7;
@@ -178,35 +180,6 @@ interface TransactionAmountResolution {
   source: AmountResolutionSource;
 }
 
-function roundTo(value: number, decimals: number): number {
-  const factor = 10 ** decimals;
-  return Math.round(value * factor) / factor;
-}
-
-function toSafeNumber(value: unknown): number {
-  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function normalizeSymbol(value: unknown): string {
-  return typeof value === "string" ? value.trim().toUpperCase() : "";
-}
-
-function normalizeCoingeckoId(value: unknown): string {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
-}
-
-function makeAssetKey(symbol: unknown, coingeckoId: unknown): string {
-  const normalizedSymbol = normalizeSymbol(symbol);
-  const normalizedId = normalizeCoingeckoId(coingeckoId);
-  if (!normalizedSymbol) return "";
-  return `${normalizedSymbol}:${normalizedId}`;
-}
-
 function parseSnapshotBreakdown(raw: string): Record<string, number> {
   if (!raw || raw.trim().length === 0) return {};
 
@@ -239,7 +212,7 @@ function splitAssetKey(assetKey: string): { symbol: string; coingeckoId: string 
   const [symbolRaw = "", coingeckoIdRaw = ""] = assetKey.split(":");
   return {
     symbol: normalizeSymbol(symbolRaw),
-    coingeckoId: normalizeCoingeckoId(coingeckoIdRaw),
+    coingeckoId: normalizeCoingeckoId(coingeckoIdRaw) ?? "",
   };
 }
 

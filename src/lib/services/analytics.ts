@@ -1,4 +1,5 @@
 import type { TokenHolding } from "@/lib/services/portfolio-calculator";
+import { roundToTwo } from "@/lib/num";
 
 export interface PerformanceMetrics {
   totalInvested: number;
@@ -10,10 +11,6 @@ export interface PerformanceMetrics {
   winRate: number;
   avgHoldingValue: number;
   numberOfTokens: number;
-}
-
-function roundToTwo(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 function getInvestedCostBasis(holding: TokenHolding): number {
