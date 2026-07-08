@@ -57,7 +57,7 @@ describe("POST /api/auth/refresh", () => {
     expect(res.headers.get("set-cookie")).toBeNull();
   });
 
-  it("returns a new access token and refreshes the active session", async () => {
+  it("rotates the refresh token and returns a new access token", async () => {
     updateReturningMock.mockResolvedValue([
       {
         userId: "user-1",
@@ -78,12 +78,44 @@ describe("POST /api/auth/refresh", () => {
       accessToken: "new-access-token",
       userId: "user-1",
     });
+    // The session row must receive a NEW token hash (rotation), not just a
+    // bumped expiry.
     expect(updateSetMock).toHaveBeenCalledWith({
+      refreshTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       expiresAt: expect.any(Date),
     });
     expect(signAccessTokenMock).toHaveBeenCalledWith("user-1");
-    expect(res.headers.get("set-cookie")).toContain("refreshToken=old-token");
-    expect(res.headers.get("set-cookie")).toContain("rememberMe=1");
-    expect(res.headers.get("set-cookie")).toContain("Max-Age=2592000");
+
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    // A fresh 64-hex-char refresh token is issued; the old value never
+    // reappears in the cookie.
+    expect(setCookie).toMatch(/refreshToken=[0-9a-f]{64}/);
+    expect(setCookie).not.toContain("refreshToken=old-token");
+    expect(setCookie).toContain("rememberMe=1");
+    expect(setCookie).toContain("Max-Age=2592000");
+  });
+
+  it("issues a different token on every refresh", async () => {
+    updateReturningMock.mockResolvedValue([{ userId: "user-1" }]);
+    signAccessTokenMock.mockResolvedValue("new-access-token");
+
+    const { POST } = await import("@/app/api/auth/refresh/route");
+    const makeReq = () =>
+      new NextRequest("http://localhost/api/auth/refresh", {
+        method: "POST",
+        headers: { cookie: "refreshToken=old-token; rememberMe=1" },
+      });
+
+    const extractToken = (res: Response) =>
+      (res.headers.get("set-cookie") ?? "").match(
+        /refreshToken=([0-9a-f]{64})/
+      )?.[1];
+
+    const first = extractToken(await POST(makeReq()));
+    const second = extractToken(await POST(makeReq()));
+
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    expect(first).not.toBe(second);
   });
 });

@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // On mount: check if we have a valid session (encryption key in session/local storage + refresh token)
   useEffect(() => {
     const tryRestore = async () => {
-      if (!hasEncKey()) {
+      if (!(await hasEncKey())) {
         setLoading(false);
         return;
       }

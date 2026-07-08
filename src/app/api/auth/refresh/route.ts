@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { and, eq, gt } from "drizzle-orm";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 import { signAccessToken } from "@/lib/auth/jwt";
 
 const REFRESH_TOKEN_EXPIRY_DAYS = 30;
@@ -36,9 +36,19 @@ export async function POST(req: NextRequest) {
       .update(refreshToken)
       .digest("hex");
 
+    // Rotate: a refresh token is single-use. The UPDATE only matches the
+    // current hash, so a replayed old token finds no session and gets a 401.
+    const newRefreshToken = randomBytes(32).toString("hex");
+    const newTokenHash = createHash("sha256")
+      .update(newRefreshToken)
+      .digest("hex");
+
     const [session] = await db
       .update(schema.sessions)
-      .set({ expiresAt: getRefreshExpiryDate() })
+      .set({
+        refreshTokenHash: newTokenHash,
+        expiresAt: getRefreshExpiryDate(),
+      })
       .where(
         and(
           eq(schema.sessions.refreshTokenHash, tokenHash),
@@ -62,7 +72,7 @@ export async function POST(req: NextRequest) {
       userId: session.userId,
     });
 
-    response.cookies.set("refreshToken", refreshToken, {
+    response.cookies.set("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

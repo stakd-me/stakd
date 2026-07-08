@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, timingSafeEqual } from "crypto";
 import { db, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { authenticateRequest, authError } from "@/lib/auth-guard";
+import { rateLimit } from "@/lib/redis";
+import { isHexOfByteLength } from "@/lib/auth/input-validation";
 
 const MAX_VAULT_SIZE = 10 * 1024 * 1024; // 10MB
 const REFRESH_COOKIE_PATH = "/api/auth/refresh";
@@ -130,10 +133,49 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ version: updated[0].version });
 }
 
-// DELETE: Delete user account and all data (CASCADE)
+// DELETE: Delete user account and all data (CASCADE).
+// Irreversible, so a 15-min access token alone is not enough — the caller
+// must re-prove knowledge of the passphrase via the derived auth key.
 export async function DELETE(req: NextRequest) {
   const payload = await authenticateRequest(req);
   if (!payload) return authError();
+
+  const allowed = await rateLimit(`delete-account:${payload.sub}`, 5, 60);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many attempts. Try again later." },
+      { status: 429 }
+    );
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const authKeyHex =
+    typeof body.authKeyHex === "string" ? body.authKeyHex : "";
+  if (!isHexOfByteLength(authKeyHex, 32)) {
+    return NextResponse.json(
+      { error: "Passphrase verification required" },
+      { status: 400 }
+    );
+  }
+
+  const [user] = await db
+    .select({ authHash: schema.users.authHash })
+    .from(schema.users)
+    .where(eq(schema.users.id, payload.sub))
+    .limit(1);
+  if (!user) return authError();
+
+  const computedHash = createHash("sha256")
+    .update(Buffer.from(authKeyHex, "hex"))
+    .digest("hex");
+  const a = Buffer.from(computedHash, "hex");
+  const b = Buffer.from(user.authHash, "hex");
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return NextResponse.json(
+      { error: "Invalid passphrase" },
+      { status: 401 }
+    );
+  }
 
   await db.delete(schema.users).where(eq(schema.users.id, payload.sub));
 

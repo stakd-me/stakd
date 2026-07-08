@@ -22,7 +22,7 @@ export default function Home() {
         return;
       }
 
-      if (!hasEncKey()) {
+      if (!(await hasEncKey())) {
         setLoading(false);
         return;
       }

@@ -7,18 +7,8 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self' data:",
-  "connect-src 'self'",
-].join("; ");
+// Content-Security-Policy is set per-request in src/proxy.ts so the
+// script-src can carry a nonce instead of 'unsafe-inline'.
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -38,16 +28,10 @@ const nextConfig: NextConfig = {
     ];
 
     if (isProduction) {
-      headers.push(
-        {
-          key: "Strict-Transport-Security",
-          value: "max-age=31536000; includeSubDomains; preload",
-        },
-        {
-          key: "Content-Security-Policy",
-          value: contentSecurityPolicy,
-        }
-      );
+      headers.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains; preload",
+      });
     }
 
     return [{

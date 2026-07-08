@@ -141,7 +141,7 @@ export default function SettingsPage() {
       // 4. Re-encrypt vault with new enc key
       const { vault } = useVaultStore.getState();
       const { ciphertext, iv } = await encryptVault(vault, newEncKey);
-      const rememberCurrentDevice = isEncKeyPersistent();
+      const rememberCurrentDevice = await isEncKeyPersistent();
 
       // 5. Send to server
       const newSaltHex = Array.from(newSalt)
@@ -394,6 +394,8 @@ export default function SettingsPage() {
         .catch(() => ({ error: t("settings.failedVerifyPassphrase") }));
       throw new Error(payload.error || t("settings.failedVerifyPassphrase"));
     }
+
+    return authKeyHex;
   };
 
   const handleExportVaultBackup = () => {
@@ -427,7 +429,7 @@ export default function SettingsPage() {
 
     setDangerRunning(true);
     try {
-      await verifyCurrentPassphrase(dangerPassphrase);
+      const authKeyHex = await verifyCurrentPassphrase(dangerPassphrase);
 
       if (dangerAction === "portfolio") {
         useVaultStore.getState().updateVault((prev) => ({
@@ -456,19 +458,23 @@ export default function SettingsPage() {
         useVaultStore.getState().updateVault(() => createEmptyVault());
         await saveVaultToServer();
         await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-        clearEncKey();
+        await clearEncKey();
         clearVaultStore();
         clearAuth();
         toast(t("settings.wipeAllSuccess"), "success");
       } else {
-        const res = await apiFetch("/api/vault", { method: "DELETE" });
+        const res = await apiFetch("/api/vault", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ authKeyHex }),
+        });
         if (!res.ok) {
           const payload = await res
             .json()
             .catch(() => ({ error: t("settings.wipeFailed") }));
           throw new Error(payload.error || t("settings.wipeFailed"));
         }
-        clearEncKey();
+        await clearEncKey();
         clearVaultStore();
         clearAuth();
         toast(t("settings.deleteAccountSuccess"), "success");
@@ -490,7 +496,13 @@ export default function SettingsPage() {
   const passphraseLongEnough = newPassphrase.length >= 8;
 
   useEffect(() => {
-    setSessionKeyPersistent(isEncKeyPersistent());
+    let cancelled = false;
+    isEncKeyPersistent().then((persistent) => {
+      if (!cancelled) setSessionKeyPersistent(persistent);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSessionModeChange = async (persist: boolean) => {
@@ -505,7 +517,7 @@ export default function SettingsPage() {
         throw new Error(t("settings.sessionModeNoKey"));
       }
 
-      const previousPersist = isEncKeyPersistent();
+      const previousPersist = await isEncKeyPersistent();
       await storeEncKey(encKey, { persist });
 
       const res = await apiFetch("/api/auth/refresh/mode", {

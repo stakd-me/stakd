@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const authenticateRequestMock = vi.fn();
+const rateLimitMock = vi.fn();
 const authErrorMock = vi.fn(() =>
   NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 );
@@ -21,6 +23,13 @@ const updateWhereMock = vi.fn(() => ({ returning: updateReturningMock }));
 const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
 const updateMock = vi.fn(() => ({ set: updateSetMock }));
 
+const deleteWhereMock = vi.fn();
+const deleteMock = vi.fn(() => ({ where: deleteWhereMock }));
+
+vi.mock("@/lib/redis", () => ({
+  rateLimit: (...args: unknown[]) => rateLimitMock(...args),
+}));
+
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn(() => ({})),
   and: vi.fn(() => ({})),
@@ -36,7 +45,7 @@ vi.mock("@/lib/db", () => ({
     select: (...args: unknown[]) => selectMock(...args),
     insert: (...args: unknown[]) => insertMock(...args),
     update: (...args: unknown[]) => updateMock(...args),
-    delete: vi.fn(),
+    delete: (...args: unknown[]) => deleteMock(...args),
   },
   schema: {
     encryptedVaults: {
@@ -45,6 +54,7 @@ vi.mock("@/lib/db", () => ({
     },
     users: {
       id: "id",
+      authHash: "auth_hash",
     },
   },
 }));
@@ -134,5 +144,82 @@ describe("PUT /api/vault", () => {
 
     expect(res.status).toBe(409);
     expect(body.currentVersion).toBe(5);
+  });
+});
+
+describe("DELETE /api/vault", () => {
+  const authKeyHex = "ab".repeat(32);
+  const authHash = createHash("sha256")
+    .update(Buffer.from(authKeyHex, "hex"))
+    .digest("hex");
+
+  const makeReq = (body?: unknown) =>
+    new NextRequest("http://localhost/api/vault", {
+      method: "DELETE",
+      ...(body !== undefined
+        ? {
+            body: JSON.stringify(body),
+            headers: { "content-type": "application/json" },
+          }
+        : {}),
+    });
+
+  beforeEach(() => {
+    authenticateRequestMock.mockReset();
+    authErrorMock.mockClear();
+    rateLimitMock.mockReset();
+    selectLimitMock.mockReset();
+    deleteWhereMock.mockReset();
+    deleteMock.mockClear();
+
+    authenticateRequestMock.mockResolvedValue({ sub: "user-1" });
+    rateLimitMock.mockResolvedValue(true);
+    selectLimitMock.mockResolvedValue([{ authHash }]);
+    deleteWhereMock.mockResolvedValue(undefined);
+  });
+
+  it("rejects deletion without passphrase verification payload", async () => {
+    const { DELETE } = await import("@/app/api/vault/route");
+
+    const res = await DELETE(makeReq());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toMatch(/Passphrase verification required/);
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects deletion with a wrong auth key", async () => {
+    const { DELETE } = await import("@/app/api/vault/route");
+
+    const res = await DELETE(makeReq({ authKeyHex: "cd".repeat(32) }));
+    const body = await res.json();
+
+    expect(res.status).toBe(401);
+    expect(body.error).toMatch(/Invalid passphrase/);
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes the account when the auth key matches", async () => {
+    const { DELETE } = await import("@/app/api/vault/route");
+
+    const res = await DELETE(makeReq({ authKeyHex }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    const setCookie = res.headers.get("set-cookie") ?? "";
+    expect(setCookie).toContain("refreshToken=;");
+  });
+
+  it("returns 429 when rate limited", async () => {
+    rateLimitMock.mockResolvedValue(false);
+    const { DELETE } = await import("@/app/api/vault/route");
+
+    const res = await DELETE(makeReq({ authKeyHex }));
+
+    expect(res.status).toBe(429);
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 });

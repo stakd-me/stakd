@@ -57,7 +57,7 @@ export function Sidebar() {
     } catch {
       // Logout endpoint may fail if session already expired
     }
-    clearEncKey();
+    await clearEncKey();
     clearVault();
     clearAuth();
   };
