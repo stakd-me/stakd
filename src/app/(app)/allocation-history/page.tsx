@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +13,21 @@ import { useVaultStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import {
   ALLOCATION_HISTORY_ROWS_PER_PAGE,
+  buildAllocationTrend,
   formatAllocationUpdateDate,
   getAllocationHistorySymbols,
   getAllocationPercentChange,
   getAllocationPercentMap,
   sortAllocationSnapshotsDesc,
 } from "@/lib/services/allocation-history";
+
+const AllocationAreaChart = dynamic(
+  () =>
+    import("@/components/charts/allocation-area").then(
+      (mod) => mod.AllocationAreaChart
+    ),
+  { ssr: false }
+);
 
 function formatPercent(value: number | undefined): string {
   if (typeof value !== "number" || !Number.isFinite(value)) {
@@ -82,6 +92,9 @@ export default function AllocationHistoryPage() {
 
   const latestSnapshot = sortedSnapshots[0] ?? null;
 
+  const trend = useMemo(() => buildAllocationTrend(snapshots), [snapshots]);
+  const showTrendChart = trend.weeks.length >= 2;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -108,6 +121,23 @@ export default function AllocationHistoryPage() {
           valueSize="2xl"
         />
       </div>
+
+      {showTrendChart && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("allocationHistory.chartTitle")}</CardTitle>
+            <p className="text-xs text-text-subtle">
+              {t("allocationHistory.chartHint")}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AllocationAreaChart
+              trend={trend}
+              othersLabel={t("allocationHistory.others")}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

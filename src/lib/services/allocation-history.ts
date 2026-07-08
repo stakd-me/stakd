@@ -181,6 +181,81 @@ export function getAllocationPercentMap(
   return map;
 }
 
+export const ALLOCATION_TREND_MAX_SERIES = 7;
+
+export interface AllocationTrendSeries {
+  /** Uppercase token symbol; "" for the aggregated "others" bucket. */
+  symbol: string;
+  isOthers: boolean;
+  /** Percent per week, aligned with AllocationTrend.weeks (0 when absent). */
+  percents: number[];
+}
+
+export interface AllocationTrend {
+  /** Week-start keys (YYYY-MM-DD), oldest first. */
+  weeks: string[];
+  /** Top series by average percent, largest first; "others" (if any) last. */
+  series: AllocationTrendSeries[];
+}
+
+/**
+ * Chronological per-token allocation series for the stacked-area trend chart.
+ * Tokens beyond maxSeries fold into a single "others" series — categorical
+ * hues are assigned in fixed order and never cycled.
+ */
+export function buildAllocationTrend(
+  snapshots: VaultAllocationSnapshot[],
+  maxSeries: number = ALLOCATION_TREND_MAX_SERIES
+): AllocationTrend {
+  const sorted = [...snapshots].sort((a, b) =>
+    a.weekStart.localeCompare(b.weekStart)
+  );
+  const weeks = sorted.map((snapshot) => snapshot.weekStart);
+  const percentMaps = sorted.map((snapshot) =>
+    getAllocationPercentMap(snapshot)
+  );
+
+  const totals = new Map<string, number>();
+  for (const percentMap of percentMaps) {
+    for (const [symbol, percent] of Object.entries(percentMap)) {
+      if (!symbol || !Number.isFinite(percent)) continue;
+      totals.set(symbol, (totals.get(symbol) ?? 0) + percent);
+    }
+  }
+
+  const ranked = [...totals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([symbol]) => symbol);
+  const top = ranked.slice(0, maxSeries);
+  const topSet = new Set(top);
+
+  const series: AllocationTrendSeries[] = top.map((symbol) => ({
+    symbol,
+    isOthers: false,
+    percents: percentMaps.map((percentMap) => {
+      const percent = percentMap[symbol];
+      return Number.isFinite(percent) ? roundToTwo(percent) : 0;
+    }),
+  }));
+
+  if (ranked.length > top.length) {
+    const others = percentMaps.map((percentMap) =>
+      roundToTwo(
+        Object.entries(percentMap).reduce(
+          (sum, [symbol, percent]) =>
+            !topSet.has(symbol) && Number.isFinite(percent)
+              ? sum + percent
+              : sum,
+          0
+        )
+      )
+    );
+    series.push({ symbol: "", isOthers: true, percents: others });
+  }
+
+  return { weeks, series };
+}
+
 export function getAllocationPercentChange(
   currentSnapshot: VaultAllocationSnapshot,
   previousSnapshot: VaultAllocationSnapshot | null | undefined,

@@ -6,6 +6,7 @@ import type {
 } from "@/lib/crypto/vault-types";
 import type { PriceData } from "@/lib/services/portfolio-calculator";
 import {
+  buildAllocationTrend,
   createWeeklyAllocationSnapshot,
   formatAllocationUpdateDate,
   getAllocationHistorySymbols,
@@ -248,5 +249,87 @@ describe("allocation-history", () => {
     );
 
     expect(missing).toEqual([{ coingeckoId: "ethereum", symbol: "ETH" }]);
+  });
+
+  describe("buildAllocationTrend", () => {
+    const makeSnapshot = (
+      weekStart: string,
+      allocations: { symbol: string; percent: number }[]
+    ): VaultAllocationSnapshot => ({
+      id: `snap-${weekStart}`,
+      weekStart,
+      updatedAt: `${weekStart}T00:01:00.000Z`,
+      capturedAt: `${weekStart}T00:01:00.000Z`,
+      totalValueUsd: 1000,
+      allocations: allocations.map(({ symbol, percent }) => ({
+        symbol,
+        tokenName: symbol,
+        coingeckoId: null,
+        valueUsd: (percent / 100) * 1000,
+        percent,
+      })),
+    });
+
+    it("orders weeks ascending and series by average percent descending", () => {
+      const trend = buildAllocationTrend([
+        makeSnapshot("2026-06-29", [
+          { symbol: "BTC", percent: 60 },
+          { symbol: "ETH", percent: 40 },
+        ]),
+        makeSnapshot("2026-06-22", [
+          { symbol: "BTC", percent: 50 },
+          { symbol: "ETH", percent: 50 },
+        ]),
+      ]);
+
+      expect(trend.weeks).toEqual(["2026-06-22", "2026-06-29"]);
+      expect(trend.series.map((s) => s.symbol)).toEqual(["BTC", "ETH"]);
+      expect(trend.series[0].percents).toEqual([50, 60]);
+      expect(trend.series[1].percents).toEqual([50, 40]);
+    });
+
+    it("fills missing weeks with zero for tokens absent from a snapshot", () => {
+      const trend = buildAllocationTrend([
+        makeSnapshot("2026-06-22", [{ symbol: "BTC", percent: 100 }]),
+        makeSnapshot("2026-06-29", [
+          { symbol: "BTC", percent: 70 },
+          { symbol: "SOL", percent: 30 },
+        ]),
+      ]);
+
+      const sol = trend.series.find((s) => s.symbol === "SOL");
+      expect(sol?.percents).toEqual([0, 30]);
+    });
+
+    it("folds tokens beyond maxSeries into a single others series", () => {
+      const trend = buildAllocationTrend(
+        [
+          makeSnapshot("2026-06-22", [
+            { symbol: "BTC", percent: 40 },
+            { symbol: "ETH", percent: 30 },
+            { symbol: "SOL", percent: 20 },
+            { symbol: "DOGE", percent: 10 },
+          ]),
+        ],
+        2
+      );
+
+      expect(trend.series).toHaveLength(3);
+      expect(trend.series.map((s) => s.symbol)).toEqual(["BTC", "ETH", ""]);
+      const others = trend.series[2];
+      expect(others.isOthers).toBe(true);
+      expect(others.percents).toEqual([30]);
+    });
+
+    it("returns no others series when everything fits", () => {
+      const trend = buildAllocationTrend([
+        makeSnapshot("2026-06-22", [
+          { symbol: "BTC", percent: 60 },
+          { symbol: "ETH", percent: 40 },
+        ]),
+      ]);
+
+      expect(trend.series.some((s) => s.isOthers)).toBe(false);
+    });
   });
 });
