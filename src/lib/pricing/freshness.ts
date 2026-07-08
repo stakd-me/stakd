@@ -1,15 +1,9 @@
 import type { PriceData } from "@/lib/services/portfolio-calculator";
+import { lookupPrice } from "@/lib/pricing/price-map";
 
 export interface PriceFreshnessToken {
   coingeckoId: string | null | undefined;
   symbol?: string | null | undefined;
-}
-
-function normalizeCoingeckoId(
-  value: string | null | undefined
-): string | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized.length > 0 ? normalized : null;
 }
 
 /**
@@ -24,10 +18,7 @@ export function getOldestPriceUpdateForTokens(
   const updatedAts: string[] = [];
 
   for (const token of tokens) {
-    // Try symbol first (CEX), then coingeckoId (CoinGecko fallback)
-    const sym = (token.symbol ?? "").trim().toUpperCase();
-    const id = normalizeCoingeckoId(token.coingeckoId);
-    const entry = (sym ? priceMap[sym] : undefined) ?? (id ? priceMap[id] : undefined);
+    const entry = lookupPrice(priceMap, token.symbol, token.coingeckoId);
     const updatedAt = entry?.updatedAt;
     if (typeof updatedAt === "string" && updatedAt.length > 0) {
       updatedAts.push(updatedAt);

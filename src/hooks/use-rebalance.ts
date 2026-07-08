@@ -24,7 +24,9 @@ import {
 import type { StrategyContext, StrategyOutput } from "@/lib/services/rebalance-strategies";
 import { getSymbolValues } from "@/lib/services/portfolio-calculator";
 import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
+import { lookupPrice } from "@/lib/pricing/price-map";
 import { resolveCanonicalCoinGeckoIdBySymbol } from "@/lib/pricing/binance-symbol-resolver";
+import { normalizeCoingeckoId } from "@/lib/asset-key";
 import { formatUsd } from "@/lib/utils";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
 import type {
@@ -289,13 +291,6 @@ function computeCategoryBreakdown(
   }));
 }
 
-function normalizeCoinGeckoId(
-  value: string | null | undefined
-): string | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized.length > 0 ? normalized : null;
-}
-
 const TARGET_EXPANDED_STORAGE_KEY = "rebalance:target-allocation-expanded";
 
 export type RebalancePhase = "setup" | "analysis" | "execution" | "all";
@@ -443,7 +438,7 @@ export function useRebalance() {
     const map: Record<string, string> = {};
     const assign = (symbol: string, coingeckoId: string | null | undefined) => {
       const normalizedSymbol = symbol.trim().toUpperCase();
-      const normalizedId = normalizeCoinGeckoId(coingeckoId);
+      const normalizedId = normalizeCoingeckoId(coingeckoId);
       if (!normalizedSymbol || !normalizedId || map[normalizedSymbol]) return;
       map[normalizedSymbol] = normalizedId;
     };
@@ -488,7 +483,7 @@ export function useRebalance() {
         return null;
       }
 
-      const unitPrice = priceMap[symbol]?.usd ?? priceMap[coingeckoId]?.usd ?? 0;
+      const unitPrice = lookupPrice(priceMap, symbol, coingeckoId)?.usd ?? 0;
       if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
         return null;
       }
@@ -773,14 +768,11 @@ export function useRebalance() {
         const coingeckoId =
           knownSymbolCoingeckoMap[symbol] ??
           resolveCanonicalCoinGeckoIdBySymbol(symbol);
-        const trackingStatus =
-          priceMap[symbol]
-            ? "tracked"
-            : coingeckoId && priceMap[coingeckoId]
-              ? "tracked"
-              : coingeckoId
-                ? "requested"
-                : "untracked";
+        const trackingStatus = lookupPrice(priceMap, symbol, coingeckoId)
+          ? "tracked"
+          : coingeckoId
+            ? "requested"
+            : "untracked";
 
         if (trackingStatus === "tracked") trackedCount += 1;
         else if (trackingStatus === "requested") requestedCount += 1;

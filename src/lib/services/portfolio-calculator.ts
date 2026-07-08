@@ -1,7 +1,10 @@
 import type { VaultData } from "@/lib/crypto/vault-types";
 import { expandTransactionForBalance } from "@/lib/transactions";
 import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
+import { lookupPrice } from "@/lib/pricing/price-map";
 import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
+import { makeAssetKey, normalizeCoingeckoId } from "@/lib/asset-key";
+import { toSafeNumber } from "@/lib/num";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -47,24 +50,6 @@ export interface TokenHolding {
   realizedPL: number;
 }
 
-function toSafeNumber(value: number | string | null | undefined): number {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : 0;
-  }
-  if (typeof value === "string") {
-    const parsed = parseFloat(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
-}
-
-function normalizeCoingeckoId(
-  value: string | null | undefined
-): string | null {
-  const normalized = (value ?? "").trim().toLowerCase();
-  return normalized.length > 0 ? normalized : null;
-}
-
 /**
  * Auto-resolve coingeckoId from symbol when missing.
  * Uses the curated BINANCE_SYMBOL_TO_COINGECKO_ID map for top assets.
@@ -82,7 +67,7 @@ function getHoldingKey(
   symbol: string,
   coingeckoId: string | null | undefined
 ): string {
-  return `${symbol.trim().toUpperCase()}:${normalizeCoingeckoId(coingeckoId) ?? ""}`;
+  return makeAssetKey(symbol, coingeckoId);
 }
 
 function buildCostBasisOverrideMap(vault: VaultData): Map<string, number> {
@@ -116,23 +101,15 @@ function getCostBasisOverride(
 }
 
 /**
- * Look up price by symbol first (CEX/Binance), then coingeckoId (CoinGecko fallback).
- * priceMap is dual-keyed: both "BTC" and "bitcoin" point to the same price data.
+ * Look up price for a holding. Exchange (symbol-keyed) prices win; the
+ * coingeckoId entry is the CoinGecko fallback — see lookupPrice.
  */
 function getPrice(
   priceMap: Record<string, PriceData>,
   symbol: string | undefined,
   coingeckoId: string | null | undefined
 ): PriceData | null {
-  // Primary: look up by symbol (CEX price, always available)
-  if (symbol) {
-    const upper = symbol.trim().toUpperCase();
-    if (upper && priceMap[upper]) return priceMap[upper];
-  }
-  // Fallback: look up by coingeckoId (CoinGecko / long-tail tokens)
-  const normalized = normalizeCoingeckoId(coingeckoId);
-  if (normalized && priceMap[normalized]) return priceMap[normalized];
-  return null;
+  return lookupPrice(priceMap, symbol, coingeckoId);
 }
 
 // ── Core: compute holdings from vault data + prices ──────────────────
@@ -363,8 +340,15 @@ export function getPortfolioSummary(
   vault: VaultData,
   priceMap: Record<string, PriceData>
 ): PortfolioSummary {
-  const holdings = getHoldings(vault, priceMap);
+  return summarizeHoldings(getHoldings(vault, priceMap));
+}
 
+/**
+ * Derive the summary from already-computed holdings. Use this when holdings
+ * are in hand (e.g. usePortfolio) — getHoldings is the expensive full
+ * transaction-expansion pass and must not run twice per render.
+ */
+export function summarizeHoldings(holdings: TokenHolding[]): PortfolioSummary {
   let totalValue = 0;
   const symbolValues: Record<string, number> = {};
 

@@ -480,15 +480,52 @@ export async function startBinanceWebSocket(): Promise<void> {
   // Clean up non-canonical duplicate symbols before starting.
   // The curated map defines THE canonical coingeckoId for each symbol.
   // Any other coingeckoId claiming the same symbol is a lookalike token.
-  const { BINANCE_SYMBOL_TO_COINGECKO_ID } = await import("./binance-symbol-resolver");
-  for (const [symbol, canonicalId] of Object.entries(BINANCE_SYMBOL_TO_COINGECKO_ID)) {
-    const { and, ne, eq } = await import("drizzle-orm");
-    await db
-      .delete(schema.prices)
-      .where(and(eq(schema.prices.symbol, symbol), ne(schema.prices.coingeckoId, canonicalId)));
-    await db
-      .delete(schema.exchangeCache)
-      .where(and(eq(schema.exchangeCache.symbol, symbol), ne(schema.exchangeCache.coingeckoId, canonicalId)));
+  try {
+    const { BINANCE_SYMBOL_TO_COINGECKO_ID } = await import("./binance-symbol-resolver");
+    const { and, ne, eq, or } = await import("drizzle-orm");
+    const entries = Object.entries(BINANCE_SYMBOL_TO_COINGECKO_ID);
+
+    const [deletedPrices, deletedCache] = await Promise.all([
+      db
+        .delete(schema.prices)
+        .where(
+          or(
+            ...entries.map(([symbol, canonicalId]) =>
+              and(
+                eq(schema.prices.symbol, symbol),
+                ne(schema.prices.coingeckoId, canonicalId)
+              )
+            )
+          )
+        )
+        .returning({ coingeckoId: schema.prices.coingeckoId }),
+      db
+        .delete(schema.exchangeCache)
+        .where(
+          or(
+            ...entries.map(([symbol, canonicalId]) =>
+              and(
+                eq(schema.exchangeCache.symbol, symbol),
+                ne(schema.exchangeCache.coingeckoId, canonicalId)
+              )
+            )
+          )
+        )
+        .returning({ coingeckoId: schema.exchangeCache.coingeckoId }),
+    ]);
+
+    if (deletedPrices.length > 0 || deletedCache.length > 0) {
+      console.warn(
+        `[binance-ws] Removed non-canonical duplicate symbol rows — prices: [${deletedPrices
+          .map((r) => r.coingeckoId)
+          .join(", ")}], exchange_cache: [${deletedCache
+          .map((r) => r.coingeckoId)
+          .join(", ")}]`
+      );
+    }
+  } catch (error) {
+    // Cleanup is a hygiene pass; a failure must not block price streaming.
+    console.warn("[binance-ws] Duplicate-symbol cleanup failed:", error);
   }
 
   const allPrices = await db

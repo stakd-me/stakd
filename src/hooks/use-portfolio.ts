@@ -5,7 +5,7 @@ import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
 import {
   getHoldings,
-  getPortfolioSummary,
+  summarizeHoldings,
 } from "@/lib/services/portfolio-calculator";
 import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
 
@@ -43,10 +43,7 @@ export function usePortfolio() {
     [vault, priceMap]
   );
 
-  const summary = useMemo(
-    () => getPortfolioSummary(vault, priceMap),
-    [vault, priceMap]
-  );
+  const summary = useMemo(() => summarizeHoldings(holdings), [holdings]);
 
   // Auto-ensure prices exist for all held tokens (subscribes to WS for real-time updates)
   useEffect(() => {

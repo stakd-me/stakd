@@ -491,8 +491,16 @@ export async function ensurePricesExist(
         );
       }
     }
-  } catch {
-    // WS manager or exchange resolver may not be initialized yet
+  } catch (error) {
+    // Not fatal (REST polling still covers these tokens), but if this keeps
+    // failing the affected tokens never get live streamed prices — so it must
+    // be visible, not silent.
+    console.warn(
+      `[pricing] Failed to subscribe new tokens to live price streams (${missing
+        .map((t) => t.coingeckoId)
+        .join(", ")}):`,
+      error
+    );
   }
 }
 

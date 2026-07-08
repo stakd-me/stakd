@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/store";
-import type { PriceData } from "@/lib/services/portfolio-calculator";
-import { COINGECKO_TO_BINANCE_SYMBOL } from "@/lib/pricing/binance-symbol-resolver";
+import {
+  mergePriceEntries,
+  type PriceEntry,
+  type PriceMap,
+} from "@/lib/pricing/price-map";
 
-export type PriceMap = Record<string, PriceData>;
+export type { PriceMap } from "@/lib/pricing/price-map";
 
 interface PriceArrayRow {
   coingeckoId: string;
@@ -31,6 +34,10 @@ interface PricesResponse {
   updatedAt: string | null;
 }
 
+// Live ticks are coalesced so at most one cache update (and therefore one
+// re-render of price consumers) happens per interval.
+const SSE_FLUSH_INTERVAL_MS = 1_000;
+
 function normalizeIsoDate(
   value: string | Date | null | undefined
 ): string | null {
@@ -40,48 +47,40 @@ function normalizeIsoDate(
   return date.toISOString();
 }
 
+function toPriceEntries(prices: PricesResponse["prices"]): PriceEntry[] {
+  const rows: [string, PriceArrayRow | PriceObjectRow][] = Array.isArray(prices)
+    ? prices.map((p) => [p.coingeckoId, p])
+    : Object.entries(prices);
+
+  return rows.map(([coingeckoId, p]) => ({
+    coingeckoId,
+    symbol: p.symbol ?? null,
+    usd:
+      typeof p.priceUsd === "number"
+        ? p.priceUsd
+        : typeof p.usd === "number"
+          ? p.usd
+          : 0,
+    change24h: p.change24h ?? null,
+    updatedAt: normalizeIsoDate(p.updatedAt),
+  }));
+}
+
 function toPriceMap(prices: PricesResponse["prices"]): {
   priceMap: PriceMap;
   oldestUpdatedAt: string | null;
 } {
-  const map: PriceMap = {};
-  const updatedAts: string[] = [];
-
-  if (Array.isArray(prices)) {
-    for (const p of prices) {
-      const usd = typeof p.priceUsd === "number"
-        ? p.priceUsd
-        : typeof p.usd === "number"
-          ? p.usd
-          : 0;
-      const updatedAt = normalizeIsoDate(p.updatedAt);
-      if (updatedAt) updatedAts.push(updatedAt);
-      const priceData = { usd, change24h: p.change24h ?? null, updatedAt };
-      map[p.coingeckoId] = priceData;
-      // Also key by uppercase symbol so holdings can look up by symbol directly
-      if (p.symbol) map[p.symbol.toUpperCase()] = priceData;
-    }
-  } else {
-    for (const [coingeckoId, p] of Object.entries(prices)) {
-      const usd = typeof p.priceUsd === "number"
-        ? p.priceUsd
-        : typeof p.usd === "number"
-          ? p.usd
-          : 0;
-      const updatedAt = normalizeIsoDate(p.updatedAt);
-      if (updatedAt) updatedAts.push(updatedAt);
-      const priceData = { usd, change24h: p.change24h ?? null, updatedAt };
-      map[coingeckoId] = priceData;
-      if (p.symbol) map[p.symbol.toUpperCase()] = priceData;
-    }
-  }
+  const entries = toPriceEntries(prices);
+  const updatedAts = entries
+    .map((e) => e.updatedAt)
+    .filter((v): v is string => Boolean(v));
 
   const oldestUpdatedAt =
     updatedAts.length > 0
-      ? updatedAts.reduce((oldest, value) => value < oldest ? value : oldest)
+      ? updatedAts.reduce((oldest, value) => (value < oldest ? value : oldest))
       : null;
 
-  return { priceMap: map, oldestUpdatedAt };
+  return { priceMap: mergePriceEntries(undefined, entries), oldestUpdatedAt };
 }
 
 // ---------------------------------------------------------------------------
@@ -112,20 +111,84 @@ function parseSseEvents(
   return { events, remaining };
 }
 
-function usePriceStream() {
+function priceEntryChanged(
+  prev: PriceMap | undefined,
+  entry: PriceEntry
+): boolean {
+  const current = prev?.[entry.coingeckoId.trim().toLowerCase()];
+  if (!current) return true;
+  return (
+    current.usd !== entry.usd ||
+    current.change24h !== entry.change24h ||
+    current.updatedAt !== entry.updatedAt
+  );
+}
+
+function usePriceStream(): boolean {
   const queryClient = useQueryClient();
   const accessToken = useAuthStore((s) => s.accessToken);
-  const sseConnected = useRef(false);
+  // State (not a ref) so usePrices' refetchInterval reacts to connect/drop.
+  const [connected, setConnected] = useState(false);
   const reconnectTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!accessToken) {
-      sseConnected.current = false;
+      setConnected(false);
       return;
     }
 
     let aborted = false;
     const abortController = new AbortController();
+
+    // Tick coalescing: incoming events accumulate here and flush at most
+    // once per SSE_FLUSH_INTERVAL_MS.
+    const pending = new Map<string, PriceEntry>();
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    let lastFlushAt = 0;
+
+    const flush = () => {
+      flushTimer = null;
+      lastFlushAt = Date.now();
+      if (pending.size === 0) return;
+      const entries = [...pending.values()];
+      pending.clear();
+
+      queryClient.setQueryData(
+        ["prices"],
+        (
+          prev: { priceMap: PriceMap; updatedAt: string | null } | undefined
+        ) => {
+          const changed = entries.filter((e) =>
+            priceEntryChanged(prev?.priceMap, e)
+          );
+          // Keep the object identity stable when nothing moved so memoized
+          // consumers don't recompute.
+          if (changed.length === 0) return prev;
+
+          const updatedAts = changed
+            .map((e) => e.updatedAt)
+            .filter((v): v is string => Boolean(v));
+          const newestUpdatedAt =
+            updatedAts.length > 0
+              ? updatedAts.reduce((newest, v) => (v > newest ? v : newest))
+              : null;
+
+          return {
+            priceMap: mergePriceEntries(prev?.priceMap, changed),
+            updatedAt: newestUpdatedAt ?? prev?.updatedAt ?? null,
+          };
+        }
+      );
+    };
+
+    const scheduleFlush = () => {
+      if (flushTimer) return;
+      const delay = Math.max(
+        0,
+        SSE_FLUSH_INTERVAL_MS - (Date.now() - lastFlushAt)
+      );
+      flushTimer = setTimeout(flush, delay);
+    };
 
     const applyPriceEvent = (data: string) => {
       try {
@@ -134,38 +197,15 @@ function usePriceStream() {
           { usd: number; change24h: number | null; updatedAt: string }
         > = JSON.parse(data);
 
-        const priceMap: PriceMap = {};
-        const updatedAts: string[] = [];
-
         for (const [coingeckoId, p] of Object.entries(payload)) {
-          const priceData = {
+          pending.set(coingeckoId, {
+            coingeckoId,
             usd: p.usd,
             change24h: p.change24h,
-            updatedAt: p.updatedAt,
-          };
-          priceMap[coingeckoId] = priceData;
-          // Also key by symbol so holdings can look up by symbol
-          const symbol = COINGECKO_TO_BINANCE_SYMBOL[coingeckoId];
-          if (symbol) priceMap[symbol] = priceData;
-          if (p.updatedAt) updatedAts.push(p.updatedAt);
+            updatedAt: p.updatedAt ?? null,
+          });
         }
-
-        const newestUpdatedAt =
-          updatedAts.length > 0
-            ? updatedAts.reduce((newest, v) => (v > newest ? v : newest))
-            : null;
-
-        queryClient.setQueryData(
-          ["prices"],
-          (
-            prev:
-              | { priceMap: PriceMap; updatedAt: string | null }
-              | undefined
-          ) => ({
-            priceMap: { ...prev?.priceMap, ...priceMap },
-            updatedAt: newestUpdatedAt ?? prev?.updatedAt ?? null,
-          })
-        );
+        scheduleFlush();
       } catch {
         // ignore parse errors
       }
@@ -187,13 +227,13 @@ function usePriceStream() {
         if (!res.ok || !res.body) {
           // On 401, don't retry — let the polling fallback handle it
           if (res.status === 401) {
-            sseConnected.current = false;
+            setConnected(false);
             return;
           }
           throw new Error(`SSE response ${res.status}`);
         }
 
-        sseConnected.current = true;
+        if (!aborted) setConnected(true);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let sseBuffer = "";
@@ -217,8 +257,8 @@ function usePriceStream() {
         // Connection lost — schedule reconnect
       }
 
-      sseConnected.current = false;
       if (!aborted) {
+        setConnected(false);
         reconnectTimeout.current = setTimeout(connect, 3_000);
       }
     };
@@ -228,7 +268,11 @@ function usePriceStream() {
     return () => {
       aborted = true;
       abortController.abort();
-      sseConnected.current = false;
+      setConnected(false);
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
       if (reconnectTimeout.current) {
         clearTimeout(reconnectTimeout.current);
         reconnectTimeout.current = null;
@@ -236,7 +280,7 @@ function usePriceStream() {
     };
   }, [accessToken, queryClient]);
 
-  return sseConnected;
+  return connected;
 }
 
 // ---------------------------------------------------------------------------
@@ -253,7 +297,7 @@ export function usePrices(options?: UsePricesOptions) {
 
   // Disable REST polling when SSE is connected to prevent overwriting fresh data.
   // Only poll as fallback when SSE is disconnected.
-  const refetchInterval = sseConnected.current
+  const refetchInterval = sseConnected
     ? false
     : (options?.refetchInterval ?? 10_000);
 
