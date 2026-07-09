@@ -210,7 +210,7 @@ export default function DashboardPage() {
       });
   }, [strategyOutput, holdZonePercent, holdingPLMap, marketPhase, t]);
 
-  const concentrationAlerts = (() => {
+  const concentrationAlerts = useMemo(() => {
     const result: DashboardAlert[] = [];
     for (const item of breakdown) {
       const normalizedSymbol = item.symbol.toUpperCase();
@@ -233,14 +233,25 @@ export default function DashboardPage() {
       }
     }
     return result;
-  })();
+  }, [
+    breakdown,
+    excludeStablecoinsFromConcentration,
+    stablecoinSymbols,
+    concentrationThresholdPercent,
+    highConcentrationThresholdPercent,
+  ]);
 
-  const alerts = [...deviationAlerts, ...concentrationAlerts];
+  const alerts = useMemo(
+    () => [...deviationAlerts, ...concentrationAlerts],
+    [deviationAlerts, concentrationAlerts]
+  );
 
   // ── Client-side category breakdown from vault.tokenCategories ──────
-  const categoryBreakdown = (() => {
-    const categories = vault.tokenCategories;
-    if (categories.length === 0 || totals.totalValue === 0) return [];
+  const tokenCategories = vault.tokenCategories;
+  const totalValue = totals.totalValue;
+  const categoryBreakdown = useMemo(() => {
+    const categories = tokenCategories;
+    if (categories.length === 0 || totalValue === 0) return [];
 
     // Build symbol -> value map from breakdown
     const symbolValueMap: Record<string, number> = {};
@@ -262,12 +273,11 @@ export default function DashboardPage() {
       .map(([category, valueUsd]) => ({
         category,
         valueUsd,
-        percent: (valueUsd / totals.totalValue) * 100,
+        percent: (valueUsd / totalValue) * 100,
       }))
       .sort((a, b) => b.valueUsd - a.valueUsd);
-  })();
+  }, [tokenCategories, totalValue, breakdown]);
 
-  const totalValue = totals.totalValue;
   const totalPL = totals.totalPL;
   const change24hUsdt = (totals.totalValue * totals.change24h) / 100;
   const topHoldings = useMemo(
@@ -280,7 +290,7 @@ export default function DashboardPage() {
     if (!lastPriceUpdate) return true;
     return now - new Date(lastPriceUpdate).getTime() > 60 * 1000;
   }, [lastPriceUpdate, now]);
-  const mergedAlertBadges = (() => {
+  const mergedAlertBadges = useMemo(() => {
     const severityRank: Record<DashboardAlertSeverity, number> = {
       low: 1,
       medium: 2,
@@ -336,7 +346,7 @@ export default function DashboardPage() {
           severityRank[b.severity] - severityRank[a.severity] ||
           Math.abs(b.value) - Math.abs(a.value)
       );
-  })();
+  }, [alerts]);
   const hasAlerts = alerts.length > 0;
   const primaryAlert = mergedAlertBadges[0] ?? null;
   const highestAlertSeverity = primaryAlert?.severity ?? "low";
