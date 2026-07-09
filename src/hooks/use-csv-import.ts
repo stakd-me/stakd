@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { useVaultStore } from "@/lib/store";
+import { withAutoStablecoinCategory } from "@/lib/constants/stablecoins";
+import { createVaultTransaction } from "@/lib/transactions";
 import {
   CSV_HEADER_ALIASES,
   REQUIRED_CSV_COLUMNS,
@@ -11,21 +15,28 @@ import {
 } from "@/lib/portfolio/csv-parser";
 import type { ImportPreviewRow, PortfolioTxType } from "@/components/portfolio/types";
 
+interface UseCsvImportOptions {
+  /** Price fetcher (from usePrices) used to warm prices for imported tokens. */
+  ensurePrices?: (
+    tokens: { coingeckoId: string; symbol: string }[]
+  ) => Promise<void>;
+}
+
 /**
  * Hook for CSV import flow (Improvement #1 refactor - Phase 0).
  *
- * Current responsibilities (after PR 3):
+ * Current responsibilities:
  * - Owns all import modal state
  * - Provides derived readiness flags
  * - Provides open/reset/close controls
  * - Owns `parseCsvFile` (the FileReader + validation + preview builder)
- *
- * Future slices will move `handleImportSubmit` (the actual vault mutation part).
+ * - Owns `submitImport` (the actual vault mutation part, moved from the page)
  *
  * See plan.md §9 for the approved extraction roadmap.
  */
-export function useCsvImport() {
+export function useCsvImport({ ensurePrices }: UseCsvImportOptions = {}) {
   const { t } = useTranslation();
+  const { toast } = useToast();
 
   // --- State ---
   const [showImportModal, setShowImportModal] = useState(false);
@@ -232,6 +243,80 @@ export function useCsvImport() {
     [t]
   );
 
+  // --- submitImport (vault mutation, moved from the page) ---
+  const submitImport = useCallback(async () => {
+    if (importPreview.length === 0 || importValidationErrors.length > 0) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const createdAtIso = new Date().toISOString();
+      const newTransactions = importPreview.map((row) =>
+        createVaultTransaction({
+          id: crypto.randomUUID(),
+          tokenSymbol: row.symbol,
+          tokenName: row.name,
+          chain: "",
+          type: row.type,
+          quantity: row.quantity,
+          pricePerUnit: row.pricePerUnit,
+          fee: row.fee,
+          coingeckoId: row.coingeckoId,
+          note: row.note,
+          transactedAt: row.dateIso,
+          createdAt: createdAtIso,
+        })
+      );
+
+      useVaultStore.getState().updateVault((prev) => {
+        const nowIso = new Date().toISOString();
+        let nextTokenCategories = prev.tokenCategories;
+
+        for (const tx of newTransactions) {
+          nextTokenCategories = withAutoStablecoinCategory(
+            nextTokenCategories,
+            tx.tokenSymbol,
+            nowIso
+          );
+        }
+
+        return {
+          ...prev,
+          transactions: [...prev.transactions, ...newTransactions],
+          tokenCategories: nextTokenCategories,
+        };
+      });
+
+      // Ensure prices for any tokens with coingeckoIds
+      const tokensToPrice = newTransactions
+        .filter((tx) => tx.coingeckoId)
+        .reduce((acc, tx) => {
+          if (!acc.find((token) => token.coingeckoId === tx.coingeckoId)) {
+            acc.push({ coingeckoId: tx.coingeckoId!, symbol: tx.tokenSymbol });
+          }
+          return acc;
+        }, [] as { coingeckoId: string; symbol: string }[]);
+
+      if (tokensToPrice.length > 0 && ensurePrices) {
+        await ensurePrices(tokensToPrice);
+      }
+
+      toast(t("portfolio.importedCount", { count: newTransactions.length }), "success");
+      setShowImportModal(false);
+      resetImportState();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : t("portfolio.failedImport"));
+    } finally {
+      setImporting(false);
+    }
+  }, [
+    ensurePrices,
+    importPreview,
+    importValidationErrors.length,
+    resetImportState,
+    t,
+    toast,
+  ]);
+
   return {
     // State
     showImportModal,
@@ -257,5 +342,6 @@ export function useCsvImport() {
     openImportModal,
     closeImportModal,
     parseCsvFile,
+    submitImport,
   };
 }

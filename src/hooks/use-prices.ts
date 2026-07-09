@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api-client";
 import { useAuthStore } from "@/lib/store";
@@ -317,19 +317,23 @@ export function usePrices(options?: UsePricesOptions) {
     refetchInterval,
   });
 
-  const refreshPrices = async () => {
+  // Stable identities so consumers can safely list these in hook deps.
+  const refreshPrices = useCallback(async () => {
     await apiFetch("/api/prices/refresh", { method: "POST" });
     await queryClient.invalidateQueries({ queryKey: ["prices"] });
-  };
+  }, [queryClient]);
 
-  const ensurePrices = async (tokens: { coingeckoId: string; symbol: string }[]) => {
-    await apiFetch("/api/prices/ensure", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokens }),
-    });
-    await queryClient.invalidateQueries({ queryKey: ["prices"] });
-  };
+  const ensurePrices = useCallback(
+    async (tokens: { coingeckoId: string; symbol: string }[]) => {
+      await apiFetch("/api/prices/ensure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["prices"] });
+    },
+    [queryClient]
+  );
 
   return {
     priceMap: query.data?.priceMap ?? {},
