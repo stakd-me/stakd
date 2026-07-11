@@ -100,7 +100,7 @@ export default function AppGuidePage() {
                 <p>{t("appGuide.reportsStep6")}</p>
                 <p>{t("appGuide.reportsStep7")}</p>
                 <div className="pt-1">
-                  <Link href="/reports">
+                  <Link href="/analytics">
                     <Button variant="outline" size="sm">
                       {t("appGuide.openReports")}
                       <ArrowRight className="ml-2 h-4 w-4" />

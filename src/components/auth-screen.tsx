@@ -1,12 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  KeyRound,
-  MonitorSmartphone,
-  ShieldCheck,
-  TriangleAlert,
-} from "lucide-react";
+import { KeyRound, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -287,19 +282,17 @@ export function AuthScreen() {
 
   return (
     <div className="min-h-screen bg-bg-page px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:items-center">
-        <section className="space-y-4 lg:pr-6">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-4xl gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+        <section className="order-2 hidden space-y-4 lg:order-1 lg:block lg:pr-6">
           <div className="space-y-3">
             <div className="inline-flex items-center rounded-full border border-border-subtle bg-bg-card px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-text-dim">
               {t("nav.title")}
             </div>
             <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight text-text-primary sm:text-4xl">
-                {tab === "login"
-                  ? t("auth.signInDescription")
-                  : t("auth.createAccountDescription")}
+              <h1 className="text-2xl font-bold text-text-primary">
+                {t("auth.privateVaultTitle")}
               </h1>
-              <p className="max-w-xl text-sm text-text-subtle sm:text-base">
+              <p className="max-w-xl text-sm text-text-subtle">
                 {t("auth.privateVaultDesc")}
               </p>
             </div>
@@ -315,18 +308,7 @@ export function AuthScreen() {
             ]}
           />
 
-          {tab === "login" ? (
-            <InlineHelpCard
-              tone={rememberMe ? "warning" : "info"}
-              icon={<MonitorSmartphone className="h-4 w-4" />}
-              title={t("auth.sessionSecurityTitle")}
-              description={t("auth.sessionSecuritySummary")}
-              items={[
-                t("auth.sessionOnlyDesc"),
-                t("auth.trustedDeviceDesc", { days: TRUST_DEVICE_DAYS }),
-              ]}
-            />
-          ) : (
+          {tab === "register" ? (
             <InlineHelpCard
               tone="warning"
               icon={<KeyRound className="h-4 w-4" />}
@@ -337,17 +319,20 @@ export function AuthScreen() {
                 t("auth.registerStartsSessionOnly"),
               ]}
             />
-          )}
+          ) : null}
         </section>
 
-        <section className="w-full rounded-2xl border border-border-subtle bg-bg-card p-6 shadow-sm sm:p-8">
+        <section className="order-1 w-full rounded-lg border border-border-subtle bg-bg-card p-6 shadow-sm sm:p-8 lg:order-2">
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-text-primary">
-              {tab === "login" ? t("auth.signIn") : t("auth.createAccount")}
-            </h2>
+            <div>
+              <p className="text-sm font-medium text-accent">{t("nav.title")}</p>
+              <h1 className="mt-1 text-2xl font-bold text-text-primary">
+                {tab === "login" ? t("auth.signInDescription") : t("auth.createAccountDescription")}
+              </h1>
+            </div>
 
             <div
-              className="grid grid-cols-2 rounded-xl border border-border-subtle bg-bg-muted p-1"
+              className="grid grid-cols-2 rounded-md border border-border-subtle bg-bg-muted p-1"
               role="tablist"
               aria-label={t("auth.accountTabs")}
             >
@@ -360,7 +345,7 @@ export function AuthScreen() {
                 tabIndex={tab === "login" ? 0 : -1}
                 onClick={() => handleTabChange("login")}
                 className={cn(
-                  "rounded-lg px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
+                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
                   tab === "login"
                     ? "bg-bg-card text-text-primary shadow-sm"
                     : "text-text-subtle hover:text-text-primary"
@@ -377,7 +362,7 @@ export function AuthScreen() {
                 tabIndex={tab === "register" ? 0 : -1}
                 onClick={() => handleTabChange("register")}
                 className={cn(
-                  "rounded-lg px-4 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
+                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
                   tab === "register"
                     ? "bg-bg-card text-text-primary shadow-sm"
                     : "text-text-subtle hover:text-text-primary"
@@ -472,7 +457,7 @@ export function AuthScreen() {
               </p>
 
               {tab === "login" && (
-                <div className="rounded-xl border border-border-subtle bg-bg-card p-4">
+                <div className="border-t border-border-subtle pt-4">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
                       type="checkbox"

@@ -24,7 +24,7 @@ const PortfolioLineChart = dynamic(
   () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
   { ssr: false }
 );
-import { AlertTriangle, CheckCircle2, Scale, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Plus, Scale, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 
 const CategoryBarChart = dynamic(
@@ -32,7 +32,6 @@ const CategoryBarChart = dynamic(
   { ssr: false }
 );
 import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { MarketSignalBanner } from "@/components/dashboard/market-signal-banner";
 import { AlertsSection } from "@/components/dashboard/alerts-section";
 import { useMarketSignal } from "@/hooks/use-market-signal";
 import { useAlertEngine } from "@/hooks/use-alert-engine";
@@ -413,6 +412,14 @@ export default function DashboardPage() {
       <PageHeader
         title={t("dashboard.title")}
         description={t("dashboard.subtitle")}
+        actions={
+          <Link href="/portfolio/add">
+            <Button size="sm">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("portfolio.addTransaction")}
+            </Button>
+          </Link>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
@@ -453,14 +460,14 @@ export default function DashboardPage() {
         />
       </div>
 
-      <MarketSignalBanner />
-
-      <AlertsSection
-        alerts={ruleAlerts}
-        totalAlertCount={ruleAlertCount}
-        onDismiss={dismissAlert}
-        onDismissAll={dismissAllAlerts}
-      />
+      {ruleAlertCount > 0 ? (
+        <AlertsSection
+          alerts={ruleAlerts}
+          totalAlertCount={ruleAlertCount}
+          onDismiss={dismissAlert}
+          onDismissAll={dismissAllAlerts}
+        />
+      ) : null}
 
       <StatusBanner
         tone={

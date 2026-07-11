@@ -13,7 +13,7 @@ import type {
   TokenGroup,
 } from "@/components/rebalance/types";
 
-export type RebalancePhase = "setup" | "analysis" | "execution" | "all";
+export type RebalancePhase = "setup" | "analysis" | "execution";
 
 interface RebalancePhaseInputs {
   activePhase: RebalancePhase;
@@ -92,9 +92,9 @@ export function useRebalancePhases({
     untargetedSuggestions.length,
   ]);
 
-  const showSetupPhase = activePhase === "all" || activePhase === "setup";
-  const showAnalysisPhase = activePhase === "all" || activePhase === "analysis";
-  const showExecutionPhase = activePhase === "all" || activePhase === "execution";
+  const showSetupPhase = activePhase === "setup";
+  const showAnalysisPhase = activePhase === "analysis";
+  const showExecutionPhase = activePhase === "execution";
 
   const setupPhaseCount =
     targets.length +
@@ -126,11 +126,6 @@ export function useRebalancePhases({
         value: "execution" as const,
         label: t("rebalance.phaseExecution"),
         count: executionPhaseCount,
-      },
-      {
-        value: "all" as const,
-        label: t("rebalance.viewAll"),
-        count: setupPhaseCount + analysisPhaseCount + executionPhaseCount,
       },
     ],
     [

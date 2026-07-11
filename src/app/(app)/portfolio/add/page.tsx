@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatUsd, toLocalDatetimeString } from "@/lib/utils";
-import { ArrowLeft, Search, AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { apiFetch } from "@/lib/api-client";
@@ -81,8 +81,9 @@ export default function AddTransactionPage() {
   const [feePercent, setFeePercent] = useState("0.1");
   const [coingeckoId, setCoingeckoId] = useState("");
   const [note, setNote] = useState("");
-  const [settlementEnabled, setSettlementEnabled] = useState(true);
+  const [settlementEnabled, setSettlementEnabled] = useState(false);
   const [settlementSymbol, setSettlementSymbol] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Track CoinGecko selection to detect manual edits
@@ -429,7 +430,7 @@ export default function AddTransactionPage() {
   };
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/portfolio">
           <Button variant="ghost" size="icon">
@@ -451,7 +452,7 @@ export default function AddTransactionPage() {
             onClick={() => {
               setType(txType);
             }}
-            className={`rounded-lg py-2.5 text-sm font-semibold transition-colors ${getTxTypeToggleClass(
+            className={`rounded-md py-2.5 text-sm font-semibold transition-colors ${getTxTypeToggleClass(
               txType,
               type === txType
             )}`}
@@ -468,12 +469,10 @@ export default function AddTransactionPage() {
         </p>
       )}
 
-      {/* CoinGecko Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("portfolioAdd.searchCoinGecko")}</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <section className="space-y-2" aria-labelledby="token-search-label">
+          <p id="token-search-label" className="text-sm font-medium text-text-muted">
+            {t("portfolioAdd.searchCoinGecko")}
+          </p>
           <div ref={dropdownRef} className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-subtle" />
             <Input
@@ -489,7 +488,7 @@ export default function AddTransactionPage() {
               className="pl-10"
             />
             {showDropdown && searchQuery.length >= 1 && (
-              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-border bg-bg-input shadow-lg">
+              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
                 {filteredCoins.length === 0 ? (
                   <div className="px-4 py-3 text-sm text-text-subtle">
                     {t("portfolioAdd.noResults")}
@@ -522,8 +521,7 @@ export default function AddTransactionPage() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+      </section>
 
       {/* Transaction Details */}
       <Card>
@@ -602,7 +600,20 @@ export default function AddTransactionPage() {
               </div>
             )}
 
-            {(type === "buy" || type === "sell") && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAdvanced((value) => !value)}
+              aria-expanded={showAdvanced}
+              className="px-0"
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              {t("portfolioAdd.advancedDetails")}
+              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+            </Button>
+
+            {showAdvanced && (type === "buy" || type === "sell") && (
               <div className="space-y-3 rounded-md border border-border bg-bg-card px-4 py-4">
                 <label className="flex items-start gap-3">
                   <input
@@ -672,7 +683,7 @@ export default function AddTransactionPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {showAdvanced ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {(type === "buy" || type === "sell") ? (
                 <div className="space-y-2">
                   <label htmlFor="feePercent" className="text-sm font-medium text-text-muted">
@@ -697,9 +708,9 @@ export default function AddTransactionPage() {
                 <div />
               )}
               <div />
-            </div>
+            </div> : null}
 
-            <div className="space-y-2">
+            {showAdvanced ? <div className="space-y-2">
               <label htmlFor="note" className="text-sm font-medium text-text-muted">
                 {t("common.note")} <span className="text-text-dim">({t("common.optional")})</span>
               </label>
@@ -709,7 +720,7 @@ export default function AddTransactionPage() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
               />
-            </div>
+            </div> : null}
 
             {tokenMismatch && (
               <div className="flex items-start gap-2 rounded-md bg-status-warning-soft px-4 py-3 text-sm text-status-warning">

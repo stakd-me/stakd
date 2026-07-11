@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
+import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -101,6 +102,8 @@ export default function AllocationHistoryPage() {
         title={t("allocationHistory.title")}
         description={t("allocationHistory.subtitle")}
       />
+
+      <AnalyticsNavigation />
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <KpiCard

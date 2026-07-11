@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "db:migrate": "node scripts/db-migrate.mjs",
     "fetch-coins": "npx tsx scripts/fetch-coins.ts",
     "analyze": "ANALYZE=true next build"
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",

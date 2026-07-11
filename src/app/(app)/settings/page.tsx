@@ -18,19 +18,15 @@ import { parseAlertRules } from "@/lib/alert-rules";
 type SettingsSection =
   | "security"
   | "strategy"
-  | "risk"
-  | "trading"
-  | "alerts"
-  | "danger"
-  | "about"
-  | "all";
+  | "preferences"
+  | "data";
 
 export default function SettingsPage() {
   const sectionsBaseId = "settings-sections";
   const { t } = useTranslation();
   const vault = useVaultStore((s) => s.vault);
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>("all");
+  const [activeSection, setActiveSection] = useState<SettingsSection>("security");
 
   const {
     form,
@@ -68,50 +64,19 @@ export default function SettingsPage() {
         value: "strategy" as const,
         label: t("settings.sectionStrategy"),
         description: t("settings.rebalanceStrategy"),
-        count: strategyFieldsCount,
+        count: strategyFieldsCount + 3 + tradingFieldsCount,
       },
       {
-        value: "risk" as const,
-        label: t("settings.sectionRisk"),
-        description: t("settings.concentrationThreshold"),
-        count: 3,
-      },
-      {
-        value: "trading" as const,
-        label: t("settings.sectionTrading"),
-        description: t("settings.minTradeSize"),
-        count: tradingFieldsCount,
-      },
-      {
-        value: "alerts" as const,
-        label: t("settings.sectionAlerts"),
+        value: "preferences" as const,
+        label: t("settings.sectionPreferences"),
         description: t("settings.alertRulesDescription"),
         count: alertRulesCount,
       },
       {
-        value: "danger" as const,
-        label: t("settings.sectionDanger"),
+        value: "data" as const,
+        label: t("settings.sectionData"),
         description: t("settings.exportBackup"),
-        count: 1,
-      },
-      {
-        value: "about" as const,
-        label: t("settings.sectionAbout"),
-        description: t("settings.about"),
-        count: 1,
-      },
-      {
-        value: "all" as const,
-        label: t("settings.sectionAll"),
-        description: t("settings.subtitle"),
-        count:
-          2 +
-          strategyFieldsCount +
-          3 +
-          tradingFieldsCount +
-          alertRulesCount +
-          1 +
-          1,
+        count: 2,
       },
     ],
     [strategyFieldsCount, t, tradingFieldsCount, alertRulesCount]
@@ -128,24 +93,11 @@ export default function SettingsPage() {
     return Array.from(symbols);
   }, [vault.transactions, vault.manualEntries]);
 
-  const showSecuritySection =
-    activeSection === "all" || activeSection === "security";
-  const showStrategySection =
-    activeSection === "all" || activeSection === "strategy";
-  const showRiskSection = activeSection === "all" || activeSection === "risk";
-  const showTradingSection =
-    activeSection === "all" || activeSection === "trading";
-  const showAlertsSection =
-    activeSection === "all" || activeSection === "alerts";
-  const showDangerSection =
-    activeSection === "all" || activeSection === "danger";
-  const showAboutSection =
-    activeSection === "all" || activeSection === "about";
-  const showRebalanceSaveAction =
-    activeSection === "all" ||
-    activeSection === "strategy" ||
-    activeSection === "risk" ||
-    activeSection === "trading";
+  const showSecuritySection = activeSection === "security";
+  const showStrategySection = activeSection === "strategy";
+  const showAlertsSection = activeSection === "preferences";
+  const showDataSection = activeSection === "data";
+  const showRebalanceSaveAction = activeSection === "strategy";
 
   return (
     <div className="space-y-6">
@@ -185,15 +137,15 @@ export default function SettingsPage() {
           form={form}
           setField={setField}
           showStrategy={showStrategySection}
-          showRisk={showRiskSection}
-          showTrading={showTradingSection}
+          showRisk={showStrategySection}
+          showTrading={showStrategySection}
         />
 
         {showAlertsSection && <AlertRulesSection holdingSymbols={holdingSymbols} />}
 
-        {showDangerSection && <DangerZoneSection />}
+        {showDataSection && <DangerZoneSection />}
 
-        {showAboutSection && <AboutSection />}
+        {showDataSection && <AboutSection />}
       </SectionPanel>
     </div>
   );

@@ -6,6 +6,7 @@ import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
+import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
@@ -212,6 +213,8 @@ export default function HistoryPage() {
         title={t("history.title")}
         description={t("history.subtitle")}
       />
+
+      <AnalyticsNavigation />
 
       <SectionNavigator
         baseId={sectionsBaseId}

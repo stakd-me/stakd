@@ -14,6 +14,7 @@ const vi: Record<TranslationKeys, string> = {
   "nav.closeMenu": "Đóng menu",
   "nav.guide": "Hướng dẫn",
   "nav.reports": "Báo cáo",
+  "nav.analytics": "Phân tích",
 
   // Common/Shared
   "common.loading": "Đang tải...",
@@ -317,6 +318,7 @@ const vi: Record<TranslationKeys, string> = {
   "portfolioAdd.searchPlaceholder": "Tìm token (VD: Bitcoin, Ethereum)...",
   "portfolioAdd.noResults": "Không tìm thấy kết quả",
   "portfolioAdd.transactionDetails": "Chi tiết giao dịch",
+  "portfolioAdd.advancedDetails": "Chi tiết nâng cao",
   "portfolioAdd.fetchingPrice": "Đang lấy giá...",
   "portfolioAdd.receiveSendHint": "{label} - nhập giá thị trường USD để tính dòng tiền và P&L chính xác",
   "portfolioAdd.tokenMismatchWarning": "Thông tin token đã bị sửa sau khi chọn CoinGecko ({token}). Điều này có thể gây lỗi theo dõi giá.",
@@ -353,6 +355,7 @@ const vi: Record<TranslationKeys, string> = {
   "rebalance.title": "Tái cân bằng",
   "rebalance.subtitle": "Đặt phân bổ mục tiêu và so sánh với danh mục hiện tại",
   "rebalance.focusView": "Chế độ tập trung",
+  "rebalance.advancedSetup": "Thiết lập nâng cao",
   "rebalance.phaseSetup": "Thiết lập",
   "rebalance.phaseAnalysis": "Phân tích",
   "rebalance.phaseExecution": "Thực hiện",
@@ -568,7 +571,7 @@ const vi: Record<TranslationKeys, string> = {
   "history.snapshots": "Ảnh chụp",
 
   // Reports
-  "reports.title": "Báo cáo",
+  "reports.title": "Phân tích",
   "reports.subtitle": "Hiệu suất và rủi ro theo tuần, tháng, quý, năm và toàn thời gian.",
   "reports.focusView": "Chế độ tập trung",
   "reports.sectionOverview": "Tổng quan",
@@ -651,6 +654,8 @@ const vi: Record<TranslationKeys, string> = {
   "settings.sectionAll": "Tất cả mục",
   "settings.sectionSecurity": "Bảo mật",
   "settings.sectionStrategy": "Chiến lược",
+  "settings.sectionPreferences": "Tùy chọn",
+  "settings.sectionData": "Dữ liệu",
   "settings.sectionRisk": "Rủi ro",
   "settings.sectionTrading": "Giao dịch",
   "settings.sectionRefresh": "Làm mới",

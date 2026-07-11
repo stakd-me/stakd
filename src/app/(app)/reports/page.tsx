@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { InlineHelpCard } from "@/components/ui/inline-help";
 import { PageHeader } from "@/components/ui/page-header";
+import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { StatusPill } from "@/components/ui/status-pill";
 import { SummaryStrip } from "@/components/ui/summary-strip";
@@ -29,7 +29,7 @@ import {
 import { cn, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
-import { BookOpen, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 const PERIOD_OPTIONS: ReportPeriod[] = [
   "weekly",
@@ -39,7 +39,7 @@ const PERIOD_OPTIONS: ReportPeriod[] = [
   "all-time",
 ];
 
-type ReportsSection = "overview" | "activity" | "risk" | "holdings" | "all";
+type ReportsSection = "overview" | "activity" | "risk" | "holdings";
 
 function getSignedPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
@@ -206,13 +206,10 @@ export default function ReportsPage() {
       : reconciliationGapAbs <= 1
         ? "border-status-warning-border bg-status-warning-soft text-status-warning"
         : "border-status-negative-border bg-status-negative-soft text-status-negative";
-  const showOverviewSection =
-    activeSection === "all" || activeSection === "overview";
-  const showActivitySection =
-    activeSection === "all" || activeSection === "activity";
-  const showRiskSection = activeSection === "all" || activeSection === "risk";
-  const showHoldingsSection =
-    activeSection === "all" || activeSection === "holdings";
+  const showOverviewSection = activeSection === "overview";
+  const showActivitySection = activeSection === "activity";
+  const showRiskSection = activeSection === "risk";
+  const showHoldingsSection = activeSection === "holdings";
   const sectionOptions = useMemo(
     () => [
       {
@@ -234,11 +231,6 @@ export default function ReportsPage() {
         value: "holdings" as const,
         label: t("reports.sectionHoldings"),
         count: report.topHoldings.length,
-      },
-      {
-        value: "all" as const,
-        label: t("reports.sectionAll"),
-        count: 12 + report.topHoldings.length,
       },
     ],
     [report.topHoldings.length, t]
@@ -271,20 +263,6 @@ export default function ReportsPage() {
               size="sm"
               onClick={() =>
                 triggerDownload(
-                  `portfolio-report-${report.period}-${report.window.label}.json`,
-                  JSON.stringify(report, null, 2),
-                  "application/json"
-                )
-              }
-            >
-              <Download className="mr-2 h-4 w-4" />
-              {t("reports.exportJson")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                triggerDownload(
                   `portfolio-report-${report.period}-${report.window.label}.csv`,
                   toCsv(report),
                   "text/csv;charset=utf-8"
@@ -297,6 +275,8 @@ export default function ReportsPage() {
           </>
         }
       />
+
+      <AnalyticsNavigation />
 
       <div
         role="group"
@@ -327,28 +307,10 @@ export default function ReportsPage() {
         value={activeSection}
         onChange={setActiveSection}
         options={sectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-5"
+        columnsClassName="grid-cols-2 xl:grid-cols-4"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
-      <InlineHelpCard
-        icon={<BookOpen className="h-4 w-4" />}
-        title={t("reports.inlineHelpTitle")}
-        description={t("reports.inlineHelpDescription")}
-        items={[
-          t("reports.inlineHelpOverview"),
-          t("reports.inlineHelpReconciliation"),
-          t("reports.inlineHelpActivity"),
-        ]}
-        action={
-          <Link href="/guide#reports">
-            <Button variant="ghost" size="sm" className="h-auto px-0 py-0 text-current hover:bg-transparent">
-              {t("reports.openGuide")}
-            </Button>
-          </Link>
-        }
-      />
-
       {showOverviewSection && (
         <>
           <Card>

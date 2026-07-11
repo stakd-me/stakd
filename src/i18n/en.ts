@@ -12,6 +12,7 @@ const en = {
   "nav.closeMenu": "Close menu",
   "nav.guide": "Guide",
   "nav.reports": "Reports",
+  "nav.analytics": "Analytics",
 
   // Common/Shared
   "common.loading": "Loading...",
@@ -315,6 +316,7 @@ const en = {
   "portfolioAdd.searchPlaceholder": "Search for a token (e.g. Bitcoin, Ethereum)...",
   "portfolioAdd.noResults": "No results found",
   "portfolioAdd.transactionDetails": "Transaction Details",
+  "portfolioAdd.advancedDetails": "Advanced details",
   "portfolioAdd.fetchingPrice": "Fetching...",
   "portfolioAdd.receiveSendHint": "{label} - enter market price in USD for accurate cash-flow and P&L",
   "portfolioAdd.tokenMismatchWarning": "Token details were modified after CoinGecko selection ({token}). This may cause price tracking issues.",
@@ -351,6 +353,7 @@ const en = {
   "rebalance.title": "Rebalance",
   "rebalance.subtitle": "Set target allocations and compare with current holdings",
   "rebalance.focusView": "Focus view",
+  "rebalance.advancedSetup": "Advanced setup",
   "rebalance.phaseSetup": "Setup",
   "rebalance.phaseAnalysis": "Analysis",
   "rebalance.phaseExecution": "Execution",
@@ -566,7 +569,7 @@ const en = {
   "history.snapshots": "Snapshots",
 
   // Reports
-  "reports.title": "Reports",
+  "reports.title": "Analytics",
   "reports.subtitle": "Weekly, monthly, quarterly, yearly, and all-time performance and risk.",
   "reports.focusView": "Focus view",
   "reports.sectionOverview": "Overview",
@@ -649,6 +652,8 @@ const en = {
   "settings.sectionAll": "All sections",
   "settings.sectionSecurity": "Security",
   "settings.sectionStrategy": "Strategy",
+  "settings.sectionPreferences": "Preferences",
+  "settings.sectionData": "Data",
   "settings.sectionRisk": "Risk",
   "settings.sectionTrading": "Trading",
   "settings.sectionRefresh": "Refresh",

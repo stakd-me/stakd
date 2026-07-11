@@ -42,7 +42,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
 
-type PortfolioSection = "holdings" | "transactions" | "manual" | "all";
+type PortfolioSection = "holdings" | "transactions";
 const TRANSACTION_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
 function getHeldDuration(
@@ -229,10 +229,7 @@ export default function PortfolioPage() {
   const { exportCsv } = useCsvExport(transactions);
 
   const [activeSection, setActiveSection] = useState<PortfolioSection>(() => {
-    if (rawBreakdown.length > 0) return "holdings";
-    if (transactions.length > 0) return "transactions";
-    if (manual.manualEntries.length > 0) return "manual";
-    return "all";
+    return "holdings";
   });
   const isLoading = portfolioLoading;
   const sectionOptions = useMemo(
@@ -247,18 +244,8 @@ export default function PortfolioPage() {
         label: t("portfolio.transactionHistory"),
         count: transactions.length,
       },
-      {
-        value: "manual" as const,
-        label: t("portfolio.quickAddHoldings"),
-        count: manual.manualEntries.length,
-      },
-      {
-        value: "all" as const,
-        label: t("portfolio.viewAll"),
-        count: breakdown.length + transactions.length + manual.manualEntries.length,
-      },
     ],
-    [breakdown.length, manual.manualEntries.length, t, transactions.length]
+    [breakdown.length, t, transactions.length]
   );
 
   // Filter by search
@@ -365,23 +352,14 @@ export default function PortfolioPage() {
     handleInlineSubmit,
   });
 
-  const showHoldingsSection =
-    activeSection === "all" || activeSection === "holdings";
-  const showTransactionsSection =
-    activeSection === "all" || activeSection === "transactions";
-  const showManualSection =
-    activeSection === "all" || activeSection === "manual";
-  const manualSectionExpanded =
-    activeSection === "manual" || showManualEntries;
+  const showHoldingsSection = activeSection === "holdings";
+  const showTransactionsSection = activeSection === "transactions";
+  const showManualSection = showManualEntries;
+  const manualSectionExpanded = showManualEntries;
   const canSearchCurrentSection = (() => {
     if (activeSection === "holdings") return breakdown.length > 0;
     if (activeSection === "transactions") return transactions.length > 0;
-    if (activeSection === "manual") return manual.manualEntries.length > 0;
-    return (
-      breakdown.length > 0 ||
-      transactions.length > 0 ||
-      manual.manualEntries.length > 0
-    );
+    return false;
   })();
 
   const renderHoldingInlineForm = useCallback(
@@ -481,17 +459,14 @@ export default function PortfolioPage() {
       <PageHeader
         title={t("portfolio.title")}
         description={
-          <>
-            <p>
-              {t("portfolio.subtitle")}
-              {lastPriceUpdate && now - new Date(lastPriceUpdate).getTime() > 60_000 && (
-                <span className="ml-2 text-xs text-status-warning">
-                  · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
-                </span>
-              )}
-            </p>
-            <p className="text-xs text-text-dim">{t("portfolio.shortcutsHint")}</p>
-          </>
+          <p>
+            {t("portfolio.subtitle")}
+            {lastPriceUpdate && now - new Date(lastPriceUpdate).getTime() > 60_000 && (
+              <span className="ml-2 text-xs text-status-warning">
+                · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
+              </span>
+            )}
+          </p>
         }
         actions={
           <>
@@ -507,6 +482,15 @@ export default function PortfolioPage() {
           >
             <Upload className="mr-2 h-4 w-4" />
             {t("common.import")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowManualEntries((value) => !value)}
+            aria-expanded={showManualEntries}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            {t("portfolio.quickAddHoldings")}
           </Button>
           <Link href="/portfolio/add">
             <Button size="sm">
@@ -525,7 +509,7 @@ export default function PortfolioPage() {
         value={activeSection}
         onChange={setActiveSection}
         options={sectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
+        columnsClassName="grid-cols-2"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
@@ -548,7 +532,7 @@ export default function PortfolioPage() {
         <ManualEntriesPanel
           manual={manual}
           search={search}
-          isAllSectionsView={activeSection === "all"}
+          isAllSectionsView={false}
           manualSectionExpanded={manualSectionExpanded}
           onToggleExpanded={() => setShowManualEntries((value) => !value)}
         />
@@ -568,7 +552,6 @@ export default function PortfolioPage() {
           onRepeatLast={handleRepeatLast}
           onEditHolding={setEditingHolding}
           onOpenManualSection={() => {
-            setActiveSection("manual");
             setShowManualEntries(true);
           }}
         />

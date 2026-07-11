@@ -135,7 +135,7 @@ export default function RebalancePage() {
           rb.setPhaseInitialized(true);
         }}
         options={rb.phaseOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
+        columnsClassName="grid-cols-3"
       />
 
       <SectionPanel baseId={phasesBaseId} value={rb.activePhase}>
