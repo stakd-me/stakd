@@ -82,6 +82,7 @@ const vi: Record<TranslationKeys, string> = {
   "auth.signInTab": "Đăng nhập",
   "auth.registerTab": "Đăng ký",
   "auth.signIn": "Đăng nhập",
+  "auth.encryptedInBrowser": "Mã hoá ngay trong trình duyệt. Máy chủ không bao giờ thấy passphrase của bạn.",
   "auth.createAccount": "Tạo tài khoản",
   "auth.accountTabs": "Truy cập tài khoản",
   "auth.accountCreated": "Đã tạo tài khoản",

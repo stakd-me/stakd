@@ -80,6 +80,7 @@ const en = {
   "auth.signInTab": "Login",
   "auth.registerTab": "Register",
   "auth.signIn": "Sign In",
+  "auth.encryptedInBrowser": "Encrypted in your browser. The server never sees your passphrase.",
   "auth.createAccount": "Create Account",
   "auth.accountTabs": "Account access",
   "auth.accountCreated": "Account Created",

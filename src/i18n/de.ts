@@ -75,6 +75,7 @@ const de: Record<TranslationKeys, string> = {
   "auth.signInTab": "Login",
   "auth.registerTab": "Register",
   "auth.signIn": "Sign In",
+  "auth.encryptedInBrowser": "Im Browser verschlüsselt. Der Server sieht deine Passphrase nie.",
   "auth.createAccount": "Create Account",
   "auth.accountTabs": "Account access",
   "auth.accountCreated": "Account Created",
