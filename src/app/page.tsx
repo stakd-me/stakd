@@ -4,12 +4,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/lib/store";
 import { AuthScreen } from "@/components/auth-screen";
-import { useTranslation } from "@/hooks/use-translation";
+import { AppSplash } from "@/components/layout/app-splash";
 import { hasEncKey } from "@/lib/crypto/key-store";
 import { loadVaultFromServer } from "@/lib/services/vault-sync";
 
 export default function Home() {
-  const { t } = useTranslation();
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
@@ -46,11 +45,7 @@ export default function Home() {
   }, [router, isAuthenticated, setLoading]);
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-text-subtle">{t("common.loading")}</div>
-      </div>
-    );
+    return <AppSplash />;
   }
 
   if (isAuthenticated) return null;

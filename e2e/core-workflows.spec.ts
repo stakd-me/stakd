@@ -69,7 +69,9 @@ test.describe.serial("core portfolio workflows", () => {
     await page.getByRole("button", { name: "Sign In", exact: true }).click();
     await expect(page).toHaveURL(/\/portfolio$/);
 
-    await page.getByRole("button", { name: "Open menu" }).click();
+    // The off-canvas drawer is gone: five destinations sit in a bottom tab
+    // bar, and the desktop rail is display:none at this width, so the link
+    // below resolves to the tab.
     await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
     await page.getByRole("link", { name: "Analytics" }).click();
     await expect(page).toHaveURL(/\/analytics$/);

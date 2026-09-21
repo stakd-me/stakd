@@ -11,6 +11,15 @@ const vi: Record<TranslationKeys, string> = {
   "nav.closeMenu": "Đóng menu",
   "nav.guide": "Hướng dẫn",
   "nav.analytics": "Phân tích",
+  "nav.localVault": "Kho cục bộ",
+  "nav.status": "Trạng thái",
+  "nav.vaultEncrypted": "Kho đã mã hoá",
+  "nav.skipToContent": "Bỏ qua, tới nội dung",
+  "nav.notFoundTitle": "Không có màn hình này",
+  "nav.notFoundBody": "Địa chỉ này không khớp trang nào trong ứng dụng. Kho dữ liệu của bạn không bị ảnh hưởng.",
+  "nav.backToDashboard": "Về bảng điều khiển",
+  "nav.pageErrorTitle": "Không hiển thị được trang này",
+  "nav.pageErrorBody": "Dữ liệu nắm giữ vẫn nguyên vẹn — chỉ khung hiển thị này lỗi. Thử lại hoặc chuyển sang trang khác.",
 
   // Common/Shared
   "common.loading": "Đang tải...",

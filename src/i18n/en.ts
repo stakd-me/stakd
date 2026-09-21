@@ -9,6 +9,15 @@ const en = {
   "nav.closeMenu": "Close menu",
   "nav.guide": "Guide",
   "nav.analytics": "Analytics",
+  "nav.localVault": "Local vault",
+  "nav.status": "Status",
+  "nav.vaultEncrypted": "Vault encrypted",
+  "nav.skipToContent": "Skip to content",
+  "nav.notFoundTitle": "No such screen",
+  "nav.notFoundBody": "That address does not match any page in this app. Your vault is untouched.",
+  "nav.backToDashboard": "Back to dashboard",
+  "nav.pageErrorTitle": "This page could not be rendered",
+  "nav.pageErrorBody": "Your holdings are intact — only this view failed. Try again, or move to another page.",
 
   // Common/Shared
   "common.loading": "Loading...",

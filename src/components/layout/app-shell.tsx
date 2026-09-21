@@ -3,7 +3,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { useAuthStore } from "@/lib/store";
 import { AuthScreen } from "@/components/auth-screen";
-import { Sidebar } from "@/components/layout/sidebar";
+import { AppBar } from "@/components/layout/app-bar";
+import { AppSplash } from "@/components/layout/app-splash";
+import { BottomTabs } from "@/components/layout/bottom-tabs";
+import { NavRail } from "@/components/layout/nav-rail";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultAutosave } from "@/hooks/use-vault-autosave";
 import { WeeklyAllocationSnapshotRecorder } from "@/hooks/use-weekly-allocation-snapshots";
@@ -63,13 +66,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     apiFetch("/api/prices/refresh", { method: "POST" }).catch(() => {});
   }, [isAuthenticated]);
 
-
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-bg-page">
-        <div className="text-text-subtle">{t("common.loading")}</div>
-      </div>
-    );
+    return <AppSplash />;
   }
 
   if (!isAuthenticated) {
@@ -80,8 +78,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-bg-page text-text-secondary">
       <WeeklyAllocationSnapshotRecorder />
       <PortfolioSnapshotRecorder />
-      <Sidebar />
-      <main className="flex-1 overflow-auto p-6 pt-16 md:pt-6">{children}</main>
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:border focus:border-border focus:bg-bg-card focus:px-3 focus:py-2 focus:text-body focus:text-text-primary"
+      >
+        {t("nav.skipToContent")}
+      </a>
+      <NavRail />
+      <div className="flex min-w-0 grow flex-col">
+        <AppBar />
+        <main id="main" className="grow overflow-auto p-4 md:p-6">
+          <div className="mx-auto w-full max-w-content">{children}</div>
+        </main>
+        <BottomTabs />
+      </div>
     </div>
   );
 }
