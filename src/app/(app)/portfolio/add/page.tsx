@@ -664,7 +664,7 @@ export default function AddTransactionPage() {
                   size="md"
                 />
                 <Metric
-                  label={t("portfolioAdd.fee")}
+                  label={t("portfolioAdd.feeAmountLabel")}
                   value={formatUsd(feeAmountUsd)}
                   size="md"
                   tone="muted"

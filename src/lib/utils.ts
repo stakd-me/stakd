@@ -1,5 +1,34 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * The design system renames the font-size scale, and tailwind-merge only
+ * knows Tailwind's default names. Without this, `text-body` looks like a
+ * colour class to it, so `cn("text-accent-ink", "text-body")` silently
+ * dropped the colour — which is exactly how the accent button ended up
+ * with an unreadable label.
+ */
+const FONT_SIZES = [
+  "display-lg",
+  "display-sm",
+  "heading",
+  "label",
+  "body",
+  "caption",
+  "num-xl",
+  "num-lg",
+  "num-md",
+  "num-sm",
+  "meta",
+];
+
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: FONT_SIZES }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

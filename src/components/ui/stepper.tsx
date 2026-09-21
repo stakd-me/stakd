@@ -8,7 +8,7 @@ export interface StepperStep<T extends string> {
   id: T;
   title: ReactNode;
   /** A live count, which is how a person decides whether to skip ahead. */
-  caption?: ReactNode;
+  count?: number;
   done?: boolean;
 }
 
@@ -72,18 +72,18 @@ export function Stepper<T extends string>({
                 steps.indexOf(step) + 1
               )}
             </span>
-            <span className="min-w-0">
+            <span className="flex min-w-0 items-center gap-2">
               <span
                 className={cn(
-                  "block truncate text-body font-semibold",
+                  "min-w-0 truncate text-body font-semibold",
                   step.done || isCurrent ? "text-text-primary" : "text-text-muted"
                 )}
               >
                 {step.title}
               </span>
-              {step.caption ? (
-                <span className="mt-0.5 block truncate font-mono text-meta uppercase text-text-muted">
-                  {step.caption}
+              {step.count ? (
+                <span className="shrink-0 rounded-sm border border-border-subtle bg-bg-input px-1.5 font-mono text-[11px] leading-4 text-text-muted">
+                  {step.count}
                 </span>
               ) : null}
             </span>

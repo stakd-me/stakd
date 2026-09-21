@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const items = [
   {
     href: "/analytics",
-    labelKey: "reports.sectionOverview" as const,
+    labelKey: "reports.tabSummary" as const,
     icon: ChartNoAxesCombined,
   },
   {

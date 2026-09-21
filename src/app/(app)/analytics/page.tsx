@@ -300,7 +300,7 @@ export default function ReportsPage() {
               onClick={() => setPeriod(option)}
               aria-pressed={period === option}
               className={cn(
-                "border-r border-border-subtle px-3 py-1.5 font-mono text-num-sm last:border-r-0",
+                "whitespace-nowrap border-r border-border-subtle px-3 py-1.5 font-mono text-num-sm last:border-r-0",
                 "transition-colors duration-[120ms] ease-out",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset",
                 period === option

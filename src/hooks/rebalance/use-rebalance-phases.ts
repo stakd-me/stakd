@@ -144,7 +144,7 @@ export function useRebalancePhases({
     return phaseOptions.map((option, index) => ({
       id: option.value,
       title: option.label,
-      caption: option.count > 0 ? String(option.count) : undefined,
+      count: option.count,
       done: index < activeIndex,
     }));
   }, [activePhase, phaseOptions]);
