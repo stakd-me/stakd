@@ -4,11 +4,16 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { formatUsd, toLocalDatetimeString } from "@/lib/utils";
+import { cn, formatUsd, toLocalDatetimeString } from "@/lib/utils";
+import { FormField } from "@/components/ui/form-field";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusPill } from "@/components/ui/status-pill";
+import { InlineHelpCard } from "@/components/ui/inline-help";
+import { Metric, MetricBand } from "@/components/ui/metric";
 import { AlertTriangle, ArrowLeft, ChevronDown, Search, SlidersHorizontal } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -47,18 +52,20 @@ type TxType = "buy" | "sell" | "receive" | "send";
 
 function getTxTypeToggleClass(type: TxType, isActive: boolean): string {
   if (!isActive) {
-    return "border border-border bg-bg-input text-text-subtle hover:bg-bg-hover";
+    return "border-border-subtle bg-transparent text-text-muted hover:bg-bg-hover hover:text-text-primary";
   }
+  // The selected type is stated in its own semantic colour: money in,
+  // money out, and the two transfers that move neither.
   if (type === "buy") {
-    return "border border-status-positive-border bg-status-positive-soft text-status-positive";
+    return "border-status-positive bg-status-positive-soft text-status-positive";
   }
   if (type === "sell") {
-    return "border border-status-negative-border bg-status-negative-soft text-status-negative";
+    return "border-status-negative bg-status-negative-soft text-status-negative";
   }
   if (type === "receive") {
-    return "border border-status-info-border bg-status-info-soft text-status-info";
+    return "border-accent bg-accent-soft text-accent";
   }
-  return "border border-status-caution-border bg-status-caution-soft text-status-caution";
+  return "border-status-caution bg-status-caution-soft text-status-caution";
 }
 
 export default function AddTransactionPage() {
@@ -429,137 +436,187 @@ export default function AddTransactionPage() {
     }
   };
 
+  const stepLabel = (index: number) => (
+    <span className="font-mono text-meta uppercase text-text-muted">
+      {t("portfolioAdd.step", { index: String(index) })}
+    </span>
+  );
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex items-center gap-4">
-        <Link href="/portfolio">
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex items-center gap-3">
+        <Link href="/portfolio" aria-label={t("portfolioAdd.back")}>
           <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold">{t("portfolioAdd.title")}</h1>
-          <p className="text-text-subtle">{t("portfolioAdd.subtitle")}</p>
-        </div>
+        <PageHeader
+          eyebrow={t("portfolioAdd.subtitle")}
+          title={t("portfolioAdd.title")}
+          className="grow"
+        />
       </div>
 
-      {/* Transaction Type Toggle */}
-      <div className="grid grid-cols-4 gap-2">
-        {(["buy", "sell", "receive", "send"] as const).map((txType) => (
-          <button
-            key={txType}
-            type="button"
-            onClick={() => {
-              setType(txType);
-            }}
-            className={`rounded-md py-2.5 text-sm font-semibold transition-colors ${getTxTypeToggleClass(
-              txType,
-              type === txType
-            )}`}
-          >
-            {txType === "buy" ? t("portfolio.buy") : txType === "sell" ? t("portfolio.sell") : txType === "receive" ? t("portfolio.receive") : t("portfolio.send")}
-          </button>
-        ))}
-      </div>
-      {(type === "receive" || type === "send") && (
-        <p className="text-xs text-text-subtle">
-          {t("portfolioAdd.receiveSendHint", {
-            label: type === "receive" ? t("portfolio.receive") : t("portfolio.send"),
-          })}
-        </p>
-      )}
-
-      <section className="space-y-2" aria-labelledby="token-search-label">
-          <p id="token-search-label" className="text-sm font-medium text-text-muted">
-            {t("portfolioAdd.searchCoinGecko")}
-          </p>
-          <div ref={dropdownRef} className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-subtle" />
-            <Input
-              placeholder={t("portfolioAdd.searchPlaceholder")}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => {
-                if (searchQuery.length >= 1) setShowDropdown(true);
-              }}
-              className="pl-10"
-            />
-            {showDropdown && searchQuery.length >= 1 && (
-              <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
-                {filteredCoins.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-text-subtle">
-                    {t("portfolioAdd.noResults")}
-                  </div>
-                ) : (
-                  filteredCoins.map((coin) => (
-                    <button
-                      key={coin.id}
-                      type="button"
-                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-bg-hover"
-                      onClick={() => selectCoin(coin)}
-                    >
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-xs font-bold text-accent">
-                        {coin.symbol[0]?.toUpperCase()}
-                      </div>
-                      <span className="font-medium text-text-tertiary">
-                        {coin.name}
-                      </span>
-                      <span className="text-text-subtle">
-                        {coin.symbol.toUpperCase()}
-                      </span>
-                      {coin.binance && (
-                        <span className="ml-auto rounded-md bg-status-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-status-warning">
-                          Binance
-                        </span>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Step 1 — what kind of transaction */}
+        <Card className="p-0">
+          <div className="border-b border-border px-5 py-3">
+            {stepLabel(1)}
+            <h2 className="text-label uppercase text-text-primary">
+              {t("portfolioAdd.stepType")}
+            </h2>
+          </div>
+          <div className="space-y-3 p-5">
+            <div
+              role="group"
+              aria-label={t("portfolioAdd.stepType")}
+              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+            >
+              {(["buy", "sell", "receive", "send"] as const).map((txType) => (
+                <button
+                  key={txType}
+                  type="button"
+                  onClick={() => setType(txType)}
+                  aria-pressed={type === txType}
+                  className={cn(
+                    "h-control-lg border text-body font-semibold",
+                    "transition-colors duration-[120ms] ease-out",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
+                    getTxTypeToggleClass(txType, type === txType)
+                  )}
+                >
+                  {txType === "buy"
+                    ? t("portfolio.buy")
+                    : txType === "sell"
+                      ? t("portfolio.sell")
+                      : txType === "receive"
+                        ? t("portfolio.receive")
+                        : t("portfolio.send")}
+                </button>
+              ))}
+            </div>
+            {(type === "receive" || type === "send") && (
+              <p className="text-caption text-text-muted">
+                {t("portfolioAdd.receiveSendHint", {
+                  label:
+                    type === "receive" ? t("portfolio.receive") : t("portfolio.send"),
+                })}
+              </p>
             )}
           </div>
-      </section>
+        </Card>
 
-      {/* Transaction Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("portfolioAdd.transactionDetails")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="symbol" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.tokenSymbol")}
-                </label>
+        {/* Step 2 — which token */}
+        <Card className="p-0">
+          <div className="border-b border-border px-5 py-3">
+            {stepLabel(2)}
+            <h2 className="text-label uppercase text-text-primary">
+              {t("portfolioAdd.stepToken")}
+            </h2>
+          </div>
+          <div className="space-y-4 p-5">
+            <div ref={dropdownRef} className="relative">
+              <FormField
+                label={t("portfolioAdd.searchCoinGecko")}
+                htmlFor="coin-search"
+                hint={t("portfolioAdd.searchHint")}
+              >
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+                    aria-hidden="true"
+                  />
+                  <Input
+                    id="coin-search"
+                    placeholder={t("portfolioAdd.searchPlaceholder")}
+                    value={searchQuery}
+                    aria-expanded={showDropdown && searchQuery.length >= 1}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                    }}
+                    onFocus={() => {
+                      if (searchQuery.length >= 1) setShowDropdown(true);
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+              </FormField>
+              {showDropdown && searchQuery.length >= 1 && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-bg-card shadow-overlay">
+                  {filteredCoins.length === 0 ? (
+                    <p className="px-4 py-3 text-body text-text-muted">
+                      {t("portfolioAdd.noResults")}
+                    </p>
+                  ) : (
+                    filteredCoins.map((coin) => (
+                      <button
+                        key={coin.id}
+                        type="button"
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset"
+                        onClick={() => selectCoin(coin)}
+                      >
+                        <span className="font-semibold text-text-primary">
+                          {coin.symbol.toUpperCase()}
+                        </span>
+                        <span className="min-w-0 truncate text-text-secondary">
+                          {coin.name}
+                        </span>
+                        {coin.binance && (
+                          <StatusPill tone="neutral" className="ml-auto shrink-0">
+                            Binance
+                          </StatusPill>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label={t("portfolioAdd.tokenSymbol")} htmlFor="symbol">
                 <Input
                   id="symbol"
                   placeholder={t("portfolioAdd.tokenSymbolPlaceholder")}
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                  className="font-mono"
                 />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.tokenName")}
-                </label>
+              </FormField>
+              <FormField label={t("portfolioAdd.tokenName")} htmlFor="name">
                 <Input
                   id="name"
                   placeholder={t("portfolioAdd.tokenNamePlaceholder")}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
-              </div>
+              </FormField>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="quantity" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.quantity")}
-                </label>
+            {tokenMismatch && (
+              <InlineHelpCard
+                tone="warning"
+                icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+                title={t("portfolioAdd.tokenMismatchWarning", {
+                  token: selectedCoin.name,
+                })}
+              />
+            )}
+          </div>
+        </Card>
+
+        {/* Step 3 — how much, and when */}
+        <Card className="p-0">
+          <div className="border-b border-border px-5 py-3">
+            {stepLabel(3)}
+            <h2 className="text-label uppercase text-text-primary">
+              {t("portfolioAdd.stepAmount")}
+            </h2>
+          </div>
+          <div className="space-y-4 p-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label={t("portfolioAdd.quantity")} htmlFor="quantity">
                 <Input
                   id="quantity"
                   type="number"
@@ -568,17 +625,14 @@ export default function AddTransactionPage() {
                   placeholder={t("portfolioAdd.quantityPlaceholder")}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
+                  className="font-mono tabular"
                 />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="pricePerUnit" className="text-sm font-medium text-text-muted">
-                  {t("portfolioAdd.pricePerUnit")}
-                  {fetchingPrice && (
-                    <span className="ml-2 text-xs text-status-info">
-                      {t("portfolioAdd.fetchingPrice")}
-                    </span>
-                  )}
-                </label>
+              </FormField>
+              <FormField
+                label={t("portfolioAdd.pricePerUnit")}
+                htmlFor="pricePerUnit"
+                hint={fetchingPrice ? t("portfolioAdd.fetchingPrice") : undefined}
+              >
                 <Input
                   id="pricePerUnit"
                   type="number"
@@ -587,175 +641,181 @@ export default function AddTransactionPage() {
                   placeholder={t("portfolioAdd.pricePlaceholder")}
                   value={pricePerUnit}
                   onChange={(e) => setPricePerUnit(e.target.value)}
+                  className="font-mono tabular"
                 />
-              </div>
+              </FormField>
             </div>
 
-            {/* Auto-computed total */}
-            {totalCost > 0 && (
-              <div className="rounded-md bg-bg-card px-4 py-3">
-                <p className="text-sm text-text-subtle">
-                  {t("portfolioAdd.totalCost", { amount: formatUsd(totalCost) })}
-                </p>
-              </div>
-            )}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAdvanced((value) => !value)}
-              aria-expanded={showAdvanced}
-              className="px-0"
-            >
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              {t("portfolioAdd.advancedDetails")}
-              <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-            </Button>
-
-            {showAdvanced && (type === "buy" || type === "sell") && (
-              <div className="space-y-3 rounded-md border border-border bg-bg-card px-4 py-4">
-                <label className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={settlementEnabled}
-                    onChange={(e) => setSettlementEnabled(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded-md border-border"
-                  />
-                  <div className="space-y-1">
-                    <span className="text-sm font-medium text-text-primary">
-                      {t("portfolioAdd.adjustStablecoinBalance")}
-                    </span>
-                    <p className="text-xs text-text-subtle">
-                      {t("portfolioAdd.adjustStablecoinBalanceDesc")}
-                    </p>
-                  </div>
-                </label>
-
-                {settlementEnabled && (
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="settlementStablecoin"
-                        className="text-sm font-medium text-text-muted"
-                      >
-                        {t("portfolioAdd.settlementStablecoin")}
-                      </label>
-                      <Select
-                        id="settlementStablecoin"
-                        value={settlementSymbol}
-                        onChange={(e) => setSettlementSymbol(e.target.value)}
-                      >
-                        {stablecoinOptions.map((option) => (
-                          <option key={option.symbol} value={option.symbol}>
-                            {option.symbol} · {option.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    {settlementAmountUsd > 0 && (
-                      <div className="rounded-md bg-bg-input px-4 py-3 text-sm text-text-subtle">
-                        {t("portfolioAdd.settlementPreview", {
-                          token: selectedSettlementOption.symbol,
-                          direction:
-                            type === "buy"
-                              ? t("portfolio.transactionSettlementOut")
-                              : t("portfolio.transactionSettlementIn"),
-                          amount: formatUsd(settlementAmountUsd),
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-2">
-              <label htmlFor="transactedAt" className="text-sm font-medium text-text-muted">
-                {t("common.date")}
-              </label>
+            <FormField label={t("common.date")} htmlFor="transactedAt">
               <Input
                 id="transactedAt"
                 type="datetime-local"
                 value={transactedAt}
                 onChange={(e) => setTransactedAt(e.target.value)}
+                className="font-mono"
               />
-            </div>
+            </FormField>
 
-            {showAdvanced ? <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {(type === "buy" || type === "sell") ? (
-                <div className="space-y-2">
-                  <label htmlFor="feePercent" className="text-sm font-medium text-text-muted">
-                    {t("portfolioAdd.fee")} <span className="text-text-dim">({t("common.optional")})</span>
+            {totalCost > 0 && (
+              <MetricBand columns={2}>
+                <Metric
+                  label={t("portfolioAdd.totalCostLabel")}
+                  value={formatUsd(totalCost)}
+                  size="md"
+                />
+                <Metric
+                  label={t("portfolioAdd.fee")}
+                  value={formatUsd(feeAmountUsd)}
+                  size="md"
+                  tone="muted"
+                />
+              </MetricBand>
+            )}
+          </div>
+        </Card>
+
+        {/* Everything a person does not set most of the time */}
+        <Card className="p-0">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((value) => !value)}
+            aria-expanded={showAdvanced}
+            className="flex w-full items-center gap-2 px-5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset"
+          >
+            <SlidersHorizontal className="h-4 w-4 text-text-muted" aria-hidden="true" />
+            <span className="text-label uppercase text-text-primary">
+              {t("portfolioAdd.advancedDetails")}
+            </span>
+            <ChevronDown
+              className={cn(
+                "ml-auto h-4 w-4 text-text-muted transition-transform duration-[120ms] ease-out",
+                showAdvanced && "rotate-180"
+              )}
+              aria-hidden="true"
+            />
+          </button>
+
+          {showAdvanced && (
+            <div className="space-y-4 border-t border-border p-5">
+              {(type === "buy" || type === "sell") && (
+                <>
+                  <label className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={settlementEnabled}
+                      onChange={(e) => setSettlementEnabled(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded-sm border-border accent-accent"
+                    />
+                    <span className="space-y-1">
+                      <span className="block text-body font-semibold text-text-primary">
+                        {t("portfolioAdd.adjustStablecoinBalance")}
+                      </span>
+                      <span className="block text-caption text-text-muted">
+                        {t("portfolioAdd.adjustStablecoinBalanceDesc")}
+                      </span>
+                    </span>
                   </label>
-                  <Input
-                    id="feePercent"
-                    type="number"
-                    step="any"
-                    min="0"
-                    placeholder={t("portfolioAdd.feePlaceholder")}
-                    value={feePercent}
-                    onChange={(e) => setFeePercent(e.target.value)}
-                  />
-                  <p className="text-xs text-text-dim">
-                    {t("portfolioAdd.feeAmountPreview", {
+
+                  {settlementEnabled && (
+                    <div className="space-y-3 border-l-0 pl-7">
+                      <FormField
+                        label={t("portfolioAdd.settlementStablecoin")}
+                        htmlFor="settlementStablecoin"
+                      >
+                        <Select
+                          id="settlementStablecoin"
+                          value={settlementSymbol}
+                          onChange={(e) => setSettlementSymbol(e.target.value)}
+                        >
+                          {stablecoinOptions.map((option) => (
+                            <option key={option.symbol} value={option.symbol}>
+                              {option.symbol} · {option.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormField>
+
+                      {settlementAmountUsd > 0 && (
+                        <p className="font-mono text-num-sm tabular text-text-secondary">
+                          {t("portfolioAdd.settlementPreview", {
+                            token: selectedSettlementOption.symbol,
+                            direction:
+                              type === "buy"
+                                ? t("portfolio.transactionSettlementOut")
+                                : t("portfolio.transactionSettlementIn"),
+                            amount: formatUsd(settlementAmountUsd),
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <FormField
+                    label={t("portfolioAdd.fee")}
+                    htmlFor="feePercent"
+                    requiredLabel={`(${t("common.optional")})`}
+                    hint={t("portfolioAdd.feeAmountPreview", {
                       amount: formatUsd(feeAmountUsd),
                     })}
-                  </p>
-                </div>
-              ) : (
-                <div />
+                  >
+                    <Input
+                      id="feePercent"
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder={t("portfolioAdd.feePlaceholder")}
+                      value={feePercent}
+                      onChange={(e) => setFeePercent(e.target.value)}
+                      className="font-mono tabular"
+                    />
+                  </FormField>
+                </>
               )}
-              <div />
-            </div> : null}
 
-            {showAdvanced ? <div className="space-y-2">
-              <label htmlFor="note" className="text-sm font-medium text-text-muted">
-                {t("common.note")} <span className="text-text-dim">({t("common.optional")})</span>
-              </label>
-              <Input
-                id="note"
-                placeholder={t("portfolioAdd.notePlaceholder")}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div> : null}
-
-            {tokenMismatch && (
-              <div className="flex items-start gap-2 rounded-md bg-status-warning-soft px-4 py-3 text-sm text-status-warning">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>
-                  {t("portfolioAdd.tokenMismatchWarning", {
-                    token: selectedCoin.name,
-                  })}
-                </span>
-              </div>
-            )}
-
-            {error && (
-              <div className="rounded-md bg-status-negative-soft px-4 py-3 text-sm text-status-negative">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <Link href="/portfolio" className="flex-1">
-                <Button type="button" variant="outline" className="w-full">
-                  {t("portfolioAdd.back")}
-                </Button>
-              </Link>
-              <Button
-                type="submit"
-                className="flex-1"
-                disabled={submitting}
+              <FormField
+                label={t("common.note")}
+                htmlFor="note"
+                requiredLabel={`(${t("common.optional")})`}
               >
-                {submitting ? t("portfolioAdd.addingTransaction") : t("portfolioAdd.addTransaction")}
-              </Button>
+                <Input
+                  id="note"
+                  placeholder={t("portfolioAdd.notePlaceholder")}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </FormField>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          )}
+        </Card>
+
+        {error && (
+          <InlineHelpCard
+            tone="danger"
+            icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
+            title={t("portfolioAdd.failedToAdd")}
+            description={error}
+          />
+        )}
+
+        <div className="sticky bottom-0 flex gap-2 border-t border-border bg-bg-page py-3">
+          <Link href="/portfolio" className="grow sm:grow-0">
+            <Button type="button" variant="outline" size="lg" className="w-full">
+              {t("portfolioAdd.back")}
+            </Button>
+          </Link>
+          <Button
+            type="submit"
+            variant="accent"
+            size="lg"
+            className="grow"
+            disabled={submitting}
+          >
+            {submitting
+              ? t("portfolioAdd.addingTransaction")
+              : t("portfolioAdd.addTransaction")}
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

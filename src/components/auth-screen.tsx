@@ -382,7 +382,6 @@ export function AuthScreen() {
               <FormField
                 label={t("auth.usernameLabel")}
                 htmlFor="auth-username"
-                required
                 requiredLabel={requiredLabel}
               >
                 <Input
@@ -403,7 +402,6 @@ export function AuthScreen() {
               <FormField
                 label={t("auth.passphraseLabel")}
                 htmlFor="auth-passphrase"
-                required
                 requiredLabel={requiredLabel}
                 error={passphraseTooShort ? t("auth.passphraseMinLength") : undefined}
               >
@@ -424,7 +422,6 @@ export function AuthScreen() {
                 <FormField
                   label={t("auth.confirmPassphraseLabel")}
                   htmlFor="auth-confirm-passphrase"
-                  required
                   requiredLabel={requiredLabel}
                   error={confirmMismatch ? t("auth.passphrasesDoNotMatch") : undefined}
                 >

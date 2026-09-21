@@ -316,6 +316,12 @@ const en = {
 
   // Portfolio Add page
   "portfolioAdd.title": "Add Transaction",
+  "portfolioAdd.step": "Step {index}",
+  "portfolioAdd.stepType": "Transaction type",
+  "portfolioAdd.stepToken": "Token",
+  "portfolioAdd.stepAmount": "Amount and date",
+  "portfolioAdd.searchHint": "Picking a token here fills in the symbol, the name and the current price.",
+  "portfolioAdd.totalCostLabel": "Total cost",
   "portfolioAdd.subtitle": "Record a transaction",
   "portfolioAdd.searchCoinGecko": "Search CoinGecko",
   "portfolioAdd.searchPlaceholder": "Search for a token (e.g. Bitcoin, Ethereum)...",
@@ -342,7 +348,6 @@ const en = {
   "portfolioAdd.date": "Date",
   "portfolioAdd.note": "Note",
   "portfolioAdd.notePlaceholder": "Optional note",
-  "portfolioAdd.totalCost": "Total Cost: {amount}",
   "portfolioAdd.adjustStablecoinBalance": "Adjust stablecoin balance",
   "portfolioAdd.adjustStablecoinBalanceDesc": "Automatically add the stablecoin funding leg when this trade is saved.",
   "portfolioAdd.settlementStablecoin": "Settlement stablecoin",

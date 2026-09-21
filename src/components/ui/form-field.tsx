@@ -6,7 +6,7 @@ interface FormFieldProps {
   htmlFor?: string;
   hint?: ReactNode;
   error?: ReactNode;
-  required?: boolean;
+  /** Rendered after the label, e.g. "(required)" or "(optional)". */
   requiredLabel?: ReactNode;
   className?: string;
   children: ReactNode;
@@ -17,7 +17,6 @@ export function FormField({
   htmlFor,
   hint,
   error,
-  required = false,
   requiredLabel,
   className,
   children,
@@ -26,20 +25,20 @@ export function FormField({
     <div className={cn("space-y-1.5", className)}>
       <label
         htmlFor={htmlFor}
-        className="block text-sm font-medium text-text-secondary"
+        className="block text-body font-semibold text-text-primary"
       >
         {label}
-        {required && requiredLabel ? (
-          <span className="ml-1 text-text-dim">({requiredLabel})</span>
+        {requiredLabel ? (
+          <span className="ml-1 font-normal text-text-muted">{requiredLabel}</span>
         ) : null}
       </label>
       {children}
       {error ? (
-        <p className="text-xs text-status-negative" role="alert" aria-live="polite">
+        <p className="text-caption text-status-negative" role="alert" aria-live="polite">
           {error}
         </p>
       ) : hint ? (
-        <p className="text-xs text-text-dim">{hint}</p>
+        <p className="text-caption text-text-muted">{hint}</p>
       ) : null}
     </div>
   );

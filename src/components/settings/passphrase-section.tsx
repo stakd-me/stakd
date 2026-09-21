@@ -137,7 +137,6 @@ export function PassphraseSection() {
             <FormField
               label={t("settings.currentPassword")}
               htmlFor="settings-current-passphrase"
-              required
               requiredLabel={requiredLabel}
             >
               <Input
@@ -151,7 +150,6 @@ export function PassphraseSection() {
             <FormField
               label={t("settings.newPassword")}
               htmlFor="settings-new-passphrase"
-              required
               requiredLabel={requiredLabel}
               error={
                 newPassphrase.length > 0 && !passphraseLongEnough
@@ -170,7 +168,6 @@ export function PassphraseSection() {
             <FormField
               label={t("settings.confirmNewPassword")}
               htmlFor="settings-confirm-passphrase"
-              required
               requiredLabel={requiredLabel}
               error={
                 confirmNewPassphrase.length > 0 && !passphrasesMatch

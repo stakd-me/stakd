@@ -318,6 +318,12 @@ const vi: Record<TranslationKeys, string> = {
 
   // Portfolio Add page
   "portfolioAdd.title": "Thêm giao dịch",
+  "portfolioAdd.step": "Bước {index}",
+  "portfolioAdd.stepType": "Loại giao dịch",
+  "portfolioAdd.stepToken": "Token",
+  "portfolioAdd.stepAmount": "Số lượng và thời điểm",
+  "portfolioAdd.searchHint": "Chọn token ở đây sẽ tự điền mã, tên và giá hiện tại.",
+  "portfolioAdd.totalCostLabel": "Tổng chi phí",
   "portfolioAdd.subtitle": "Ghi nhận giao dịch",
   "portfolioAdd.searchCoinGecko": "Tìm trên CoinGecko",
   "portfolioAdd.searchPlaceholder": "Tìm token (VD: Bitcoin, Ethereum)...",
@@ -344,7 +350,6 @@ const vi: Record<TranslationKeys, string> = {
   "portfolioAdd.date": "Ngày",
   "portfolioAdd.note": "Ghi chú",
   "portfolioAdd.notePlaceholder": "Ghi chú tùy chọn",
-  "portfolioAdd.totalCost": "Tổng chi phí: {amount}",
   "portfolioAdd.adjustStablecoinBalance": "Tự điều chỉnh số dư stablecoin",
   "portfolioAdd.adjustStablecoinBalanceDesc": "Tự động thêm vế stablecoin đối ứng khi lưu giao dịch này.",
   "portfolioAdd.settlementStablecoin": "Stablecoin đối ứng",
