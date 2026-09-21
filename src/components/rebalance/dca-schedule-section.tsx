@@ -55,7 +55,7 @@ export function DcaScheduleSection({
                       {chunk.trades.map((trade) => (
                         <span
                           key={trade.tokenSymbol}
-                          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium ${
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${
                             trade.action === "buy"
                               ? "bg-status-positive-soft text-status-positive"
                               : "bg-status-negative-soft text-status-negative"

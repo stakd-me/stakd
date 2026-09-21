@@ -180,7 +180,7 @@ export function ActiveSessionsSection({
                       className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3"
                     >
                       <span
-                        className={`inline-flex items-center rounded border px-2 py-0.5 text-xs font-medium ${
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
                           trade.action === "buy"
                             ? "border-status-positive-border bg-status-positive-soft text-status-positive"
                             : "border-status-negative-border bg-status-negative-soft text-status-negative"

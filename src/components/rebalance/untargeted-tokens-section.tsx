@@ -46,7 +46,7 @@ export function UntargetedTokensSection({
                     <p className="font-medium text-text-primary">
                       {suggestion.tokenSymbol}
                     </p>
-                    <span className="mt-1 inline-flex rounded bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
+                    <span className="mt-1 inline-flex rounded-md bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
                       {t("rebalance.untargeted")}
                     </span>
                   </div>
@@ -109,7 +109,7 @@ export function UntargetedTokensSection({
                 >
                   <th scope="row" className="py-3 pr-4 text-left font-medium text-text-muted">
                     {suggestion.tokenSymbol}
-                    <span className="ml-2 rounded bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
+                    <span className="ml-2 rounded-md bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
                       {t("rebalance.untargeted")}
                     </span>
                   </th>

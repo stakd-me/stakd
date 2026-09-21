@@ -248,7 +248,7 @@ export function RebalanceSettingsSection({
                 onChange={(e) =>
                   setField("excludeStablecoinsFromConcentration", e.target.checked)
                 }
-                className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
+                className="mt-0.5 h-4 w-4 rounded-md border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
               />
               <span>
                 <span className="text-sm font-medium text-text-primary">
@@ -291,7 +291,7 @@ export function RebalanceSettingsSection({
                 type="checkbox"
                 checked={form.buyOnlyMode}
                 onChange={(e) => setField("buyOnlyMode", e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
+                className="mt-0.5 h-4 w-4 rounded-md border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
               />
               <span>
                 <span className="text-sm font-medium text-text-primary">
@@ -374,7 +374,7 @@ export function RebalanceSettingsSection({
                     onChange={(e) =>
                       setField("treatStablecoinsAsCashReserve", e.target.checked)
                     }
-                    className="mt-0.5 h-4 w-4 rounded border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
+                    className="mt-0.5 h-4 w-4 rounded-md border-border bg-bg-muted text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
                   />
                   <span>
                     <span className="text-sm font-medium text-text-primary">

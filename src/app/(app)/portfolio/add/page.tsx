@@ -511,7 +511,7 @@ export default function AddTransactionPage() {
                         {coin.symbol.toUpperCase()}
                       </span>
                       {coin.binance && (
-                        <span className="ml-auto rounded bg-status-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-status-warning">
+                        <span className="ml-auto rounded-md bg-status-warning-soft px-1.5 py-0.5 text-[10px] font-semibold text-status-warning">
                           Binance
                         </span>
                       )}
@@ -620,7 +620,7 @@ export default function AddTransactionPage() {
                     type="checkbox"
                     checked={settlementEnabled}
                     onChange={(e) => setSettlementEnabled(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-border"
+                    className="mt-1 h-4 w-4 rounded-md border-border"
                   />
                   <div className="space-y-1">
                     <span className="text-sm font-medium text-text-primary">

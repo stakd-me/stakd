@@ -81,7 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => dismiss(toastItem.id)}
-                className="shrink-0 rounded p-0.5 hover:bg-white/10"
+                className="shrink-0 rounded-md p-0.5 hover:bg-white/10"
                 aria-label={translate("common.close")}
               >
                 <X className="h-3.5 w-3.5" />

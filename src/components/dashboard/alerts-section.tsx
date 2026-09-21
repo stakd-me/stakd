@@ -63,7 +63,7 @@ function AlertCard({
               <span className={cn("text-sm font-bold", styles.icon)}>
                 {headline}
               </span>
-              <span className="rounded bg-bg-hover px-1.5 py-0.5 text-[10px] font-medium text-text-subtle">
+              <span className="rounded-md bg-bg-hover px-1.5 py-0.5 text-[10px] font-medium text-text-subtle">
                 {t(`alertRules.type.${alert.ruleType}`)}
               </span>
             </div>
@@ -76,7 +76,7 @@ function AlertCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="flex-shrink-0 rounded p-1 text-text-dim hover:bg-bg-hover hover:text-text-secondary"
+          className="flex-shrink-0 rounded-md p-1 text-text-dim hover:bg-bg-hover hover:text-text-secondary"
           aria-label={t("alertRules.dismiss")}
         >
           <X className="h-3.5 w-3.5" />

@@ -149,14 +149,14 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                       onChange={(e) =>
                         updateRule(rule.id, { enabled: e.target.checked })
                       }
-                      className="rounded"
+                      className="rounded-md"
                     />
                     {t("alertRules.enabled")}
                   </label>
                   <button
                     type="button"
                     onClick={() => removeRule(rule.id)}
-                    className="rounded p-1 text-text-dim hover:bg-bg-hover hover:text-status-negative"
+                    className="rounded-md p-1 text-text-dim hover:bg-bg-hover hover:text-status-negative"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -244,7 +244,7 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                     <p>{t("alertRules.reserveAutoDesc")}</p>
                     <div className="mt-2 flex flex-wrap gap-3">
                       {Object.entries(PHASE_RESERVE_MAP).map(([phase, pct]) => (
-                        <span key={phase} className="rounded bg-bg-hover px-2 py-0.5">
+                        <span key={phase} className="rounded-md bg-bg-hover px-2 py-0.5">
                           {t(`marketSignal.phase.${phase}` as TranslationKeys)}: {pct}%
                         </span>
                       ))}

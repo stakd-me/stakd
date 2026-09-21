@@ -177,7 +177,7 @@ export function ManualEntriesSection({
                           </span>
                         </div>
                         {coin.binance ? (
-                          <span className="ml-2 shrink-0 rounded bg-status-info-soft px-1.5 py-0.5 text-[10px] text-status-info">
+                          <span className="ml-2 shrink-0 rounded-md bg-status-info-soft px-1.5 py-0.5 text-[10px] text-status-info">
                             Binance
                           </span>
                         ) : null}

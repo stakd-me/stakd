@@ -524,7 +524,7 @@ export function TargetAllocationSection({
                       g.name.toUpperCase() === row.tokenSymbol.toUpperCase()
                   ) && (
                     <div className="mt-2">
-                      <span className="inline-flex items-center gap-1 rounded bg-status-info-soft px-1.5 py-0.5 text-xs text-status-info">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-status-info-soft px-1.5 py-0.5 text-xs text-status-info">
                         <Layers className="h-3 w-3" />
                         {t("rebalance.group")}
                       </span>

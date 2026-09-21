@@ -250,7 +250,7 @@ export function AuthScreen() {
                     navigator.clipboard.writeText(savedPassphrase);
                     setCopyStatusMessage(t("auth.passphraseCopied"));
                   }}
-                  className="shrink-0 rounded p-1 text-status-warning transition-colors hover:bg-status-warning/10"
+                  className="shrink-0 rounded-md p-1 text-status-warning transition-colors hover:bg-status-warning/10"
                   title={t("auth.copyPassphrase")}
                   aria-label={t("auth.copyPassphrase")}
                 >
@@ -345,7 +345,7 @@ export function AuthScreen() {
                 tabIndex={tab === "login" ? 0 : -1}
                 onClick={() => handleTabChange("login")}
                 className={cn(
-                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
+                  "rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
                   tab === "login"
                     ? "bg-bg-card text-text-primary shadow-sm"
                     : "text-text-subtle hover:text-text-primary"
@@ -362,7 +362,7 @@ export function AuthScreen() {
                 tabIndex={tab === "register" ? 0 : -1}
                 onClick={() => handleTabChange("register")}
                 className={cn(
-                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
+                  "rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
                   tab === "register"
                     ? "bg-bg-card text-text-primary shadow-sm"
                     : "text-text-subtle hover:text-text-primary"
@@ -463,7 +463,7 @@ export function AuthScreen() {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border-subtle bg-bg-input text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
+                      className="mt-1 h-4 w-4 rounded-md border-border-subtle bg-bg-input text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
                     />
                     <span className="space-y-1">
                       <span className="block text-sm font-medium text-text-primary">
