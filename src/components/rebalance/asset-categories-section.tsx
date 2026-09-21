@@ -72,7 +72,7 @@ export function AssetCategoriesSection({
       <CardContent>
         <div className="mb-4 flex items-end gap-3">
           <div className="relative">
-            <label className="mb-1 block text-xs text-text-subtle">
+            <label className="mb-1 block text-caption text-text-muted">
               {t("rebalance.tokenSymbolLabel")}
             </label>
             <Input
@@ -97,7 +97,7 @@ export function AssetCategoriesSection({
                   <button
                     key={symbol}
                     type="button"
-                    className="w-full px-3 py-2 text-left text-xs text-text-muted hover:bg-bg-hover"
+                    className="w-full px-3 py-2 text-left text-caption text-text-muted hover:bg-bg-hover"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => {
                       setCategorySymbol(symbol);
@@ -112,7 +112,7 @@ export function AssetCategoriesSection({
             )}
           </div>
           <div>
-            <label className="mb-1 block text-xs text-text-subtle">
+            <label className="mb-1 block text-caption text-text-muted">
               {t("rebalance.category")}
             </label>
             <Select
@@ -150,7 +150,7 @@ export function AssetCategoriesSection({
 
         {categoryBreakdown.length > 0 && (
           <div className="mb-4">
-            <h4 className="mb-2 text-sm font-semibold text-text-muted">
+            <h4 className="mb-2 text-body font-semibold text-text-muted">
               {t("rebalance.categoryBreakdown")}
             </h4>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
@@ -159,13 +159,13 @@ export function AssetCategoriesSection({
                   key={cb.category}
                   className="rounded-md bg-bg-card px-3 py-2 text-center"
                 >
-                  <p className="text-xs font-medium text-text-subtle">
+                  <p className="text-caption font-semibold text-text-muted">
                     {cb.category}
                   </p>
-                  <p className="text-sm font-bold text-text-primary">
+                  <p className="text-body font-semibold text-text-primary">
                     {cb.percent.toFixed(1)}%
                   </p>
-                  <p className="text-xs text-text-dim">
+                  <p className="text-caption text-text-muted">
                     {formatUsd(cb.valueUsd)}
                   </p>
                 </div>
@@ -176,19 +176,19 @@ export function AssetCategoriesSection({
 
         {categories.length > 0 && (
           <div className="space-y-1">
-            <h4 className="mb-2 text-sm font-semibold text-text-muted">
+            <h4 className="mb-2 text-body font-semibold text-text-muted">
               {t("rebalance.tokenAssignments")}
             </h4>
             <div className="flex flex-wrap gap-2">
               {categories.map((cat) => (
                 <span
                   key={cat.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-bg-muted px-2.5 py-1 text-xs font-medium text-text-tertiary"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                 >
                   {cat.tokenSymbol}: {cat.category}
                   <button
                     type="button"
-                    className="text-text-subtle hover:text-status-negative"
+                    className="text-text-muted hover:text-status-negative"
                     onClick={() =>
                       onConfirmDelete(
                         cat.tokenSymbol,
@@ -207,7 +207,7 @@ export function AssetCategoriesSection({
         )}
 
         {categories.length === 0 && categoryBreakdown.length === 0 && (
-          <p className="text-sm text-text-subtle">
+          <p className="text-body text-text-muted">
             {t("rebalance.noCategories")}
           </p>
         )}

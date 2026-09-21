@@ -65,7 +65,7 @@ export function ImportReviewModal({
                 <CardTitle id="portfolio-import-title">
                   {t("portfolio.importTitle")}
                 </CardTitle>
-                <p id="portfolio-import-desc" className="mt-1 text-sm text-text-subtle">
+                <p id="portfolio-import-desc" className="mt-1 text-body text-text-muted">
                   {t("portfolio.importDesc")}
                 </p>
               </div>
@@ -96,7 +96,7 @@ export function ImportReviewModal({
                 <div>
                   <label
                     htmlFor="portfolio-import-file"
-                    className="mb-2 block text-sm font-medium text-text-primary"
+                    className="mb-2 block text-body font-semibold text-text-primary"
                   >
                     {t("portfolio.importFileLabel")}
                   </label>
@@ -110,11 +110,11 @@ export function ImportReviewModal({
                         onFileSelect(file);
                       }
                     }}
-                    className="block w-full text-sm text-text-subtle file:mr-4 file:rounded-md file:border-0 file:bg-bg-muted file:px-4 file:py-2 file:text-sm file:font-medium file:text-text-tertiary hover:file:bg-bg-hover"
+                    className="block w-full text-body text-text-muted file:mr-4 file:rounded-md file:border-0 file:bg-bg-muted file:px-4 file:py-2 file:text-body file:font-medium file:text-text-secondary hover:file:bg-bg-hover"
                   />
                 </div>
                 {importFileName ? (
-                  <p className="text-xs text-text-dim">
+                  <p className="text-caption text-text-muted">
                     {t("portfolio.importSelectedFile", { name: importFileName })}
                   </p>
                 ) : null}
@@ -123,26 +123,26 @@ export function ImportReviewModal({
               {importHasReviewState ? (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" role="status" aria-live="polite">
                   <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
-                    <p className="text-xs text-text-subtle">
+                    <p className="text-caption text-text-muted">
                       {t("portfolio.importSelectedFileLabel")}
                     </p>
-                    <p className="mt-2 truncate text-sm font-medium text-text-primary">
+                    <p className="mt-2 truncate text-body font-semibold text-text-primary">
                       {importFileName || t("common.noData")}
                     </p>
                   </div>
                   <div className="rounded-lg border border-status-positive-border bg-status-positive-soft p-4">
-                    <p className="text-xs text-status-positive">
+                    <p className="text-caption text-status-positive">
                       {t("portfolio.importReadyRows")}
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-status-positive">
+                    <p className="mt-2 text-display-sm text-status-positive">
                       {importReadyCount}
                     </p>
                   </div>
                   <div className="rounded-lg border border-status-warning-border bg-status-warning-soft p-4">
-                    <p className="text-xs text-status-warning">
+                    <p className="text-caption text-status-warning">
                       {t("portfolio.importIssueCount")}
                     </p>
-                    <p className="mt-2 text-xl font-semibold text-status-warning">
+                    <p className="mt-2 text-display-sm text-status-warning">
                       {importIssueCount}
                     </p>
                   </div>
@@ -152,32 +152,32 @@ export function ImportReviewModal({
               {importPreview.length > 0 ? (
                 <div>
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm text-text-subtle">
+                    <p className="text-body text-text-muted">
                       {t("portfolio.preview", { count: importPreview.length })}
                     </p>
-                    <p className="text-xs text-text-dim">
+                    <p className="text-caption text-text-muted">
                       {t("portfolio.importPreviewLimit")}
                     </p>
                   </div>
                   <div className="max-h-48 overflow-auto rounded-md border border-border">
-                    <table className="w-full text-xs">
+                    <table className="w-full text-caption">
                       <caption className="sr-only">
                         {t("portfolio.preview", { count: importPreview.length })}
                       </caption>
                       <thead>
-                        <tr className="border-b border-border text-text-subtle">
-                          <th scope="col" className="px-2 py-1 text-left">#</th>
-                          <th scope="col" className="px-2 py-1 text-left">{t("common.date")}</th>
-                          <th scope="col" className="px-2 py-1 text-left">{t("portfolio.type")}</th>
-                          <th scope="col" className="px-2 py-1 text-left">{t("portfolio.symbol")}</th>
-                          <th scope="col" className="px-2 py-1 text-left">{t("portfolio.quantity")}</th>
-                          <th scope="col" className="px-2 py-1 text-left">{t("portfolio.price")}</th>
+                        <tr className="border-b border-border text-text-muted">
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">#</th>
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">{t("common.date")}</th>
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">{t("portfolio.type")}</th>
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">{t("portfolio.symbol")}</th>
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">{t("portfolio.quantity")}</th>
+                          <th scope="col" className="px-2 py-1 text-left font-mono text-meta font-normal uppercase text-text-muted">{t("portfolio.price")}</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <tbody className="font-mono text-num-md tabular">
                         {importPreview.slice(0, 5).map((row, index) => (
                           <tr key={`${row.rowNumber}-${index}`} className="border-b border-border-subtle">
-                            <th scope="row" className="px-2 py-1 text-left text-text-muted">
+                            <th scope="row" className="px-2 py-1 text-left text-num-sm font-normal text-text-muted">
                               {row.rowNumber}
                             </th>
                             <td className="px-2 py-1 text-text-muted">
@@ -192,7 +192,7 @@ export function ImportReviewModal({
                       </tbody>
                     </table>
                     {importPreview.length > 5 ? (
-                      <p className="px-2 py-1 text-xs text-text-dim">
+                      <p className="px-2 py-1 text-caption text-text-muted">
                         {t("portfolio.moreRows", { count: importPreview.length - 5 })}
                       </p>
                     ) : null}
@@ -202,7 +202,7 @@ export function ImportReviewModal({
 
               {importError ? (
                 <p
-                  className="rounded-lg border border-status-negative-border bg-status-negative-soft px-3 py-2 text-sm text-status-negative"
+                  className="rounded-lg border border-status-negative-border bg-status-negative-soft px-3 py-2 text-body text-status-negative"
                   role="alert"
                 >
                   {importError}
@@ -211,10 +211,10 @@ export function ImportReviewModal({
 
               {importValidationErrors.length > 0 ? (
                 <div className="space-y-2" role="alert" aria-live="assertive">
-                  <p className="text-sm font-medium text-status-negative">
+                  <p className="text-body font-semibold text-status-negative">
                     {t("portfolio.importIssuesTitle")}
                   </p>
-                  <ul className="list-disc space-y-1 pl-5 text-xs text-status-negative">
+                  <ul className="list-disc space-y-1 pl-5 text-caption text-status-negative">
                     {importValidationErrors.slice(0, 5).map((issue, index) => (
                       <li key={`${issue}-${index}`}>{issue}</li>
                     ))}

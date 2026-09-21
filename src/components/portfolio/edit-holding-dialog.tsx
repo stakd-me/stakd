@@ -95,16 +95,16 @@ export function EditHoldingDialog({
         tabIndex={-1}
         className="relative mx-4 w-full max-w-md rounded-lg border border-border bg-bg-sidebar p-6 shadow-xl animate-fade-in-scale"
       >
-        <h3 id={titleId} className="text-lg font-semibold text-text-primary">
+        <h3 id={titleId} className="text-heading text-text-primary">
           {t("portfolio.editHoldingTitle")}
         </h3>
-        <p className="mt-1 text-sm text-text-subtle">
+        <p className="mt-1 text-body text-text-muted">
           {t("portfolio.editHoldingDesc", { symbol: item.symbol })}
         </p>
 
         <div className="mt-4 space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-subtle">
+            <label className="mb-1 block text-caption font-semibold text-text-muted">
               {t("portfolio.editFirstBuyDate")}
             </label>
             <Input
@@ -112,13 +112,13 @@ export function EditHoldingDialog({
               value={firstBuyDate}
               onChange={(e) => setFirstBuyDate(e.target.value)}
             />
-            <p className="mt-1 text-xs text-text-dim">
+            <p className="mt-1 text-caption text-text-muted">
               {t("portfolio.editFirstBuyDateHint")}
             </p>
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium text-text-subtle">
+            <label className="mb-1 block text-caption font-semibold text-text-muted">
               {t("portfolio.editAvgCost")}
             </label>
             <Input
@@ -132,7 +132,7 @@ export function EditHoldingDialog({
               }}
               placeholder={item.avgCost > 0 ? item.avgCost.toString() : "0.00"}
             />
-            <p className="mt-1 text-xs text-text-dim">
+            <p className="mt-1 text-caption text-text-muted">
               {t("portfolio.editAvgCostHint")}
             </p>
           </div>
@@ -140,13 +140,13 @@ export function EditHoldingDialog({
           <div>
             <button
               type="button"
-              className="flex items-center gap-1 text-xs text-text-subtle hover:text-text-primary"
+              className="flex items-center gap-1 text-caption text-text-muted hover:text-text-primary"
               onClick={() => setShowAdvanced((v) => !v)}
             >
               {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               {t("portfolio.editCoingeckoId")}
               {coingeckoId && (
-                <span className="ml-1 text-text-dim">({coingeckoId})</span>
+                <span className="ml-1 text-text-muted">({coingeckoId})</span>
               )}
             </button>
             {showAdvanced && (
@@ -156,7 +156,7 @@ export function EditHoldingDialog({
                   onChange={(e) => setCoingeckoId(e.target.value)}
                   placeholder="e.g. bitcoin, ethereum"
                 />
-                <p className="mt-1 text-xs text-text-dim">
+                <p className="mt-1 text-caption text-text-muted">
                   {t("portfolio.editCoingeckoIdHint")}
                 </p>
               </div>
@@ -165,7 +165,7 @@ export function EditHoldingDialog({
         </div>
 
         {error ? (
-          <p className="mt-3 text-xs text-status-negative" role="alert">
+          <p className="mt-3 text-caption text-status-negative" role="alert">
             {error}
           </p>
         ) : null}

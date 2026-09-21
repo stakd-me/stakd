@@ -32,30 +32,30 @@ export function DcaScheduleSection({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-3 text-sm text-text-subtle">
+        <p className="mb-3 text-body text-text-muted">
           {t("rebalance.dcaDescription", { chunks: totalChunks })}
         </p>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <caption className="sr-only">{t("rebalance.dcaSchedule")}</caption>
             <thead>
-              <tr className="border-b border-border text-left text-text-subtle">
+              <tr className="border-b border-border text-left text-text-muted">
                 <th scope="col" className="pb-2 pr-4">{t("rebalance.chunk")}</th>
                 <th scope="col" className="pb-2 pr-4">{t("rebalance.date")}</th>
                 <th scope="col" className="pb-2">{t("rebalance.tradesLabel")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="font-mono text-num-md tabular">
               {chunks.map((chunk) => (
                 <tr key={chunk.chunkIndex} className="border-b border-border-subtle">
-                  <th scope="row" className="py-2 pr-4 text-left text-text-muted">#{chunk.chunkIndex}</th>
+                  <th scope="row" className="py-2 pr-4 text-left text-num-sm font-normal text-text-muted">#{chunk.chunkIndex}</th>
                   <td className="py-2 pr-4 text-text-primary">{chunk.scheduledDate}</td>
                   <td className="py-2">
                     <div className="flex flex-wrap gap-2">
                       {chunk.trades.map((trade) => (
                         <span
                           key={trade.tokenSymbol}
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-caption font-semibold ${
                             trade.action === "buy"
                               ? "bg-status-positive-soft text-status-positive"
                               : "bg-status-negative-soft text-status-negative"

@@ -67,7 +67,7 @@ export function TransactionsSection({
       <CardContent>
         {transactions.length === 0 ? (
           <div className="space-y-4 py-6 text-center">
-            <p className="text-text-subtle">{t("portfolio.noTransactions")}</p>
+            <p className="text-text-muted">{t("portfolio.noTransactions")}</p>
             <div className="flex flex-wrap justify-center gap-2">
               <Link href="/portfolio/add">
                 <Button size="sm">
@@ -82,7 +82,7 @@ export function TransactionsSection({
             </div>
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <p className="py-6 text-center text-text-subtle">
+          <p className="py-6 text-center text-text-muted">
             {t("portfolio.noTransactionsMatch")}
           </p>
         ) : (
@@ -98,17 +98,17 @@ export function TransactionsSection({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-sm text-text-subtle">
+                        <p className="text-body text-text-muted">
                           {new Date(tx.transactedAt).toLocaleDateString()}
                         </p>
                         <p className="font-medium text-text-primary">{tx.tokenSymbol}</p>
-                        <p className="truncate text-xs text-text-subtle">
+                        <p className="truncate text-caption text-text-muted">
                           {tx.tokenName}
                         </p>
                       </div>
                       <div className="text-right">
                         <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getTransactionTypeBadgeClass(
+                          className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                             tx.type
                           )}`}
                         >
@@ -120,28 +120,28 @@ export function TransactionsSection({
                       </div>
                     </div>
 
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-body">
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.qty")}</p>
+                        <p className="text-caption text-text-muted">{t("portfolio.qty")}</p>
                         <p className="font-mono text-text-primary">
                           {formatCrypto(tx.quantity)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.price")}</p>
+                        <p className="text-caption text-text-muted">{t("portfolio.price")}</p>
                         <p className="text-text-primary">
                           {formatUsdPrice(Number.parseFloat(tx.pricePerUnit))}
                         </p>
                       </div>
                       {tx.note ? (
                         <div className="col-span-2">
-                          <p className="text-xs text-text-subtle">{t("common.note")}</p>
+                          <p className="text-caption text-text-muted">{t("common.note")}</p>
                           <p className="text-text-primary">{tx.note}</p>
                         </div>
                       ) : null}
                       {tx.settlement ? (
                         <div className="col-span-2">
-                          <p className="text-xs text-text-subtle">
+                          <p className="text-caption text-text-muted">
                             {t("portfolio.transactionSettlement")}
                           </p>
                           <p className="text-text-primary">
@@ -192,57 +192,57 @@ export function TransactionsSection({
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <table id="portfolio-transactions-table" className="w-full text-left text-sm">
+              <table id="portfolio-transactions-table" className="w-full text-left text-body">
                 <caption className="sr-only">{t("portfolio.transactionHistory")}</caption>
                 <thead>
-                  <tr className="border-b border-border text-text-subtle">
-                    <th scope="col" className="pb-3 pr-4 font-medium">
+                  <tr className="border-b border-border text-text-muted">
+                    <th scope="col" className="pb-2 pr-4 font-mono text-meta font-normal uppercase">
                       {t("common.date")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 font-medium">
+                    <th scope="col" className="pb-2 pr-4 font-mono text-meta font-normal uppercase">
                       {t("portfolio.type")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 font-medium">
+                    <th scope="col" className="pb-2 pr-4 font-mono text-meta font-normal uppercase">
                       {t("portfolio.token")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.qty")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.price")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("common.total")}
                     </th>
-                    <th scope="col" className="pb-3 text-right font-medium">
+                    <th scope="col" className="pb-2 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.actions")}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/50">
+                <tbody className="divide-y divide-border-faint font-mono text-num-md tabular">
                   {paginatedTransactions.map((tx) => {
                     const isEditing = editingTransactionId === tx.id;
 
                     return (
                       <Fragment key={tx.id}>
-                        <tr className="text-text-tertiary">
-                          <td className="py-3 pr-4 text-text-subtle">
+                        <tr className="text-text-secondary">
+                          <td className="py-3 pr-4 text-text-muted">
                             {new Date(tx.transactedAt).toLocaleDateString()}
                           </td>
                           <td className="py-3 pr-4">
                             <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getTransactionTypeBadgeClass(
+                              className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                                 tx.type
                               )}`}
                             >
                               {tx.type.toUpperCase()}
                             </span>
                           </td>
-                          <th scope="row" className="py-3 pr-4 text-left">
+                          <th scope="row" className="py-3 pr-4 text-left font-sans text-body">
                             <p className="font-medium">{tx.tokenSymbol}</p>
-                            <p className="text-xs text-text-subtle">{tx.tokenName}</p>
+                            <p className="text-caption text-text-muted">{tx.tokenName}</p>
                             {tx.settlement ? (
-                              <p className="mt-1 text-xs text-text-subtle">
+                              <p className="mt-1 text-caption text-text-muted">
                                 {t("portfolio.transactionSettlementSummary", {
                                   token: tx.settlement.tokenSymbol,
                                   direction:
@@ -270,7 +270,7 @@ export function TransactionsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-text-subtle hover:text-text-tertiary"
+                                className="h-8 w-8 text-text-muted hover:text-text-primary"
                                 onClick={() => onToggleEdit(tx)}
                                 title={
                                   isEditing
@@ -319,7 +319,7 @@ export function TransactionsSection({
             </div>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-text-subtle" role="status" aria-live="polite">
+              <p className="text-caption text-text-muted" role="status" aria-live="polite">
                 {t("portfolio.transactionRange", {
                   from: transactionRange.from,
                   to: transactionRange.to,
@@ -327,14 +327,14 @@ export function TransactionsSection({
                 })}
               </p>
               <div className="flex items-center gap-2">
-                <label htmlFor="transactions-per-page" className="text-xs text-text-subtle">
+                <label htmlFor="transactions-per-page" className="text-caption text-text-muted">
                   {t("portfolio.rowsPerPage")}
                 </label>
                 <Select
                   id="transactions-per-page"
                   value={String(transactionsPerPage)}
                   onChange={(event) => onSetTransactionsPerPage(Number(event.target.value))}
-                  className="h-8 w-20 px-2 py-1 text-xs"
+                  className="h-8 w-20 px-2 py-1 text-caption"
                   aria-label={t("portfolio.rowsPerPage")}
                   aria-controls="portfolio-transactions-table"
                 >
@@ -354,7 +354,7 @@ export function TransactionsSection({
                 >
                   {t("portfolio.prevPage")}
                 </Button>
-                <span className="text-xs text-text-subtle" role="status" aria-live="polite">
+                <span className="text-caption text-text-muted" role="status" aria-live="polite">
                   {t("portfolio.pageOf", {
                     page: transactionsPage,
                     total: totalTransactionPages,

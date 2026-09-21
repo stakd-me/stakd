@@ -100,7 +100,7 @@ export default function RebalancePage() {
 
       {/* ── 2. Info Bar ──────────────────────────────────────── */}
       {rb.suggestionsData && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-text-subtle">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-body text-text-muted">
           {rb.suggestionsData?.buyOnlyMode && (
             <StatusPill tone="info">
               {t("rebalance.buyOnlyMode")}
@@ -207,7 +207,7 @@ export default function RebalancePage() {
           heading={t("rebalance.waitingForNext")}
           icon={<Clock className="h-5 w-5" />}
         >
-          <p className="text-sm text-text-subtle">
+          <p className="text-body text-text-muted">
             {t("rebalance.calendarActive")}{" "}
             <span className="font-medium text-text-primary">
               {rb.suggestionsData.nextRebalanceDate || t("rebalance.notSet")}

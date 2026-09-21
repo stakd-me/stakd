@@ -28,7 +28,7 @@ export function UntargetedTokensSection({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-3 text-sm text-text-subtle">
+        <p className="mb-3 text-body text-text-muted">
           {t("rebalance.untargetedDescription")}
         </p>
 
@@ -46,7 +46,7 @@ export function UntargetedTokensSection({
                     <p className="font-medium text-text-primary">
                       {suggestion.tokenSymbol}
                     </p>
-                    <span className="mt-1 inline-flex rounded-md bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
+                    <span className="mt-1 inline-flex rounded-md bg-bg-muted px-1.5 py-0.5 text-caption text-text-muted">
                       {t("rebalance.untargeted")}
                     </span>
                   </div>
@@ -61,9 +61,9 @@ export function UntargetedTokensSection({
                   </Button>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-3 text-body">
                   <div>
-                    <p className="text-xs text-text-subtle">
+                    <p className="text-caption text-text-muted">
                       {t("rebalance.currentPercent")}
                     </p>
                     <p className="text-text-primary">
@@ -71,7 +71,7 @@ export function UntargetedTokensSection({
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-text-subtle">
+                    <p className="text-caption text-text-muted">
                       {t("rebalance.currentValue")}
                     </p>
                     <p className="text-text-primary">
@@ -85,10 +85,10 @@ export function UntargetedTokensSection({
         </div>
 
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <caption className="sr-only">{t("rebalance.untargetedTokens")}</caption>
             <thead>
-              <tr className="border-b border-border text-left text-text-subtle">
+              <tr className="border-b border-border text-left text-text-muted">
                 <th scope="col" className="pb-3 pr-4">
                   {t("rebalance.token")}
                 </th>
@@ -101,15 +101,15 @@ export function UntargetedTokensSection({
                 <th scope="col" className="pb-3 text-right"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="font-mono text-num-md tabular">
               {suggestions.map((suggestion) => (
                 <tr
                   key={suggestion.tokenSymbol}
                   className="border-b border-border-subtle"
                 >
-                  <th scope="row" className="py-3 pr-4 text-left font-medium text-text-muted">
+                  <th scope="row" className="py-2.5 pr-4 text-left font-sans text-body font-semibold text-text-primary">
                     {suggestion.tokenSymbol}
-                    <span className="ml-2 rounded-md bg-bg-muted px-1.5 py-0.5 text-xs text-text-subtle">
+                    <span className="ml-2 rounded-md bg-bg-muted px-1.5 py-0.5 text-caption text-text-muted">
                       {t("rebalance.untargeted")}
                     </span>
                   </th>
@@ -125,7 +125,7 @@ export function UntargetedTokensSection({
                       size="sm"
                       onClick={() => onAddTarget(suggestion)}
                       disabled={isTargeted(suggestion.tokenSymbol)}
-                      className="text-xs"
+                      className="text-caption"
                     >
                       <Plus className="mr-1 h-3 w-3" />
                       {t("rebalance.addTarget")}

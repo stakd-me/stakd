@@ -111,14 +111,14 @@ export function ManualEntriesSection({
             </CardTitle>
             {isAllSectionsView ? (
               manualSectionExpanded ? (
-                <ChevronUp className="h-5 w-5 text-text-subtle" />
+                <ChevronUp className="h-5 w-5 text-text-muted" />
               ) : (
-                <ChevronDown className="h-5 w-5 text-text-subtle" />
+                <ChevronDown className="h-5 w-5 text-text-muted" />
               )
             ) : null}
           </button>
           {!manualSectionExpanded && manualEntriesCount > 0 ? (
-            <span className="text-xs text-text-dim">
+            <span className="text-caption text-text-muted">
               {t("portfolio.manualEntries", { count: manualEntriesCount })}
             </span>
           ) : null}
@@ -136,13 +136,13 @@ export function ManualEntriesSection({
                 t("portfolio.quickAddHelpPointHistory"),
               ]}
             />
-            <p className="text-sm text-text-subtle">{t("portfolio.enterHoldings")}</p>
+            <p className="text-body text-text-muted">{t("portfolio.enterHoldings")}</p>
           </div>
 
           <div className="mb-4 space-y-3 rounded-lg border border-border bg-bg-card p-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
               <div className="relative">
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("portfolio.symbol")}
                 </label>
                 <Input
@@ -164,7 +164,7 @@ export function ManualEntriesSection({
                       <button
                         key={coin.id}
                         type="button"
-                        className="flex w-full items-center justify-between px-3 py-2 text-left text-xs hover:bg-bg-hover"
+                        className="flex w-full items-center justify-between px-3 py-2 text-left text-caption hover:bg-bg-hover"
                         onMouseDown={(event) => event.preventDefault()}
                         onClick={() => onSelectManualSymbolSuggestion(coin)}
                       >
@@ -172,7 +172,7 @@ export function ManualEntriesSection({
                           <span className="font-semibold text-text-primary">
                             {coin.symbol.toUpperCase()}
                           </span>
-                          <span className="ml-2 truncate text-text-subtle">
+                          <span className="ml-2 truncate text-text-muted">
                             {coin.name}
                           </span>
                         </div>
@@ -187,7 +187,7 @@ export function ManualEntriesSection({
                 ) : null}
               </div>
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("portfolio.name")}
                 </label>
                 <Input
@@ -197,7 +197,7 @@ export function ManualEntriesSection({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("portfolio.quantity")}
                 </label>
                 <Input
@@ -210,7 +210,7 @@ export function ManualEntriesSection({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("portfolio.manualInitialPrice")}
                 </label>
                 <Input
@@ -223,7 +223,7 @@ export function ManualEntriesSection({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("common.note")}
                 </label>
                 <Input
@@ -233,7 +233,7 @@ export function ManualEntriesSection({
                 />
               </div>
             </div>
-            <p className="text-xs text-text-dim">
+            <p className="text-caption text-text-muted">
               {t("portfolio.manualInitialPriceHint")}
             </p>
             <Button
@@ -254,7 +254,7 @@ export function ManualEntriesSection({
 
           {manualEntries.length > 0 ? (
             <div className="space-y-2">
-              <h4 className="text-sm font-medium text-text-muted">
+              <h4 className="text-body font-semibold text-text-muted">
                 {t("portfolio.currentManualEntries")}
               </h4>
               {filteredManualEntries.map((entry) => (
@@ -302,16 +302,16 @@ export function ManualEntriesSection({
                         <span className="font-medium text-text-primary">
                           {entry.tokenSymbol}
                         </span>
-                        <span className="text-sm text-text-muted">{entry.tokenName}</span>
-                        <span className="font-mono text-sm text-text-tertiary">
+                        <span className="text-body text-text-muted">{entry.tokenName}</span>
+                        <span className="font-mono text-body text-text-secondary">
                           {formatCrypto(entry.quantity)}
                         </span>
                         {entry.note ? (
-                          <span className="text-xs italic text-text-dim">
+                          <span className="text-caption italic text-text-muted">
                             {entry.note}
                           </span>
                         ) : null}
-                        <span className="inline-flex rounded-full bg-status-info-soft px-2 py-0.5 text-xs text-status-info">
+                        <span className="inline-flex rounded-full bg-status-info-soft px-2 py-0.5 text-caption text-status-info">
                           {t("portfolio.manual")}
                         </span>
                       </div>
@@ -319,7 +319,7 @@ export function ManualEntriesSection({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-text-subtle hover:text-text-primary"
+                          className="h-8 w-8 text-text-muted hover:text-text-primary"
                           onClick={() => onStartEditEntry(entry)}
                           aria-label={`${t("common.edit")} ${entry.tokenSymbol}`}
                           title={`${t("common.edit")} ${entry.tokenSymbol}`}
@@ -329,7 +329,7 @@ export function ManualEntriesSection({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-text-subtle hover:text-status-negative"
+                          className="h-8 w-8 text-text-muted hover:text-status-negative"
                           onClick={() => onDeleteEntry(entry)}
                           disabled={deletingManualEntry}
                           aria-label={`${t("common.delete")} ${entry.tokenSymbol}`}
@@ -344,7 +344,7 @@ export function ManualEntriesSection({
               ))}
 
               {search.trim() && filteredManualEntries.length === 0 ? (
-                <p className="text-sm text-text-subtle">{t("portfolio.noMatch")}</p>
+                <p className="text-body text-text-muted">{t("portfolio.noMatch")}</p>
               ) : null}
             </div>
           ) : null}

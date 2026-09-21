@@ -32,7 +32,7 @@ function Change24hBadge({ value }: { value: number | null }) {
   return (
     <span
       className={cn(
-        "text-xs",
+        "text-caption",
         value >= 0 ? "text-status-positive" : "text-status-negative"
       )}
     >
@@ -66,7 +66,7 @@ export function HoldingsSection({
       <CardContent>
         {breakdown.length === 0 ? (
           <div className="space-y-4 py-6 text-center">
-            <p className="text-text-subtle">{t("portfolio.noHoldings")}</p>
+            <p className="text-text-muted">{t("portfolio.noHoldings")}</p>
             <div className="flex flex-wrap justify-center gap-2">
               <Link href="/portfolio/add">
                 <Button size="sm">
@@ -81,7 +81,7 @@ export function HoldingsSection({
             </div>
           </div>
         ) : filteredBreakdown.length === 0 ? (
-          <p className="py-6 text-center text-text-subtle">
+          <p className="py-6 text-center text-text-muted">
             {t("portfolio.noMatch")}
           </p>
         ) : (
@@ -100,38 +100,38 @@ export function HoldingsSection({
                     {/* Header: token + holdings value */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="font-medium text-text-primary">{item.symbol}</p>
-                        <p className="truncate text-xs text-text-subtle">
+                        <p className="text-body font-semibold text-text-primary">{item.symbol}</p>
+                        <p className="truncate text-caption text-text-muted">
                           {item.tokenName}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold text-text-primary">
+                        <p className="font-mono text-num-md tabular text-text-primary">
                           <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                         </p>
-                        <p className="font-mono text-xs text-text-subtle">
+                        <p className="font-mono text-num-sm tabular text-text-muted">
                           {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
                         </p>
                       </div>
                     </div>
 
                     {/* Details grid */}
-                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                    <div className="mt-4 grid grid-cols-2 gap-3 font-mono text-num-sm tabular">
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.price")}</p>
+                        <p className="text-meta uppercase text-text-muted">{t("portfolio.price")}</p>
                         <p className="text-text-primary">
                           <PriceFlash value={item.currentPrice}>{formatUsdPrice(item.currentPrice)}</PriceFlash>
                           <span className="ml-1"><Change24hBadge value={item.change24h} /></span>
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.avgCost")}</p>
+                        <p className="text-meta uppercase text-text-muted">{t("portfolio.avgCost")}</p>
                         <p className="text-text-primary">
                           {formatUsdPrice(item.avgCost)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">
+                        <p className="text-meta uppercase text-text-muted">
                           {t("portfolio.unrealizedPL")}
                         </p>
                         <p
@@ -143,14 +143,14 @@ export function HoldingsSection({
                         >
                           {item.unrealizedPL >= 0 ? "+" : ""}
                           {formatUsd(item.unrealizedPL)}
-                          <span className="ml-1 text-xs">
+                          <span className="ml-1 text-caption">
                             ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                             {item.unrealizedPLPercent.toFixed(1)}%)
                           </span>
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">
+                        <p className="text-meta uppercase text-text-muted">
                           {t("portfolio.realizedPL")}
                         </p>
                         <p
@@ -165,13 +165,13 @@ export function HoldingsSection({
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.fees")}</p>
+                        <p className="text-meta uppercase text-text-muted">{t("portfolio.fees")}</p>
                         <p className="text-status-caution">
                           {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-text-subtle">{t("portfolio.held")}</p>
+                        <p className="text-meta uppercase text-text-muted">{t("portfolio.held")}</p>
                         <div className="pt-1">{getHeldDurationBadge(item.firstBuyDate)}</div>
                       </div>
                     </div>
@@ -215,7 +215,7 @@ export function HoldingsSection({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-text-subtle hover:text-text-tertiary"
+                        className="text-text-muted hover:text-text-primary"
                         onClick={() => onEditHolding(item)}
                       >
                         <Pencil className="mr-2 h-4 w-4" />
@@ -235,48 +235,48 @@ export function HoldingsSection({
 
             {/* ── Desktop table ── */}
             <div className="hidden overflow-x-auto md:block">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-body">
                 <caption className="sr-only">{t("portfolio.holdings")}</caption>
                 <thead>
-                  <tr className="border-b border-border text-text-subtle">
-                    <th scope="col" className="pb-3 pr-4 font-medium">
+                  <tr className="border-b border-border text-text-muted">
+                    <th scope="col" className="pb-2 pr-4 font-mono text-meta font-normal uppercase">
                       {t("portfolio.token")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.price")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.holdings")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.avgCost")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.unrealizedPL")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.realizedPL")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-right font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-right font-mono text-meta font-normal uppercase">
                       {t("portfolio.fees")}
                     </th>
-                    <th scope="col" className="pb-3 pr-4 text-center font-medium">
+                    <th scope="col" className="pb-2 pr-4 text-center font-mono text-meta font-normal uppercase">
                       {t("portfolio.held")}
                     </th>
-                    <th scope="col" className="pb-3 text-center font-medium">
+                    <th scope="col" className="pb-2 text-center font-mono text-meta font-normal uppercase">
                       {t("portfolio.actions")}
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/50">
+                <tbody className="divide-y divide-border-faint">
                   {filteredBreakdown.map((item) => {
                     const holdingKey = getHoldingKey(item);
                     const isExpanded = expandedHoldingKey === holdingKey;
 
                     return (
                       <Fragment key={holdingKey}>
-                        <tr className="text-text-tertiary">
-                          <th scope="row" className="py-3 pr-4 text-left font-medium">
+                        <tr className="font-mono tabular text-text-secondary">
+                          <th scope="row" className="py-2.5 pr-4 text-left font-sans text-body font-semibold text-text-primary">
                             {item.symbol}
                           </th>
                           {/* Price + 24h change */}
@@ -286,10 +286,10 @@ export function HoldingsSection({
                           </td>
                           {/* Holdings: value + amount + allocation */}
                           <td className="py-3 pr-4 text-right">
-                            <div className="font-medium">
+                            <div className="text-text-primary">
                               <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
                             </div>
-                            <div className="font-mono text-xs text-text-subtle">
+                            <div className="text-num-sm text-text-muted">
                               {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
                             </div>
                           </td>
@@ -306,7 +306,7 @@ export function HoldingsSection({
                           >
                             {item.unrealizedPL >= 0 ? "+" : ""}
                             {formatUsd(item.unrealizedPL)}
-                            <span className="ml-1 text-xs">
+                            <span className="ml-1 text-caption">
                               ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                               {item.unrealizedPLPercent.toFixed(1)}%)
                             </span>
@@ -361,7 +361,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-text-subtle hover:text-text-tertiary"
+                                className="h-8 w-8 text-text-muted hover:text-text-primary"
                                 onClick={() => onRepeatLast(item)}
                                 title={t("portfolio.repeatLast")}
                                 aria-label={`${t("portfolio.repeatLast")} ${item.symbol}`}
@@ -371,7 +371,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-text-subtle hover:text-text-tertiary"
+                                className="h-8 w-8 text-text-muted hover:text-text-primary"
                                 onClick={() => onEditHolding(item)}
                                 title={t("portfolio.editHolding")}
                                 aria-label={`${t("portfolio.editHolding")} ${item.symbol}`}

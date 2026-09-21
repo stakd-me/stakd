@@ -69,7 +69,7 @@ function getHeldDurationBadge(firstBuyDate: string | null) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex rounded-full px-2 py-0.5 text-caption font-semibold",
         heldDuration.days >= 365
           ? "bg-status-positive-soft text-status-positive"
           : "bg-status-warning-soft text-status-warning"
@@ -462,7 +462,7 @@ export default function PortfolioPage() {
           <p>
             {t("portfolio.subtitle")}
             {lastPriceUpdate && now - new Date(lastPriceUpdate).getTime() > 60_000 && (
-              <span className="ml-2 text-xs text-status-warning">
+              <span className="ml-2 text-caption text-status-warning">
                 · {t("dashboard.prices", { time: formatTimeAgo(new Date(lastPriceUpdate)) })}
               </span>
             )}

@@ -56,7 +56,7 @@ export function ActiveSessionsSection({
       {showStartExecutionCallout ? (
         <Card>
           <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-text-subtle">{t("rebalance.readyToExecute")}</p>
+            <p className="text-body text-text-muted">{t("rebalance.readyToExecute")}</p>
             <Button size="sm" onClick={onStartSession} disabled={startSessionPending}>
               <Play className="mr-2 h-4 w-4" />
               {startSessionPending ? t("rebalance.starting") : t("rebalance.startExecution")}
@@ -81,7 +81,7 @@ export function ActiveSessionsSection({
                   <Play className="h-5 w-5 text-status-info" />
                   {t("rebalance.activeSession")}
                 </CardTitle>
-                <span className="text-sm text-text-subtle">
+                <span className="text-body text-text-muted">
                   {completedCount}/{session.trades.length} {t("rebalance.tradesLabel")}
                 </span>
               </div>
@@ -103,7 +103,7 @@ export function ActiveSessionsSection({
                       <button
                         type="button"
                         onClick={() => onToggleTrade(session.id, trade.id)}
-                        className="text-text-subtle hover:text-text-primary"
+                        className="text-text-muted hover:text-text-primary"
                         aria-label={`Toggle ${trade.tokenSymbol} trade as ${trade.status === "completed" ? "pending" : "completed"}`}
                       >
                         {trade.status === "completed" ? (
@@ -115,14 +115,14 @@ export function ActiveSessionsSection({
                       <span
                         className={
                           trade.status === "completed"
-                            ? "text-text-dim line-through"
+                            ? "text-text-muted line-through"
                             : "text-text-primary"
                         }
                       >
                         {trade.action.toUpperCase()} {trade.tokenSymbol}
                       </span>
                     </div>
-                    <span className="text-sm text-text-subtle">
+                    <span className="text-body text-text-muted">
                       {formatUsd(trade.amountUsd)}
                     </span>
                   </div>
@@ -150,7 +150,7 @@ export function ActiveSessionsSection({
 
               {session.trades.every((trade) => trade.status === "completed") && !isRecording ? (
                 <div className="mt-4 rounded-md border border-status-info-border bg-status-info-soft p-3">
-                  <p className="text-sm text-status-info">
+                  <p className="text-body text-status-info">
                     {t("rebalance.allTradesCompleted")}
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -170,17 +170,17 @@ export function ActiveSessionsSection({
 
               {isRecording ? (
                 <div className="mt-4 space-y-3 rounded-md border border-border bg-bg-card p-3">
-                  <h5 className="text-sm font-medium text-text-muted">
+                  <h5 className="text-body font-semibold text-text-muted">
                     {t("rebalance.recordExecutedTrades")}
                   </h5>
-                  <p className="text-xs text-text-dim">{t("rebalance.enterQuantities")}</p>
+                  <p className="text-caption text-text-muted">{t("rebalance.enterQuantities")}</p>
                   {recordingTrades.map((trade, index) => (
                     <div
                       key={`${trade.tokenSymbol}-${index}`}
                       className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3"
                     >
                       <span
-                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-caption font-semibold ${
                           trade.action === "buy"
                             ? "border-status-positive-border bg-status-positive-soft text-status-positive"
                             : "border-status-negative-border bg-status-negative-soft text-status-negative"
@@ -188,10 +188,10 @@ export function ActiveSessionsSection({
                       >
                         {trade.action.toUpperCase()}
                       </span>
-                      <span className="w-20 text-sm font-medium text-text-primary">
+                      <span className="w-20 text-body font-semibold text-text-primary">
                         {trade.tokenSymbol}
                       </span>
-                      <span className="text-sm text-text-subtle">
+                      <span className="text-body text-text-muted">
                         {formatUsd(trade.amountUsd)}
                       </span>
                       <Input

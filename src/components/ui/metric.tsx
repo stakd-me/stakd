@@ -72,7 +72,7 @@ export function Metric({
 interface MetricBandProps {
   children: ReactNode;
   /** Desktop column count. Below md the band always stacks to two. */
-  columns?: 2 | 3 | 4;
+  columns?: 2 | 3 | 4 | 5;
   className?: string;
 }
 
@@ -80,6 +80,7 @@ const columnClass = {
   2: "md:grid-cols-2",
   3: "md:grid-cols-3",
   4: "md:grid-cols-4",
+  5: "sm:grid-cols-3 md:grid-cols-5",
 } as const;
 
 /**
