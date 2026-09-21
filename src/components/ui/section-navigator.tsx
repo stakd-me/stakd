@@ -1,7 +1,6 @@
 "use client";
 
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { Card } from "@/components/ui/card";
 import {
   SegmentedControl,
   type SegmentedControlOption,
@@ -43,34 +42,32 @@ export function SectionNavigator<T extends string>({
   className,
   columnsClassName,
 }: SectionNavigatorProps<T>) {
+  const activeDescription =
+    options.find((option) => option.value === value)?.description ?? description;
+
   return (
-    <Card className={cn("p-4", className)}>
-      <div className="space-y-3">
-        <div>
-          <p className="text-sm font-medium text-text-primary">{label}</p>
-          {description ? (
-            <p className="text-xs text-text-dim">{description}</p>
-          ) : null}
-        </div>
-        <SegmentedControl
-          baseId={baseId}
-          label={label}
-          value={value}
-          onChange={onChange}
-          options={options.map((option) => ({
-            ...option,
-            badge:
-              option.badge ??
-              (option.count !== undefined ? (
-                <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-tertiary">
-                  {option.count}
-                </span>
-              ) : undefined),
-          }))}
-          columnsClassName={columnsClassName}
-        />
-      </div>
-    </Card>
+    <div className={cn("space-y-2", className)}>
+      <SegmentedControl
+        baseId={baseId}
+        label={label}
+        value={value}
+        onChange={onChange}
+        options={options.map((option) => ({
+          ...option,
+          badge:
+            option.badge ??
+            (option.count !== undefined ? (
+              <span className="rounded-sm border border-border-subtle bg-bg-input px-1.5 font-mono text-[11px] leading-4 text-text-muted">
+                {option.count}
+              </span>
+            ) : undefined),
+        }))}
+        columnsClassName={columnsClassName}
+      />
+      {activeDescription ? (
+        <p className="text-caption text-text-muted">{activeDescription}</p>
+      ) : null}
+    </div>
   );
 }
 

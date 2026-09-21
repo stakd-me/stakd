@@ -1,87 +1,150 @@
 @import "tailwindcss";
 
+/*
+ * Portfolio OS — "Structured Signal"
+ *
+ * Source of truth: the design system at
+ * https://claude.ai/artifact/RjTvMHG5UtPJEUbUMt1Zd2
+ *
+ * Two complete themes. :root is light, .dark overrides it, and next-themes
+ * defaults to dark (see src/components/providers.tsx). Nothing in the app
+ * uses a `dark:` variant — the theme swaps underneath the tokens.
+ */
+
 :root {
-  /* Light theme (default) */
-  --font-geist-sans: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-geist-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Courier New", monospace;
-  --bg-page: #f7f8f8;
-  --bg-sidebar: #eef1f1;
+  /* Type ------------------------------------------------------------- */
+  --font-archivo-stack: var(--font-archivo), system-ui, sans-serif;
+  --font-dm-mono-stack: var(--font-dm-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Surfaces --------------------------------------------------------- */
+  --bg-page: #ffffff;
+  --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-input: #ffffff;
-  --bg-hover: #e2e8e7;
-  --bg-muted: #d8dfde;
-  --border: #c5cecc;
-  --border-subtle: #dde3e2;
-  --text-primary: #17201f;
-  --text-secondary: #293432;
-  --text-tertiary: #3c4a47;
-  --text-muted: #50615d;
-  --text-subtle: #647570;
-  --text-dim: #7b8b87;
-  --accent: #0f766e;
-  --focus-ring: rgb(15 118 110 / 0.32);
-  --chart-grid: #d1d9d7;
-  --chart-tooltip-bg: #17201f;
-  --chart-tooltip-text: #f8fafc;
-  --chart-tooltip-border: #3c4a47;
-  --chart-tick: #50615d;
-  --status-positive: #166534;
-  --status-negative: #b91c1c;
-  --status-warning: #a16207;
-  --status-info: #1d4ed8;
-  --status-caution: #c2410c;
-  --status-positive-soft: #dcfce7;
-  --status-negative-soft: #fee2e2;
-  --status-warning-soft: #fef3c7;
-  --status-info-soft: #dbeafe;
-  --status-caution-soft: #ffedd5;
-  --status-positive-border: #86efac;
-  --status-negative-border: #fca5a5;
-  --status-warning-border: #fcd34d;
-  --status-info-border: #93c5fd;
-  --status-caution-border: #fdba74;
+  --bg-input: #f4f4f1;
+  --bg-hover: #ecece8;
+  --bg-muted: #e4e4e0;
+
+  /* Division --------------------------------------------------------- */
+  --border: #12140f;
+  --border-subtle: #dededa;
+  --border-faint: #edede9;
+
+  /* Text ------------------------------------------------------------- */
+  --text-primary: #12140f;
+  --text-secondary: #2b2f28;
+  --text-tertiary: #3d403a;
+  --text-muted: #55594f;
+  --text-subtle: #6b6f68;
+  --text-dim: #8a8e86;
+  --text-inverse: #ffffff;
+  --ink: #12140f;
+
+  /* Interactive ------------------------------------------------------ */
+  --accent: #1d3fd8;
+  --accent-ink: #ffffff;
+  --accent-soft: #eaeefc;
+  --focus-ring: rgb(29 63 216 / 0.42);
+  --overlay-scrim: rgb(18 20 15 / 0.44);
+
+  /* Money and risk --------------------------------------------------- */
+  --status-positive: #0f7a3d;
+  --status-negative: #c22118;
+  --status-warning: #8a5a00;
+  --status-info: #1d3fd8;
+  --status-caution: #a6480b;
+  --status-positive-soft: #e4f2e9;
+  --status-negative-soft: #fce8e6;
+  --status-warning-soft: #fbf1dd;
+  --status-info-soft: #eaeefc;
+  --status-caution-soft: #fbebe0;
+  --status-positive-border: #0f7a3d;
+  --status-negative-border: #c22118;
+  --status-warning-border: #8a5a00;
+  --status-info-border: #1d3fd8;
+  --status-caution-border: #a6480b;
+
+  /* Charts ----------------------------------------------------------- */
+  --chart-grid: #edede9;
+  --chart-tick: #6b6f68;
+  --chart-tooltip-bg: #12140f;
+  --chart-tooltip-text: #ffffff;
+  --chart-tooltip-border: #3d403a;
+  /* The ONE categorical ordering. series-8 is always the Others bucket. */
+  --chart-series-1: #1d3fd8;
+  --chart-series-2: #0f7a3d;
+  --chart-series-3: #8a5a00;
+  --chart-series-4: #a6480b;
+  --chart-series-5: #6e3fb0;
+  --chart-series-6: #0e6c7c;
+  --chart-series-7: #a8326a;
+  --chart-series-8: #5c6459;
+
+  /* Depth ------------------------------------------------------------ */
+  --shadow-overlay-value: 0 24px 48px -16px rgb(18 20 15 / 0.22);
 }
 
 .dark {
-  --bg-page: #111514;
-  --bg-sidebar: #181d1c;
-  --bg-card: #202625;
-  --bg-input: #242b29;
-  --bg-hover: #2c3533;
-  --bg-muted: #36413f;
-  --border: #46534f;
-  --border-subtle: #303a38;
-  --text-primary: #f3f7f6;
-  --text-secondary: #dce5e2;
-  --text-tertiary: #c3d0cc;
-  --text-muted: #a4b4af;
-  --text-subtle: #8b9d98;
-  --text-dim: #71847f;
-  --accent: #5eead4;
-  --focus-ring: rgb(94 234 212 / 0.38);
-  --chart-grid: #36413f;
-  --chart-tooltip-bg: #111514;
-  --chart-tooltip-text: #f8fafc;
-  --chart-tooltip-border: #52615d;
-  --chart-tick: #9fb0ab;
-  --status-positive: #4ade80;
-  --status-negative: #f87171;
-  --status-warning: #facc15;
-  --status-info: #60a5fa;
-  --status-caution: #fb923c;
-  --status-positive-soft: rgb(34 197 94 / 0.2);
-  --status-negative-soft: rgb(239 68 68 / 0.2);
-  --status-warning-soft: rgb(234 179 8 / 0.2);
-  --status-info-soft: rgb(59 130 246 / 0.2);
-  --status-caution-soft: rgb(249 115 22 / 0.2);
-  --status-positive-border: rgb(74 222 128 / 0.45);
-  --status-negative-border: rgb(248 113 113 / 0.45);
-  --status-warning-border: rgb(250 204 21 / 0.45);
-  --status-info-border: rgb(96 165 250 / 0.45);
-  --status-caution-border: rgb(251 146 60 / 0.45);
+  --bg-page: #0e100d;
+  --bg-sidebar: #161a15;
+  --bg-card: #161a15;
+  --bg-input: #1b201a;
+  --bg-hover: #232921;
+  --bg-muted: #2c332a;
+
+  --border: #566052;
+  --border-subtle: #2a312a;
+  --border-faint: #1f251e;
+
+  --text-primary: #edf1e9;
+  --text-secondary: #d6ddd1;
+  --text-tertiary: #c3cbbe;
+  --text-muted: #a3ad9e;
+  --text-subtle: #8d978a;
+  --text-dim: #6b7568;
+  --text-inverse: #0e100d;
+  --ink: #edf1e9;
+
+  --accent: #7d9bff;
+  --accent-ink: #0b1020;
+  --accent-soft: #1a2138;
+  --focus-ring: rgb(157 180 255 / 0.48);
+  --overlay-scrim: rgb(0 0 0 / 0.66);
+
+  --status-positive: #4bd07e;
+  --status-negative: #ff7a6e;
+  --status-warning: #e9b949;
+  --status-info: #7d9bff;
+  --status-caution: #f0925a;
+  --status-positive-soft: #14261b;
+  --status-negative-soft: #2a1715;
+  --status-warning-soft: #2a2213;
+  --status-info-soft: #1a2138;
+  --status-caution-soft: #2b1d14;
+  --status-positive-border: #4bd07e;
+  --status-negative-border: #ff7a6e;
+  --status-warning-border: #e9b949;
+  --status-info-border: #7d9bff;
+  --status-caution-border: #f0925a;
+
+  --chart-grid: #232921;
+  --chart-tick: #8d978a;
+  --chart-tooltip-bg: #0e100d;
+  --chart-tooltip-text: #edf1e9;
+  --chart-tooltip-border: #566052;
+  --chart-series-1: #7d9bff;
+  --chart-series-2: #4bd07e;
+  --chart-series-3: #e9b949;
+  --chart-series-4: #f0925a;
+  --chart-series-5: #c08be8;
+  --chart-series-6: #5bc9d8;
+  --chart-series-7: #e87fa8;
+  --chart-series-8: #9aa694;
+
+  --shadow-overlay-value: 0 24px 48px -16px rgb(0 0 0 / 0.72);
 }
 
 @theme inline {
+  /* Colour ----------------------------------------------------------- */
   --color-bg-page: var(--bg-page);
   --color-bg-sidebar: var(--bg-sidebar);
   --color-bg-card: var(--bg-card);
@@ -90,14 +153,20 @@
   --color-bg-muted: var(--bg-muted);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
+  --color-border-faint: var(--border-faint);
+  --color-ink: var(--ink);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
   --color-focus-ring: var(--focus-ring);
+  --color-overlay-scrim: var(--overlay-scrim);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
   --color-text-muted: var(--text-muted);
   --color-text-subtle: var(--text-subtle);
   --color-text-dim: var(--text-dim);
+  --color-text-inverse: var(--text-inverse);
   --color-status-positive: var(--status-positive);
   --color-status-negative: var(--status-negative);
   --color-status-warning: var(--status-warning);
@@ -113,8 +182,86 @@
   --color-status-warning-border: var(--status-warning-border);
   --color-status-info-border: var(--status-info-border);
   --color-status-caution-border: var(--status-caution-border);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-tick: var(--chart-tick);
+  --color-chart-series-1: var(--chart-series-1);
+  --color-chart-series-2: var(--chart-series-2);
+  --color-chart-series-3: var(--chart-series-3);
+  --color-chart-series-4: var(--chart-series-4);
+  --color-chart-series-5: var(--chart-series-5);
+  --color-chart-series-6: var(--chart-series-6);
+  --color-chart-series-7: var(--chart-series-7);
+  --color-chart-series-8: var(--chart-series-8);
+
+  /* Type ------------------------------------------------------------- */
+  --font-sans: var(--font-archivo-stack);
+  --font-mono: var(--font-dm-mono-stack);
+
+  --text-display-lg: 34px;
+  --text-display-lg--line-height: 34px;
+  --text-display-lg--font-weight: 800;
+  --text-display-lg--letter-spacing: -0.032em;
+  --text-display-sm: 24px;
+  --text-display-sm--line-height: 26px;
+  --text-display-sm--font-weight: 800;
+  --text-display-sm--letter-spacing: -0.028em;
+  --text-heading: 16px;
+  --text-heading--line-height: 22px;
+  --text-heading--font-weight: 700;
+  --text-heading--letter-spacing: -0.012em;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-label--font-weight: 700;
+  --text-label--letter-spacing: 0.06em;
+  --text-body: 13px;
+  --text-body--line-height: 19px;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-num-xl: 26px;
+  --text-num-xl--line-height: 30px;
+  --text-num-xl--font-weight: 500;
+  --text-num-xl--letter-spacing: -0.02em;
+  --text-num-lg: 18px;
+  --text-num-lg--line-height: 22px;
+  --text-num-lg--font-weight: 500;
+  --text-num-md: 13px;
+  --text-num-md--line-height: 18px;
+  --text-num-sm: 12px;
+  --text-num-sm--line-height: 16px;
+  --text-meta: 10px;
+  --text-meta--line-height: 14px;
+  --text-meta--letter-spacing: 0.12em;
+
+  /* Shape ------------------------------------------------------------ */
+  /* This system is square. The whole radius namespace is redefined so the
+     rounded-* classes already in the codebase collapse onto it instead of
+     keeping Tailwind's defaults. radius-overlay (4px) is for dialogs and popovers only. */
+  --radius-xs: 0;
+  --radius-sm: 2px;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  /* The one rounded thing in the system: content floating over a scrim. */
+  --radius-overlay: 4px;
+
+  /* Depth: panels never have one; only overlays do. */
+  --shadow-2xs: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: var(--shadow-overlay-value);
+  --shadow-xl: var(--shadow-overlay-value);
+  --shadow-overlay: var(--shadow-overlay-value);
+
+  /* Control heights and layout limits -------------------------------- */
+  --spacing-control-sm: 28px;
+  --spacing-control-md: 34px;
+  --spacing-control-lg: 44px;
+  --spacing-rail: 220px;
+  --container-content: 1440px;
 }
 
 body {
@@ -122,7 +269,14 @@ body {
   color: var(--text-primary);
 }
 
-/* Toast slide-in animation */
+/* Money and quantities line up digit for digit everywhere. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Motion: 120ms for state, 180ms for an overlay entering, 700ms for the
+   price flash, which is a data event rather than an interface one. */
+
 @keyframes slide-in-right {
   from {
     transform: translateX(100%);
@@ -135,14 +289,13 @@ body {
 }
 
 .animate-slide-in-right {
-  animation: slide-in-right 0.3s ease-out;
+  animation: slide-in-right 0.18s ease-out;
 }
 
-/* Dialog fade-in animation */
 @keyframes fade-in-scale {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.98);
   }
   to {
     opacity: 1;
@@ -151,5 +304,21 @@ body {
 }
 
 .animate-fade-in-scale {
-  animation: fade-in-scale 0.2s ease-out;
+  animation: fade-in-scale 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-right,
+  .animate-fade-in-scale {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { KeyRound, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Copy, KeyRound, Lock, ShieldCheck, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
@@ -199,81 +199,79 @@ export function AuthScreen() {
     setShowPassphraseWarning(false);
   };
 
+  const brand = (
+    <div>
+      <div className="text-heading font-extrabold uppercase tracking-tight text-text-primary">
+        {t("nav.title")}
+      </div>
+      <div className="mt-0.5 font-mono text-meta uppercase text-text-muted">
+        {t("nav.localVault")}
+      </div>
+    </div>
+  );
+
   if (showPassphraseWarning) {
     return (
-      <div className="min-h-screen bg-bg-page px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-lg items-center">
-          <div className="w-full space-y-6 rounded-2xl border border-border-subtle bg-bg-card p-6 shadow-sm sm:p-8">
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-status-positive-soft text-status-positive">
-                <svg
-                  className="h-8 w-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-text-primary">
+      <div className="flex min-h-screen items-center justify-center bg-bg-page p-4">
+        <div className="w-full max-w-lg space-y-4">
+          {brand}
+
+          <div className="border border-border bg-bg-card">
+            <div className="border-b border-border px-5 py-4">
+              <div className="font-mono text-meta uppercase text-text-muted">
                 {t("auth.accountCreated")}
-              </h2>
-              <p className="mt-2 text-text-subtle">
+              </div>
+              <h1 className="mt-1 text-display-sm text-text-primary">
+                {t("auth.savePassphraseNow")}
+              </h1>
+              <p className="mt-1.5 text-body text-text-secondary">
                 {t("auth.accountCreatedDesc")}
               </p>
             </div>
 
-            <InlineHelpCard
-              tone="warning"
-              icon={<TriangleAlert className="h-4 w-4" />}
-              title={t("auth.savePassphraseNow")}
-              description={t("auth.savePassphraseDesc")}
-              items={[
-                t("auth.passphraseShownOnce"),
-                t("auth.registerStartsSessionOnly"),
-              ]}
-            />
+            <div className="space-y-4 p-5">
+              <InlineHelpCard
+                tone="warning"
+                icon={<TriangleAlert className="h-4 w-4" aria-hidden="true" />}
+                title={t("auth.savePassphraseDesc")}
+                items={[
+                  t("auth.passphraseShownOnce"),
+                  t("auth.registerStartsSessionOnly"),
+                ]}
+              />
 
-            <div className="rounded-lg border border-status-warning-border bg-status-warning-soft px-3 py-2 font-mono text-sm text-status-warning">
-              <div className="flex items-start gap-2">
-                <span className="min-w-0 flex-1 select-all break-all">
-                  {savedPassphrase}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(savedPassphrase);
-                    setCopyStatusMessage(t("auth.passphraseCopied"));
-                  }}
-                  className="shrink-0 rounded p-1 text-status-warning transition-colors hover:bg-status-warning/10"
-                  title={t("auth.copyPassphrase")}
-                  aria-label={t("auth.copyPassphrase")}
-                >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
+              <div className="border border-status-warning-border bg-status-warning-soft">
+                <div className="flex items-start gap-2 p-3">
+                  <span className="min-w-0 flex-1 select-all break-all font-mono text-body text-text-primary">
+                    {savedPassphrase}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(savedPassphrase);
+                      setCopyStatusMessage(t("auth.passphraseCopied"));
+                    }}
+                    className="shrink-0 rounded-sm p-1 text-status-warning transition-colors duration-[120ms] ease-out hover:bg-status-warning/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+                    title={t("auth.copyPassphrase")}
+                    aria-label={t("auth.copyPassphrase")}
                   >
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                  </svg>
-                </button>
+                    <Copy className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+                <p className="sr-only" role="status" aria-live="polite">
+                  {copyStatusMessage}
+                </p>
               </div>
-              <p className="sr-only" role="status" aria-live="polite">
-                {copyStatusMessage}
-              </p>
-            </div>
 
-            <Button className="w-full" onClick={handleDismissWarning}>
-              {t("auth.savedPassphrase")}
-            </Button>
+              <Button
+                variant="accent"
+                size="lg"
+                className="w-full"
+                onClick={handleDismissWarning}
+              >
+                {t("auth.savedPassphrase")}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -281,27 +279,20 @@ export function AuthScreen() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-page px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-4xl gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
-        <section className="order-2 hidden space-y-4 lg:order-1 lg:block lg:pr-6">
-          <div className="space-y-3">
-            <div className="inline-flex items-center rounded-full border border-border-subtle bg-bg-card px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] text-text-dim">
-              {t("nav.title")}
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-text-primary">
-                {t("auth.privateVaultTitle")}
-              </h1>
-              <p className="max-w-xl text-sm text-text-subtle">
-                {t("auth.privateVaultDesc")}
-              </p>
-            </div>
-          </div>
+    <div className="min-h-screen bg-bg-page p-4 sm:p-6">
+      <div className="mx-auto grid min-h-[calc(100vh-2rem)] w-full max-w-4xl items-center gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+        <section className="order-2 hidden space-y-4 lg:order-1 lg:block">
+          {brand}
+          <h1 className="text-display-lg text-text-primary">
+            {t("auth.privateVaultTitle")}
+          </h1>
+          <p className="max-w-md text-body text-text-secondary">
+            {t("auth.privateVaultDesc")}
+          </p>
 
           <InlineHelpCard
-            icon={<ShieldCheck className="h-4 w-4" />}
-            title={t("auth.privateVaultTitle")}
-            description={t("auth.privateVaultSummary")}
+            icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+            title={t("auth.privateVaultSummary")}
             items={[
               t("auth.privateVaultPointPassphrase"),
               t("auth.privateVaultPointBrowser"),
@@ -311,7 +302,7 @@ export function AuthScreen() {
           {tab === "register" ? (
             <InlineHelpCard
               tone="warning"
-              icon={<KeyRound className="h-4 w-4" />}
+              icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
               title={t("auth.registerSecurityTitle")}
               description={t("auth.registerSecuritySummary")}
               items={[
@@ -322,179 +313,173 @@ export function AuthScreen() {
           ) : null}
         </section>
 
-        <section className="order-1 w-full rounded-lg border border-border-subtle bg-bg-card p-6 shadow-sm sm:p-8 lg:order-2">
-          <div className="space-y-6">
-            <div>
-              <p className="text-sm font-medium text-accent">{t("nav.title")}</p>
-              <h1 className="mt-1 text-2xl font-bold text-text-primary">
-                {tab === "login" ? t("auth.signInDescription") : t("auth.createAccountDescription")}
-              </h1>
-            </div>
-
-            <div
-              className="grid grid-cols-2 rounded-md border border-border-subtle bg-bg-muted p-1"
-              role="tablist"
-              aria-label={t("auth.accountTabs")}
-            >
-              <button
-                id={loginTabId}
-                type="button"
-                role="tab"
-                aria-selected={tab === "login"}
-                aria-controls={authPanelId}
-                tabIndex={tab === "login" ? 0 : -1}
-                onClick={() => handleTabChange("login")}
-                className={cn(
-                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
-                  tab === "login"
-                    ? "bg-bg-card text-text-primary shadow-sm"
-                    : "text-text-subtle hover:text-text-primary"
-                )}
-              >
-                {t("auth.signInTab")}
-              </button>
-              <button
-                id={registerTabId}
-                type="button"
-                role="tab"
-                aria-selected={tab === "register"}
-                aria-controls={authPanelId}
-                tabIndex={tab === "register" ? 0 : -1}
-                onClick={() => handleTabChange("register")}
-                className={cn(
-                  "rounded px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
-                  tab === "register"
-                    ? "bg-bg-card text-text-primary shadow-sm"
-                    : "text-text-subtle hover:text-text-primary"
-                )}
-              >
-                {t("auth.registerTab")}
-              </button>
-            </div>
-
-            <form
-              id={authPanelId}
-              role="tabpanel"
-              aria-labelledby={tab === "login" ? loginTabId : registerTabId}
-              onSubmit={tab === "login" ? handleLogin : handleRegister}
-              className="space-y-4"
-            >
-              <FormField
-                label={t("auth.usernameLabel")}
-                htmlFor="auth-username"
-                required
-                requiredLabel={requiredLabel}
-              >
-                <Input
-                  id="auth-username"
-                  type="text"
-                  placeholder={t("auth.usernamePlaceholder")}
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  autoFocus
-                  required
-                />
-              </FormField>
-
-              <FormField
-                label={t("auth.passphraseLabel")}
-                htmlFor="auth-passphrase"
-                required
-                requiredLabel={requiredLabel}
-                error={passphraseTooShort ? t("auth.passphraseMinLength") : undefined}
-              >
-                <Input
-                  id="auth-passphrase"
-                  type="password"
-                  placeholder={t("auth.passphrasePlaceholder")}
-                  value={passphrase}
-                  onChange={(e) => setPassphrase(e.target.value)}
-                  autoComplete={tab === "login" ? "current-password" : "new-password"}
-                  minLength={8}
-                  aria-invalid={passphraseTooShort || undefined}
-                  required
-                />
-              </FormField>
-
-              {tab === "register" ? (
-                <FormField
-                  label={t("auth.confirmPassphraseLabel")}
-                  htmlFor="auth-confirm-passphrase"
-                  required
-                  requiredLabel={requiredLabel}
-                  error={confirmMismatch ? t("auth.passphrasesDoNotMatch") : undefined}
-                >
-                  <Input
-                    id="auth-confirm-passphrase"
-                    type="password"
-                    placeholder={t("auth.confirmPassphrasePlaceholder")}
-                    value={confirmPassphrase}
-                    onChange={(e) => setConfirmPassphrase(e.target.value)}
-                    autoComplete="new-password"
-                    minLength={8}
-                    aria-invalid={confirmMismatch || undefined}
-                    required
-                  />
-                </FormField>
-              ) : null}
-
-              {error ? (
-                <p
-                  className="rounded-lg border border-status-negative-border bg-status-negative-soft px-3 py-2 text-sm text-status-negative"
-                  role="alert"
-                  aria-live="assertive"
-                >
-                  {error}
-                </p>
-              ) : null}
-
-              <p className="sr-only" role="status" aria-live="polite">
-                {loading ? t("common.processing") : ""}
-              </p>
-
-              {tab === "login" && (
-                <div className="border-t border-border-subtle pt-4">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-border-subtle bg-bg-input text-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
-                    />
-                    <span className="space-y-1">
-                      <span className="block text-sm font-medium text-text-primary">
-                        {t("auth.rememberMe", { days: TRUST_DEVICE_DAYS })}
-                      </span>
-                      <span className="block text-xs text-text-dim">
-                        {rememberMe
-                          ? t("auth.trustedDeviceDesc", {
-                              days: TRUST_DEVICE_DAYS,
-                            })
-                          : t("auth.sessionOnlyDesc")}
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading || username.length < 1 || passphrase.length < 8}
-                aria-busy={loading}
-              >
-                {loading
-                  ? t("common.processing")
-                  : tab === "login"
-                    ? t("auth.signIn")
-                    : t("auth.createAccount")}
-              </Button>
-            </form>
+        <section className="order-1 w-full border border-border bg-bg-card lg:order-2">
+          <div className="border-b border-border px-5 py-4">
+            <div className="lg:hidden">{brand}</div>
+            <h1 className="mt-1 text-display-sm text-text-primary lg:mt-0">
+              {tab === "login"
+                ? t("auth.signInDescription")
+                : t("auth.createAccountDescription")}
+            </h1>
           </div>
+
+          <div
+            className="flex gap-5 border-b border-border px-5"
+            role="tablist"
+            aria-label={t("auth.accountTabs")}
+          >
+            {(["login", "register"] as const).map((value) => {
+              const isActive = tab === value;
+              return (
+                <button
+                  key={value}
+                  id={value === "login" ? loginTabId : registerTabId}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={authPanelId}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => handleTabChange(value)}
+                  className={cn(
+                    "-mb-px border-b-2 py-3 text-body font-semibold",
+                    "transition-colors duration-[120ms] ease-out",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset",
+                    isActive
+                      ? "border-accent text-text-primary"
+                      : "border-transparent text-text-muted hover:text-text-primary"
+                  )}
+                >
+                  {value === "login" ? t("auth.signInTab") : t("auth.registerTab")}
+                </button>
+              );
+            })}
+          </div>
+
+          <form
+            id={authPanelId}
+            role="tabpanel"
+            aria-labelledby={tab === "login" ? loginTabId : registerTabId}
+            onSubmit={tab === "login" ? handleLogin : handleRegister}
+            className="space-y-4 p-5"
+          >
+            <FormField
+              label={t("auth.usernameLabel")}
+              htmlFor="auth-username"
+              requiredLabel={requiredLabel}
+            >
+              <Input
+                id="auth-username"
+                type="text"
+                placeholder={t("auth.usernamePlaceholder")}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                autoFocus
+                required
+                className="font-mono"
+              />
+            </FormField>
+
+            <FormField
+              label={t("auth.passphraseLabel")}
+              htmlFor="auth-passphrase"
+              requiredLabel={requiredLabel}
+              error={passphraseTooShort ? t("auth.passphraseMinLength") : undefined}
+            >
+              <Input
+                id="auth-passphrase"
+                type="password"
+                placeholder={t("auth.passphrasePlaceholder")}
+                value={passphrase}
+                onChange={(e) => setPassphrase(e.target.value)}
+                autoComplete={tab === "login" ? "current-password" : "new-password"}
+                minLength={8}
+                aria-invalid={passphraseTooShort || undefined}
+                required
+                className="font-mono"
+              />
+            </FormField>
+
+            {tab === "register" ? (
+              <FormField
+                label={t("auth.confirmPassphraseLabel")}
+                htmlFor="auth-confirm-passphrase"
+                requiredLabel={requiredLabel}
+                error={confirmMismatch ? t("auth.passphrasesDoNotMatch") : undefined}
+              >
+                <Input
+                  id="auth-confirm-passphrase"
+                  type="password"
+                  placeholder={t("auth.confirmPassphrasePlaceholder")}
+                  value={confirmPassphrase}
+                  onChange={(e) => setConfirmPassphrase(e.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  aria-invalid={confirmMismatch || undefined}
+                  required
+                  className="font-mono"
+                />
+              </FormField>
+            ) : null}
+
+            {error ? (
+              <p
+                className="border border-status-negative-border bg-status-negative-soft px-3 py-2 text-body text-text-primary"
+                role="alert"
+                aria-live="assertive"
+              >
+                {error}
+              </p>
+            ) : null}
+
+            <p className="sr-only" role="status" aria-live="polite">
+              {loading ? t("common.processing") : ""}
+            </p>
+
+            {tab === "login" && (
+              <label className="flex cursor-pointer items-start gap-3 border-t border-border-subtle pt-4">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded-sm border-border accent-accent focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card"
+                />
+                <span>
+                  <span className="block text-body font-semibold text-text-primary">
+                    {t("auth.rememberMe", { days: TRUST_DEVICE_DAYS })}
+                  </span>
+                  <span className="mt-0.5 block text-caption text-text-muted">
+                    {rememberMe
+                      ? t("auth.trustedDeviceDesc", { days: TRUST_DEVICE_DAYS })
+                      : t("auth.sessionOnlyDesc")}
+                  </span>
+                </span>
+              </label>
+            )}
+
+            <Button
+              type="submit"
+              variant="accent"
+              size="lg"
+              className="w-full"
+              disabled={loading || username.length < 1 || passphrase.length < 8}
+              aria-busy={loading}
+            >
+              {loading
+                ? t("common.processing")
+                : tab === "login"
+                  ? t("auth.signIn")
+                  : t("auth.createAccount")}
+            </Button>
+
+            <p className="flex items-center justify-center gap-2 pt-1 text-caption text-text-muted">
+              <Lock className="h-3.5 w-3.5 text-status-positive" aria-hidden="true" />
+              {t("auth.encryptedInBrowser")}
+            </p>
+          </form>
         </section>
       </div>
     </div>

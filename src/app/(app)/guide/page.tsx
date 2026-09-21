@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { GuideSection } from "@/components/guide/guide-section";
+import { GuideTOC, GuideTocChips } from "@/components/guide/guide-toc";
 import { useTranslation } from "@/hooks/use-translation";
 import { ArrowRight } from "lucide-react";
 
@@ -21,46 +22,23 @@ export default function AppGuidePage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={t("appGuide.subtitle")}
         title={t("appGuide.title")}
-        description={t("appGuide.subtitle")}
       />
 
-      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-        <div className="overflow-x-auto lg:hidden">
-          <div className="flex min-w-max gap-2">
-            {tocItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="rounded-full border border-border-subtle bg-bg-card px-3 py-1.5 text-sm text-text-subtle transition-colors hover:bg-bg-hover hover:text-text-primary"
-              >
-                {item.label}
-              </a>
-            ))}
-          </div>
-        </div>
+      <GuideTocChips items={tocItems} />
 
-        <div className="hidden w-64 shrink-0 lg:block">
-          <div className="sticky top-6 space-y-1 rounded-lg border border-border-subtle bg-bg-card p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-dim">
-              {t("appGuide.toc")}
-            </p>
-            {tocItems.map((item) => (
-              <a
-                key={item.id}
-                href={`#${item.id}`}
-                className="block rounded-md px-2 py-1.5 text-sm text-text-subtle transition-colors hover:bg-bg-hover hover:text-text-primary"
-              >
-                {item.label}
-              </a>
-            ))}
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+        <div className="hidden w-56 shrink-0 lg:block">
+          <div className="sticky top-20">
+            <GuideTOC items={tocItems} />
           </div>
         </div>
 
         <div className="min-w-0 flex-1 space-y-10">
           <GuideSection id="quick-start" title={t("appGuide.quickStart")}>
             <Card>
-              <CardContent className="space-y-2 pt-6 text-sm text-text-muted">
+              <CardContent className="space-y-2 text-body text-text-secondary">
                 <p>{t("appGuide.quickStartStep1")}</p>
                 <p>{t("appGuide.quickStartStep2")}</p>
                 <p>{t("appGuide.quickStartStep3")}</p>
@@ -72,9 +50,9 @@ export default function AppGuidePage() {
           <GuideSection id="daily-ops" title={t("appGuide.dailyOperations")}>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("appGuide.dailyChecklist")}</CardTitle>
+                <CardTitle>{t("appGuide.dailyChecklist")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-text-muted">
+              <CardContent className="space-y-2 text-body text-text-secondary">
                 <p>{t("appGuide.dailyStep1")}</p>
                 <p>{t("appGuide.dailyStep2")}</p>
                 <p>{t("appGuide.dailyStep3")}</p>
@@ -89,9 +67,9 @@ export default function AppGuidePage() {
           >
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("appGuide.reportsHowTo")}</CardTitle>
+                <CardTitle>{t("appGuide.reportsHowTo")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-text-muted">
+              <CardContent className="space-y-3 text-body text-text-secondary">
                 <p>{t("appGuide.reportsStep1")}</p>
                 <p>{t("appGuide.reportsStep2")}</p>
                 <p>{t("appGuide.reportsStep3")}</p>
@@ -114,9 +92,9 @@ export default function AppGuidePage() {
           <GuideSection id="manual-execution" title={t("appGuide.manualExecution")}>
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">{t("appGuide.important")}</CardTitle>
+                <CardTitle>{t("appGuide.important")}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-text-muted">
+              <CardContent className="space-y-2 text-body text-text-secondary">
                 <p>{t("appGuide.manualExecutionIntro")}</p>
                 <p>{t("appGuide.manualStep1")}</p>
                 <p>{t("appGuide.manualStep2")}</p>
@@ -128,7 +106,7 @@ export default function AppGuidePage() {
 
           <GuideSection id="reconciliation" title={t("appGuide.reconciliation")}>
             <Card>
-              <CardContent className="space-y-2 pt-6 text-sm text-text-muted">
+              <CardContent className="space-y-2 text-body text-text-secondary">
                 <p>{t("appGuide.reconciliationStep1")}</p>
                 <p>{t("appGuide.reconciliationStep2")}</p>
                 <p>{t("appGuide.reconciliationStep3")}</p>

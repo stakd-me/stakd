@@ -12,7 +12,7 @@ export function AboutSection() {
         <CardTitle>{t("settings.about")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-2 text-sm text-text-subtle">
+        <div className="space-y-2 text-body text-text-secondary">
           <p>
             <strong className="text-text-primary">
               {t("settings.aboutDesc1")}
@@ -20,7 +20,7 @@ export function AboutSection() {
           </p>
           <p>{t("settings.aboutDesc2")}</p>
           <p>{t("settings.aboutDesc3")}</p>
-          <p className="pt-2 text-xs text-text-dim">
+          <p className="pt-2 text-caption text-text-muted">
             {t("settings.version")}
           </p>
         </div>

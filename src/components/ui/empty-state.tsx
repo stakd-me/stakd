@@ -10,6 +10,11 @@ interface EmptyStateProps {
   className?: string;
 }
 
+/**
+ * What a panel shows instead of data. Keeps the panel's own height so the
+ * page does not jump when data arrives. Say what is missing and what to do
+ * about it — never "No data available".
+ */
 export function EmptyState({
   title,
   description,
@@ -20,18 +25,20 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-xl border border-dashed border-border-subtle bg-bg-card px-6 py-10 text-center",
+        "flex flex-col items-center justify-center rounded-md border border-border-subtle bg-bg-card px-6 py-8 text-center",
         className
       )}
     >
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-bg-muted text-text-subtle">
-        {icon ?? <Inbox className="h-5 w-5" />}
-      </div>
-      <p className="text-base font-semibold text-text-primary">{title}</p>
+      <span className="text-text-muted">
+        {icon ?? <Inbox className="h-6 w-6" aria-hidden="true" />}
+      </span>
+      <p className="mt-3 text-heading text-text-primary">{title}</p>
       {description ? (
-        <p className="mt-2 max-w-md text-sm text-text-subtle">{description}</p>
+        <p className="mt-1.5 max-w-sm text-body text-text-secondary">{description}</p>
       ) : null}
-      {action ? <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div> : null}
+      {action ? (
+        <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>
+      ) : null}
     </div>
   );
 }

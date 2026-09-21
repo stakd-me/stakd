@@ -11,7 +11,7 @@ interface GuideSectionProps {
 export function GuideSection({ id, title, children }: GuideSectionProps) {
   return (
     <section id={id} className="scroll-mt-8">
-      <h2 className="mb-4 text-xl font-bold text-text-primary">{title}</h2>
+      <h2 className="mb-4 text-display-sm text-text-primary">{title}</h2>
       {children}
     </section>
   );

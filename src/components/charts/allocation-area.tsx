@@ -26,29 +26,10 @@ ChartJS.register(
   Filler
 );
 
-// Categorical palettes validated with the six-checks script (light on #ffffff,
-// dark on #172339): fixed assignment order, never cycled — series beyond the
-// palette fold into "others" upstream. Amber/green/cyan use darker steps in
-// dark mode to stay inside the lightness band.
-const SERIES_COLORS_LIGHT = [
-  "#3b82f6",
-  "#f59e0b",
-  "#8b5cf6",
-  "#10b981",
-  "#ef4444",
-  "#06b6d4",
-  "#ec4899",
-];
-const SERIES_COLORS_DARK = [
-  "#3b82f6",
-  "#d97706",
-  "#8b5cf6",
-  "#059669",
-  "#ef4444",
-  "#0891b2",
-  "#ec4899",
-];
-const OTHERS_COLOR = "#6b7280";
+// The categorical scale is the design system's single ordering, read from
+// the --chart-series-* tokens. Assignment is fixed, never cycled: series
+// beyond the scale fold into "others" upstream, which always takes the
+// last slot.
 const FILL_ALPHA = "59"; // ~35% — fills overlap-stack, borders carry identity
 
 interface AllocationAreaChartProps {
@@ -76,11 +57,11 @@ export const AllocationAreaChart = memo(function AllocationAreaChart({
   );
 
   const datasets = useMemo(() => {
-    const palette = chartTheme.isDark ? SERIES_COLORS_DARK : SERIES_COLORS_LIGHT;
+    const palette = chartTheme.series;
     return trend.series.map((series, index) => {
       const color = series.isOthers
-        ? OTHERS_COLOR
-        : palette[index % palette.length];
+        ? palette[palette.length - 1]
+        : palette[index % (palette.length - 1)];
       return {
         label: series.isOthers ? othersLabel : series.symbol,
         data: series.percents,
@@ -97,7 +78,7 @@ export const AllocationAreaChart = memo(function AllocationAreaChart({
         pointBackgroundColor: color,
       };
     });
-  }, [trend.series, othersLabel, chartTheme.isDark]);
+  }, [trend.series, othersLabel, chartTheme.series]);
 
   return (
     <div className="h-72">

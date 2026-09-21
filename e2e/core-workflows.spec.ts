@@ -43,7 +43,8 @@ test.describe.serial("core portfolio workflows", () => {
     await page.getByPlaceholder("Token symbol (e.g. ETH)").fill("BTC");
     await page.getByPlaceholder("Target %").fill("100");
     await page.getByRole("button", { name: "Save Targets" }).first().click();
-    await expect(page.getByRole("tab", { name: /Analysis/ })).toBeVisible();
+    // The three phases are a stepper now, not a tab strip.
+    await expect(page.getByRole("button", { name: /Analysis/ })).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("rebalance-desktop.png"),
       fullPage: true,
@@ -69,7 +70,9 @@ test.describe.serial("core portfolio workflows", () => {
     await page.getByRole("button", { name: "Sign In", exact: true }).click();
     await expect(page).toHaveURL(/\/portfolio$/);
 
-    await page.getByRole("button", { name: "Open menu" }).click();
+    // The off-canvas drawer is gone: five destinations sit in a bottom tab
+    // bar, and the desktop rail is display:none at this width, so the link
+    // below resolves to the tab.
     await expect(page.getByRole("link", { name: "Analytics" })).toBeVisible();
     await page.getByRole("link", { name: "Analytics" }).click();
     await expect(page).toHaveURL(/\/analytics$/);

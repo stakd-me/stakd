@@ -8,11 +8,7 @@ import {
   summarizeHoldings,
 } from "@/lib/services/portfolio-calculator";
 import { getOldestPriceUpdateForTokens } from "@/lib/pricing/freshness";
-
-const COLORS = [
-  "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
-  "#06b6d4", "#ec4899", "#f97316", "#6366f1", "#14b8a6",
-];
+import { useChartSeries } from "@/hooks/use-chart-theme";
 
 export interface PortfolioBreakdownItem {
   holdingKey: string;
@@ -36,6 +32,8 @@ export function usePortfolio() {
   const vault = useVaultStore((s) => s.vault);
   const { priceMap, updatedAt, isLoading: pricesLoading, refreshPrices, ensurePrices } = usePrices();
   const ensuredTokensRef = useRef<Set<string>>(new Set());
+  // The one categorical ordering, read from the --chart-series-* tokens.
+  const series = useChartSeries();
 
   const holdings = useMemo(
     () => getHoldings(vault, priceMap),
@@ -73,7 +71,7 @@ export function usePortfolio() {
         percent: summary.totalValueUsd > 0
           ? Math.round((h.currentValue / summary.totalValueUsd) * 10000) / 100
           : 0,
-        color: COLORS[i % COLORS.length],
+        color: series[i % series.length],
         quantity: h.currentQty,
         avgCost: h.avgCostBasis,
         avgCostOverride: h.avgCostOverrideUsd,
@@ -83,7 +81,7 @@ export function usePortfolio() {
         unrealizedPLPercent: h.unrealizedPLPercent,
         realizedPL: h.realizedPL,
       }));
-  }, [holdings, summary.totalValueUsd]);
+  }, [holdings, summary.totalValueUsd, series]);
 
   const totals = useMemo(() => {
     let totalUnrealizedPL = 0;

@@ -1,22 +1,45 @@
 import type { HTMLAttributes, ReactNode } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-type StatusPillTone =
-  | "neutral"
-  | "info"
-  | "success"
-  | "warning"
-  | "caution"
-  | "danger";
+// Tone means what the colour tokens mean: success is money up, danger is
+// money down, warning is a crossed threshold, caution is concentration or
+// a calendar block, info carries no judgement, and neutral is a mode
+// label that is neither good nor bad.
+const pillVariants = cva(
+  "inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 font-mono text-[11px] leading-4",
+  {
+    variants: {
+      tone: {
+        neutral: "bg-bg-input text-text-secondary",
+        info: "bg-status-info-soft text-status-info",
+        success: "bg-status-positive-soft text-status-positive",
+        warning: "bg-status-warning-soft text-status-warning",
+        caution: "bg-status-caution-soft text-status-caution",
+        danger: "bg-status-negative-soft text-status-negative",
+      },
+      bordered: { true: "", false: "border-transparent" },
+    },
+    compoundVariants: [
+      { tone: "neutral", bordered: true, class: "border-border-subtle" },
+      { tone: "info", bordered: true, class: "border-status-info-border" },
+      { tone: "success", bordered: true, class: "border-status-positive-border" },
+      { tone: "warning", bordered: true, class: "border-status-warning-border" },
+      { tone: "caution", bordered: true, class: "border-status-caution-border" },
+      { tone: "danger", bordered: true, class: "border-status-negative-border" },
+    ],
+    defaultVariants: { tone: "neutral", bordered: true },
+  }
+);
 
-interface StatusPillProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: StatusPillTone;
+interface StatusPillProps
+  extends HTMLAttributes<HTMLSpanElement>,
+    VariantProps<typeof pillVariants> {
   icon?: ReactNode;
-  bordered?: boolean;
 }
 
 export function StatusPill({
-  tone = "neutral",
+  tone,
   icon,
   bordered = true,
   className,
@@ -24,37 +47,7 @@ export function StatusPill({
   ...props
 }: StatusPillProps) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
-        {
-          "bg-bg-muted text-text-tertiary": tone === "neutral" && !bordered,
-          "border border-border bg-bg-muted text-text-tertiary":
-            tone === "neutral" && bordered,
-          "bg-status-info-soft text-status-info": tone === "info" && !bordered,
-          "border border-status-info-border bg-status-info-soft text-status-info":
-            tone === "info" && bordered,
-          "bg-status-positive-soft text-status-positive":
-            tone === "success" && !bordered,
-          "border border-status-positive-border bg-status-positive-soft text-status-positive":
-            tone === "success" && bordered,
-          "bg-status-warning-soft text-status-warning":
-            tone === "warning" && !bordered,
-          "border border-status-warning-border bg-status-warning-soft text-status-warning":
-            tone === "warning" && bordered,
-          "bg-status-caution-soft text-status-caution":
-            tone === "caution" && !bordered,
-          "border border-status-caution-border bg-status-caution-soft text-status-caution":
-            tone === "caution" && bordered,
-          "bg-status-negative-soft text-status-negative":
-            tone === "danger" && !bordered,
-          "border border-status-negative-border bg-status-negative-soft text-status-negative":
-            tone === "danger" && bordered,
-        },
-        className
-      )}
-      {...props}
-    >
+    <span className={cn(pillVariants({ tone, bordered }), className)} {...props}>
       {icon ? <span className="shrink-0">{icon}</span> : null}
       <span>{children}</span>
     </span>

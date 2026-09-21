@@ -7,6 +7,11 @@ export interface SegmentedControlOption<T extends string> {
   value: T;
   label: ReactNode;
   badge?: ReactNode;
+  /**
+   * A caption for this option. Not rendered in the tab itself — an
+   * underline row has no space for it — but SectionNavigator shows the
+   * active option's caption beneath the row.
+   */
   description?: ReactNode;
   disabled?: boolean;
 }
@@ -92,7 +97,11 @@ export function SegmentedControl<T extends string>({
     <div
       role="tablist"
       aria-label={label}
-      className={cn("grid gap-2", columnsClassName, className)}
+      className={cn(
+        "flex gap-5 overflow-x-auto border-b border-border",
+        columnsClassName,
+        className
+      )}
     >
       {options.map((option, index) => {
         const isActive = value === option.value;
@@ -113,35 +122,17 @@ export function SegmentedControl<T extends string>({
             onKeyDown={(event) => handleKeyDown(event, index)}
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-lg border px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-card",
+              "-mb-px flex shrink-0 items-center gap-2 border-b-2 pb-2.5 text-body font-semibold",
+              "transition-colors duration-[120ms] ease-out",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
               isActive
-                ? "border-accent bg-accent/10 text-text-primary"
-                : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary",
-              option.description
-                ? "block"
-                : "flex items-center justify-between gap-3 text-sm",
+                ? "border-accent text-text-primary"
+                : "border-transparent text-text-muted hover:text-text-primary",
+              option.disabled && "cursor-not-allowed text-text-dim hover:text-text-dim"
             )}
           >
-            {option.description ? (
-              <>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium text-text-primary">
-                    {option.label}
-                  </span>
-                  {option.badge ? (
-                    <span className="shrink-0">{option.badge}</span>
-                  ) : null}
-                </div>
-                <p className="mt-1 text-xs text-text-dim">
-                  {option.description}
-                </p>
-              </>
-            ) : (
-              <>
-                <span className="min-w-0 truncate font-medium">{option.label}</span>
-                {option.badge ? <span className="shrink-0">{option.badge}</span> : null}
-              </>
-            )}
+            <span className="min-w-0 truncate">{option.label}</span>
+            {option.badge ? <span className="shrink-0">{option.badge}</span> : null}
           </button>
         );
       })}

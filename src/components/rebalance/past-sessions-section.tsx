@@ -42,16 +42,16 @@ export function PastSessionsSection({
           onClick={() => setShowPastSessions(!showPastSessions)}
           aria-expanded={showPastSessions}
         >
-          <History className="h-5 w-5 text-text-subtle" />
+          <History className="h-5 w-5 text-text-muted" />
           <CardTitle>{t("rebalance.pastSessions")}</CardTitle>
           <span className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-subtle">
+            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
               {pastSessions.length}
             </span>
             {showPastSessions ? (
-              <ChevronUp className="h-5 w-5 text-text-subtle" />
+              <ChevronUp className="h-5 w-5 text-text-muted" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-text-subtle" />
+              <ChevronDown className="h-5 w-5 text-text-muted" />
             )}
           </span>
         </button>
@@ -79,26 +79,26 @@ export function PastSessionsSection({
                     aria-label={`Toggle session from ${new Date(session.createdAt).toLocaleDateString()}`}
                   >
                     {expandedPastSession === session.id ? (
-                      <ChevronUp className="h-4 w-4 shrink-0 text-text-subtle" />
+                      <ChevronUp className="h-4 w-4 shrink-0 text-text-muted" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-text-subtle" />
+                      <ChevronDown className="h-4 w-4 shrink-0 text-text-muted" />
                     )}
-                    <span className="text-sm text-text-subtle">
+                    <span className="text-body text-text-muted">
                       {new Date(session.createdAt).toLocaleDateString()}
                     </span>
                     <span className="font-medium text-text-primary">
                       {formatUsd(session.totalValueUsd)}
                     </span>
                     <span
-                      className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold ${
                         session.status === "completed"
                           ? "border-status-positive-border bg-status-positive-soft text-status-positive"
-                          : "border-border/30 bg-bg-muted/20 text-text-subtle"
+                          : "border-border/30 bg-bg-muted/20 text-text-muted"
                       }`}
                     >
                       {session.status}
                     </span>
-                    <span className="text-xs text-text-dim">
+                    <span className="text-caption text-text-muted">
                       {session.trades.length} trade
                       {session.trades.length !== 1 ? "s" : ""}
                     </span>
@@ -106,7 +106,7 @@ export function PastSessionsSection({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 shrink-0 text-text-subtle hover:text-status-negative"
+                    className="h-8 w-8 shrink-0 text-text-muted hover:text-status-negative"
                     onClick={() =>
                       onConfirmDelete(
                         session.id,
@@ -125,11 +125,11 @@ export function PastSessionsSection({
                       {session.trades.map((trade) => (
                         <div
                           key={trade.id}
-                          className="flex items-center justify-between rounded bg-bg-sidebar/50 px-3 py-1.5 text-sm"
+                          className="flex items-center justify-between rounded-md bg-bg-sidebar/50 px-3 py-1.5 text-body"
                         >
                           <div className="flex items-center gap-2">
                             <span
-                              className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(trade.action)}`}
+                              className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(trade.action)}`}
                             >
                               {trade.action}
                             </span>
@@ -137,7 +137,7 @@ export function PastSessionsSection({
                               {trade.tokenSymbol}
                             </span>
                           </div>
-                          <span className="text-text-subtle">
+                          <span className="text-text-muted">
                             {formatUsd(trade.amountUsd)}
                           </span>
                         </div>

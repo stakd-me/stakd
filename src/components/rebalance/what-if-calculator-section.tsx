@@ -122,9 +122,9 @@ export function WhatIfCalculatorSection({
           <CardTitle>{t("rebalance.whatIfCalc")}</CardTitle>
           <span className="ml-auto">
             {showWhatIf ? (
-              <ChevronUp className="h-5 w-5 text-text-subtle" />
+              <ChevronUp className="h-5 w-5 text-text-muted" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-text-subtle" />
+              <ChevronDown className="h-5 w-5 text-text-muted" />
             )}
           </span>
         </button>
@@ -187,7 +187,7 @@ export function WhatIfCalculatorSection({
                   onClick={() =>
                     setWhatIfTrades(whatIfTrades.filter((_, j) => j !== i))
                   }
-                  className="text-text-subtle hover:text-status-negative"
+                  className="text-text-muted hover:text-status-negative"
                   disabled={whatIfTrades.length <= 1}
                   aria-label={t("rebalance.removeTrade")}
                 >
@@ -228,23 +228,23 @@ export function WhatIfCalculatorSection({
 
             {whatIfResults && (
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-body">
                   <caption className="sr-only">{t("rebalance.whatIfCalc")}</caption>
                   <thead>
-                    <tr className="border-b border-border text-left text-text-subtle">
+                    <tr className="border-b border-border text-left text-text-muted">
                       <th scope="col" className="pb-2 pr-4">{t("rebalance.tokenCol")}</th>
                       <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.currentPercent")}</th>
                       <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.simulatedPercent")}</th>
                       <th scope="col" className="pb-2 text-right">{t("rebalance.change")}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="font-mono text-num-md tabular">
                     {whatIfResults.map((r) => (
                       <tr
                         key={r.tokenSymbol}
                         className="border-b border-border-subtle"
                       >
-                        <th scope="row" className="py-2 pr-4 text-left font-medium text-text-primary">
+                        <th scope="row" className="py-2 pr-4 text-left font-sans text-body font-semibold text-text-primary">
                           {r.tokenSymbol}
                         </th>
                         <td className="py-2 pr-4 text-right">
@@ -254,7 +254,7 @@ export function WhatIfCalculatorSection({
                           {r.simulatedPercent.toFixed(1)}%
                         </td>
                         <td
-                          className={`py-2 text-right font-medium ${r.change > 0 ? "text-status-positive" : r.change < 0 ? "text-status-negative" : "text-text-subtle"}`}
+                          className={`py-2 text-right font-medium ${r.change > 0 ? "text-status-positive" : r.change < 0 ? "text-status-negative" : "text-text-muted"}`}
                         >
                           {r.change >= 0 ? "+" : ""}
                           {r.change.toFixed(1)}%

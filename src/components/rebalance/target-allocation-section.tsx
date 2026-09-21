@@ -208,7 +208,7 @@ export function TargetAllocationSection({
         ? "text-status-positive"
         : totalPercent > 0
           ? "text-status-warning"
-          : "text-text-subtle";
+          : "text-text-muted";
   const progressBarClass =
     totalPercent > 100
       ? "bg-status-negative"
@@ -219,9 +219,9 @@ export function TargetAllocationSection({
           : "bg-text-dim";
 
   const getDeviationClass = (diff: number | null): string => {
-    if (diff === null) return "text-text-dim";
+    if (diff === null) return "text-text-muted";
     const abs = Math.abs(diff);
-    if (abs <= 1) return "text-text-subtle";
+    if (abs <= 1) return "text-text-muted";
     if (diff > 0) {
       if (abs <= 5) return "text-status-warning";
       return "text-status-negative";
@@ -241,20 +241,20 @@ export function TargetAllocationSection({
           >
             <CardTitle>{t("rebalance.targetAllocation")}</CardTitle>
             {!expanded && targets.length > 0 && (
-              <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-subtle">
+              <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
                 {targets.length}
               </span>
             )}
             <span className="ml-auto">
               {expanded ? (
-                <ChevronUp className="h-5 w-5 text-text-subtle" />
+                <ChevronUp className="h-5 w-5 text-text-muted" />
               ) : (
-                <ChevronDown className="h-5 w-5 text-text-subtle" />
+                <ChevronDown className="h-5 w-5 text-text-muted" />
               )}
             </span>
           </button>
           <span
-            className={`whitespace-nowrap text-sm font-medium ${totalStatusClass}`}
+            className={`whitespace-nowrap text-body font-semibold ${totalStatusClass}`}
           >
             {t("rebalance.total", { percent: totalPercent.toFixed(1) })}
             {totalPercent > 100 && ` — ${t("rebalance.exceeds100")}`}
@@ -298,14 +298,14 @@ export function TargetAllocationSection({
               <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border border-border bg-bg-input shadow-lg">
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm text-text-tertiary hover:bg-bg-hover"
+                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                   onClick={() => handleAutoGenerate("equal")}
                 >
                   {t("rebalance.equalWeight")}
                 </button>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm text-text-tertiary hover:bg-bg-hover"
+                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                   onClick={() => handleAutoGenerate("market-cap")}
                 >
                   {t("rebalance.currentAllocation")}
@@ -330,7 +330,7 @@ export function TargetAllocationSection({
                   <button
                     key={tpl.name}
                     type="button"
-                    className="w-full px-4 py-2 text-left text-sm text-text-tertiary hover:bg-bg-hover"
+                    className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                     onClick={() => handleApplyTemplate(tpl)}
                   >
                     {tpl.name}
@@ -350,7 +350,7 @@ export function TargetAllocationSection({
             >
               <ArrowUpDown className="mr-2 h-4 w-4" />
               {t("rebalance.sortByDeviation")}
-              <span className="ml-1 text-xs text-text-dim">
+              <span className="ml-1 text-caption text-text-muted">
                 {sortMode === "absolute"
                   ? t("rebalance.sortDeviationAbsoluteShort")
                   : t("rebalance.sortDeviationSignedShort")}
@@ -360,14 +360,14 @@ export function TargetAllocationSection({
               <div className="absolute left-0 top-full z-50 mt-1 min-w-52 rounded-md border border-border bg-bg-input shadow-lg">
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm text-text-tertiary hover:bg-bg-hover"
+                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                   onClick={() => sortTargetsByDeviation("absolute")}
                 >
                   {t("rebalance.sortDeviationAbsolute")}
                 </button>
                 <button
                   type="button"
-                  className="w-full px-4 py-2 text-left text-sm text-text-tertiary hover:bg-bg-hover"
+                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                   onClick={() => sortTargetsByDeviation("signed")}
                 >
                   {t("rebalance.sortDeviationSigned")}
@@ -384,7 +384,7 @@ export function TargetAllocationSection({
       {!expanded && (
         <CardContent className="pt-0">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-            <p className="text-sm text-text-subtle">
+            <p className="text-body text-text-muted">
               {targets.length} {t("rebalance.token")} • {t("rebalance.total", { percent: totalPercent.toFixed(1) })}
               {totalPercent > 100 && ` • ${t("rebalance.exceeds100")}`}
               {totalPercent > 0 &&
@@ -401,7 +401,7 @@ export function TargetAllocationSection({
         <CardContent>
           <div className="space-y-3" ref={autocompleteRef}>
             {targets.length > 0 && (
-              <div className="hidden items-center gap-3 text-xs text-text-dim md:flex">
+              <div className="hidden items-center gap-3 text-caption text-text-muted md:flex">
                 <span className="w-44">{t("rebalance.tokenHeader")}</span>
                 <span className="w-24">{t("rebalance.targetPercent")}</span>
                 <span className="w-20 text-right">{t("rebalance.current")}</span>
@@ -451,7 +451,7 @@ export function TargetAllocationSection({
                               <button
                                 key={s.symbol}
                                 type="button"
-                                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-bg-hover"
+                                className="flex w-full items-center justify-between px-3 py-2 text-left text-body hover:bg-bg-hover"
                                 onClick={() => selectAutocomplete(index, s)}
                               >
                                 <div className="flex items-center">
@@ -461,11 +461,11 @@ export function TargetAllocationSection({
                                   <span className="font-medium text-text-primary">
                                     {s.symbol}
                                   </span>
-                                  <span className="ml-2 text-text-subtle">
+                                  <span className="ml-2 text-text-muted">
                                     {s.name}
                                   </span>
                                 </div>
-                                <span className="text-xs text-text-dim">
+                                <span className="text-caption text-text-muted">
                                   {formatUsd(s.totalValueUsd)}
                                 </span>
                               </button>
@@ -488,7 +488,7 @@ export function TargetAllocationSection({
                     />
 
                     <span
-                      className="w-[calc(25%-0.25rem)] text-right text-xs tabular-nums text-text-muted md:w-20 md:text-sm"
+                      className="w-[calc(25%-0.25rem)] text-right text-caption tabular-nums text-text-muted md:w-20 md:text-body"
                       title={
                         currentPercent === null
                           ? t("common.noData")
@@ -498,7 +498,7 @@ export function TargetAllocationSection({
                       {currentPercent === null ? "—" : `${currentPercent.toFixed(1)}%`}
                     </span>
                     <span
-                      className={`w-[calc(25%-0.25rem)] text-right text-xs tabular-nums md:w-24 md:text-sm ${getDeviationClass(diff)}`}
+                      className={`w-[calc(25%-0.25rem)] text-right text-caption tabular-nums md:w-24 md:text-body ${getDeviationClass(diff)}`}
                       title={
                         diff === null
                           ? t("common.noData")
@@ -512,7 +512,7 @@ export function TargetAllocationSection({
                       variant="ghost"
                       size="icon"
                       onClick={() => removeRow(index)}
-                      className="h-8 w-8 text-text-subtle hover:text-status-negative"
+                      className="h-8 w-8 text-text-muted hover:text-status-negative"
                       aria-label={`Remove ${row.tokenSymbol || "token"} target`}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -524,7 +524,7 @@ export function TargetAllocationSection({
                       g.name.toUpperCase() === row.tokenSymbol.toUpperCase()
                   ) && (
                     <div className="mt-2">
-                      <span className="inline-flex items-center gap-1 rounded bg-status-info-soft px-1.5 py-0.5 text-xs text-status-info">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-status-info-soft px-1.5 py-0.5 text-caption text-status-info">
                         <Layers className="h-3 w-3" />
                         {t("rebalance.group")}
                       </span>
@@ -536,20 +536,20 @@ export function TargetAllocationSection({
             })}
 
             {!hasValidTargets && (
-              <p className="text-xs text-text-dim">
+              <p className="text-caption text-text-muted">
                 {t("rebalance.noValidTargets")}
               </p>
             )}
 
             {saveError && (
-              <p className="text-sm text-status-negative" role="alert" aria-live="assertive">
+              <p className="text-body text-status-negative" role="alert" aria-live="assertive">
                 {saveErrorMessage || t("rebalance.failedSave")}
               </p>
             )}
 
             <div className="sticky bottom-0 z-10 -mx-6 border-t border-border-subtle bg-bg-card/95 px-6 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg-card/80">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className={`text-sm font-medium ${totalStatusClass}`}>
+                <p className={`text-body font-semibold ${totalStatusClass}`}>
                   {t("rebalance.total", { percent: totalPercent.toFixed(1) })}
                   {totalPercent > 100 && ` — ${t("rebalance.exceeds100")}`}
                   {totalPercent > 0 &&

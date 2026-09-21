@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import type { TranslationKeys } from "@/i18n";
 
@@ -59,6 +60,7 @@ const strategyMap: Record<string, { nameKey: TranslationKeys; sectionId: string 
 
 export function StrategyPickerQuiz() {
   const { t } = useTranslation();
+  const questionId = useId();
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
@@ -100,25 +102,27 @@ export function StrategyPickerQuiz() {
 
     return (
       <Card>
-        <CardContent className="space-y-4 pt-6">
-          <h3 className="text-lg font-semibold text-text-primary">
+        <CardContent className="space-y-4">
+          <h3 className="text-heading text-text-primary">
             {t("guide.quizResult")}
           </h3>
-          <p className="text-text-muted">{t("guide.quizResultDesc")}</p>
-          <div className="rounded-lg border border-status-info-border bg-status-info-soft p-4">
-            <p className="text-xl font-bold text-status-info">
-              {t(strategy.nameKey)}
-            </p>
+          <p className="text-body text-text-secondary">{t("guide.quizResultDesc")}</p>
+          <div
+            className="border border-accent bg-accent-soft p-4"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-display-sm text-accent">{t(strategy.nameKey)}</p>
           </div>
           <div className="flex gap-3">
             <a
               href={`#${strategy.sectionId}`}
-              className="text-sm text-status-info hover:text-status-info"
+              className="self-center text-body text-accent hover:underline"
             >
               {t("dashboard.viewDetails")}
             </a>
             <Link href="/settings">
-              <Button size="sm">{t("guide.quizApply")}</Button>
+              <Button variant="accent" size="sm">{t("guide.quizApply")}</Button>
             </Link>
             <Button size="sm" variant="outline" onClick={reset}>
               {t("guide.quizRetake")}
@@ -133,34 +137,38 @@ export function StrategyPickerQuiz() {
 
   return (
     <Card>
-      <CardContent className="space-y-4 pt-6">
+      <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-text-dim">
+          <p className="font-mono text-meta uppercase text-text-muted">
             {step + 1} / {questions.length}
           </p>
           {step > 0 && (
             <button
               type="button"
-              className="text-xs text-text-subtle hover:text-text-primary"
+              className="text-caption text-text-muted hover:text-text-primary"
               onClick={() => setStep(step - 1)}
             >
               {t("guide.quizPrev")}
             </button>
           )}
         </div>
-        <h3 className="text-lg font-medium text-text-primary">
+        <h3 id={questionId} className="text-heading text-text-primary">
           {t(question.key)}
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-2" role="group" aria-labelledby={questionId}>
           {question.options.map((option, i) => (
             <button
               key={option.key}
               type="button"
-              className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
+              aria-pressed={answers[step] === i}
+              className={cn(
+                "w-full border px-4 py-3 text-left text-body",
+                "transition-colors duration-[120ms] ease-out",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
                 answers[step] === i
-                  ? "border-status-info-border bg-status-info-soft text-status-info"
-                  : "border-border bg-bg-card text-text-muted hover:border-border hover:bg-bg-hover"
-              }`}
+                  ? "border-accent bg-accent-soft font-semibold text-accent"
+                  : "border-border-subtle text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+              )}
               onClick={() => handleSelect(i)}
             >
               {t(option.key)}

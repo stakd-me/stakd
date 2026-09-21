@@ -102,16 +102,16 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={t("settings.subtitle")}
         title={t("settings.title")}
-        description={t("settings.subtitle")}
         actions={
           showRebalanceSaveAction ? (
             <Button
+              variant="accent"
               onClick={handleSaveRebalanceSettings}
               disabled={rebalanceSaving}
-              size="sm"
             >
-              <Save className="mr-2 h-4 w-4" />
+              <Save className="h-4 w-4" aria-hidden="true" />
               {rebalanceSaving
                 ? t("common.saving")
                 : t("settings.saveRebalanceSettings")}
@@ -123,23 +123,17 @@ export default function SettingsPage() {
       <SectionNavigator
         baseId={sectionsBaseId}
         label={t("settings.focusView")}
-        description={t("settings.subtitle")}
         value={activeSection}
         onChange={setActiveSection}
         options={settingsSectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
         {showSecuritySection && <PassphraseSection />}
 
-        <RebalanceSettingsSection
-          form={form}
-          setField={setField}
-          showStrategy={showStrategySection}
-          showRisk={showStrategySection}
-          showTrading={showStrategySection}
-        />
+        {showStrategySection && (
+          <RebalanceSettingsSection form={form} setField={setField} />
+        )}
 
         {showAlertsSection && <AlertRulesSection holdingSymbols={holdingSymbols} />}
 

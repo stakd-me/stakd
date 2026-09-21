@@ -4,59 +4,101 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 
-const sections = [
-  { id: "what-is", key: "guide.whatIs" as const },
-  { id: "why-rebalance", key: "guide.whyRebalance" as const },
-  { id: "strategies", key: "guide.strategies" as const },
-  { id: "comparison", key: "guide.comparison" as const },
-  { id: "risk-metrics", key: "guide.riskMetrics" as const },
-  { id: "crypto-vs-trad", key: "guide.cryptoVsTrad" as const },
-  { id: "find-strategy", key: "guide.findStrategy" as const },
-];
+export interface GuideTocItem {
+  id: string;
+  label: string;
+}
 
-export function GuideTOC() {
+interface GuideTocProps {
+  items: GuideTocItem[];
+}
+
+/**
+ * Shared table of contents for both guides. It was hard-coded to the
+ * rebalance guide's seven sections, so the app guide carried its own
+ * copy inline — without the scroll-spy that makes a long page navigable.
+ */
+function useActiveSection(items: GuideTocItem[]): string {
   const [activeId, setActiveId] = useState("");
-  const { t } = useTranslation();
+  const ids = items.map((item) => item.id).join(",");
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id);
-          }
+          if (entry.isIntersecting) setActiveId(entry.target.id);
         }
       },
       { rootMargin: "-80px 0px -60% 0px", threshold: 0 }
     );
 
-    for (const section of sections) {
-      const el = document.getElementById(section.id);
+    for (const id of ids.split(",")) {
+      const el = document.getElementById(id);
       if (el) observer.observe(el);
     }
 
     return () => observer.disconnect();
-  }, []);
+  }, [ids]);
+
+  return activeId;
+}
+
+/** The desktop sidebar form. */
+export function GuideTOC({ items }: GuideTocProps) {
+  const activeId = useActiveSection(items);
+  const { t } = useTranslation();
 
   return (
-    <nav className="space-y-1">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-dim">
+    <nav aria-label={t("guide.toc")} className="border border-border bg-bg-card p-3">
+      <p className="mb-2 px-2 font-mono text-meta uppercase text-text-muted">
         {t("guide.toc")}
       </p>
-      {sections.map((section, i) => (
+      {items.map((item, index) => (
         <a
-          key={section.id}
-          href={`#${section.id}`}
+          key={item.id}
+          href={`#${item.id}`}
+          aria-current={activeId === item.id ? "location" : undefined}
           className={cn(
-            "block rounded-md px-3 py-1.5 text-sm transition-colors",
-            activeId === section.id
-              ? "bg-bg-hover text-text-primary font-medium"
-              : "text-text-subtle hover:text-text-primary"
+            "block px-2 py-1.5 text-body transition-colors duration-[120ms] ease-out",
+            activeId === item.id
+              ? "bg-bg-hover font-semibold text-text-primary"
+              : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
           )}
         >
-          {i + 1}. {t(section.key)}
+          <span className="mr-2 font-mono text-num-sm text-text-muted">
+            {index + 1}
+          </span>
+          {item.label}
         </a>
       ))}
+    </nav>
+  );
+}
+
+/** The phone form: a scrolling strip of chips above the content. */
+export function GuideTocChips({ items }: GuideTocProps) {
+  const activeId = useActiveSection(items);
+  const { t } = useTranslation();
+
+  return (
+    <nav aria-label={t("guide.toc")} className="overflow-x-auto lg:hidden">
+      <div className="flex min-w-max gap-2">
+        {items.map((item) => (
+          <a
+            key={item.id}
+            href={`#${item.id}`}
+            aria-current={activeId === item.id ? "location" : undefined}
+            className={cn(
+              "rounded-sm border px-3 py-1.5 text-body transition-colors duration-[120ms] ease-out",
+              activeId === item.id
+                ? "border-accent bg-accent-soft font-semibold text-accent"
+                : "border-border-subtle text-text-secondary hover:bg-bg-hover hover:text-text-primary"
+            )}
+          >
+            {item.label}
+          </a>
+        ))}
+      </div>
     </nav>
   );
 }

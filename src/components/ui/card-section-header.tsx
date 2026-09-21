@@ -25,6 +25,7 @@ export function CardSectionHeader({
         <div className="min-w-0 space-y-1">
           <CardTitle
             className={cn(
+              "text-label uppercase",
               icon ? "flex items-center gap-2" : "",
               titleClassName
             )}
@@ -33,7 +34,7 @@ export function CardSectionHeader({
             {title}
           </CardTitle>
           {subtitle ? (
-            <div className="text-sm text-text-subtle">{subtitle}</div>
+            <div className="text-caption text-text-muted">{subtitle}</div>
           ) : null}
         </div>
         {actions ? (

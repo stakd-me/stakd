@@ -16,6 +16,19 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "chart.js", "@tanstack/react-query"],
   },
+  // The three analytics screens used to answer on six URLs, via re-export
+  // files. One canonical path each now, with the old bookmarks redirected.
+  async redirects() {
+    return [
+      { source: "/reports", destination: "/analytics", permanent: false },
+      { source: "/history", destination: "/analytics/history", permanent: false },
+      {
+        source: "/allocation-history",
+        destination: "/analytics/allocation",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     const headers = [
       { key: "X-Content-Type-Options", value: "nosniff" },

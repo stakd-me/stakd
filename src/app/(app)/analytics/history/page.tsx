@@ -1,1 +1,372 @@
-export { default } from "../../history/page";
+"use client";
+
+import { useMemo, useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
+import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { Metric, MetricBand } from "@/components/ui/metric";
+import { CardSectionHeader } from "@/components/ui/card-section-header";
+import dynamic from "next/dynamic";
+
+const PortfolioLineChart = dynamic(
+  () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
+  { ssr: false }
+);
+const RealizedPlLineChart = dynamic(
+  () => import("@/components/charts/realized-pl-line").then((m) => ({ default: m.RealizedPlLineChart })),
+  { ssr: false }
+);
+import { cn, formatUsd } from "@/lib/utils";
+import { ChartSkeleton, Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "@/hooks/use-translation";
+import { useVaultStore } from "@/lib/store";
+import { usePrices } from "@/hooks/use-prices";
+import type { VaultTransaction } from "@/lib/crypto/vault-types";
+import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
+import { expandTransactionForBalance } from "@/lib/transactions";
+import Link from "next/link";
+import type { RealizedPlPoint as PLPoint } from "@/components/charts/realized-pl-line";
+
+type HistorySection = "overview" | "realized" | "snapshots" | "all";
+
+/**
+ * Compute realized P&L timeline from sell transactions.
+ * For each sell, we compute: pl = (sellPrice - avgCostBasis) * quantity
+ * using the average cost basis at the time of the sell (FIFO-like running average).
+ */
+function computeRealizedPLTimeline(transactions: VaultTransaction[]): {
+  timeline: PLPoint[];
+  totalRealizedPL: number;
+} {
+  // Settlement legs should update cost-basis pools without showing up as
+  // extra realized events in the chart.
+  const sorted = transactions.flatMap(expandTransactionForBalance).sort(
+    (a, b) => new Date(a.transactedAt).getTime() - new Date(b.transactedAt).getTime()
+  );
+
+  // Track running cost basis per token key
+  const costBasis: Record<string, { totalCost: number; totalQty: number }> = {};
+
+  const timeline: PLPoint[] = [];
+  let cumulativePL = 0;
+
+  for (const tx of sorted) {
+    const key = `${tx.tokenSymbol.toUpperCase()}:${tx.coingeckoId ?? ""}`;
+    const qty = parseFloat(tx.quantity);
+    const cost = parseFloat(tx.totalCost);
+    const fee = parseFloat(tx.fee || "0");
+
+    if (!costBasis[key]) {
+      costBasis[key] = { totalCost: 0, totalQty: 0 };
+    }
+
+    if (tx.type === "buy" || tx.type === "receive") {
+      if (tx.type === "buy") {
+        costBasis[key].totalCost += cost + fee;
+      }
+      costBasis[key].totalQty += qty;
+    } else if (tx.type === "sell" || tx.type === "send") {
+      const avgCost =
+        costBasis[key].totalQty > 0
+          ? costBasis[key].totalCost / costBasis[key].totalQty
+          : 0;
+      const shouldRecordRealizedPl = tx.type === "sell" && !tx.isSettlement;
+      const sellPrice = qty > 0 ? (cost - fee) / qty : 0;
+      const pl = shouldRecordRealizedPl ? (sellPrice - avgCost) * qty : 0;
+
+      if (costBasis[key].totalQty > 0) {
+        const fraction = qty / costBasis[key].totalQty;
+        costBasis[key].totalCost -= costBasis[key].totalCost * fraction;
+      }
+      costBasis[key].totalQty -= qty;
+
+      if (shouldRecordRealizedPl) {
+        cumulativePL += pl;
+
+        timeline.push({
+          date: tx.transactedAt,
+          cumulativePL,
+          symbol: tx.tokenSymbol.toUpperCase(),
+          pl,
+        });
+      }
+    }
+  }
+
+  return { timeline, totalRealizedPL: cumulativePL };
+}
+
+export default function HistoryPage() {
+  const sectionsBaseId = "history-sections";
+  const [activeSection, setActiveSection] = useState<HistorySection>("overview");
+  const { t } = useTranslation();
+  const vault = useVaultStore((s) => s.vault);
+  const { isLoading, priceMap } = usePrices({ refetchInterval: 300_000 });
+
+  const snapshots = vault.portfolioSnapshots;
+
+  const plData = useMemo(
+    () => computeRealizedPLTimeline(vault.transactions),
+    [vault.transactions]
+  );
+
+  const chartData = useMemo(() => {
+    const fromSnapshots =
+      snapshots?.map((s) => ({
+        date: s.snapshotAt,
+        value: s.totalValueUsd,
+      })) ?? [];
+
+    if (fromSnapshots.length > 0) {
+      return fromSnapshots;
+    }
+
+    const currentTotal = getPortfolioSummary(vault, priceMap).totalValueUsd;
+    if (currentTotal > 0) {
+      return [{ date: new Date().toISOString(), value: currentTotal }];
+    }
+
+    return [];
+  }, [priceMap, snapshots, vault]);
+  const latestSnapshot = snapshots.length > 0 ? snapshots[snapshots.length - 1] : null;
+  const recentSnapshots = useMemo(
+    () => [...snapshots].reverse().slice(0, 10),
+    [snapshots]
+  );
+  const remainingSnapshotsCount = Math.max(0, snapshots.length - recentSnapshots.length);
+  const showOverviewSection =
+    activeSection === "all" || activeSection === "overview";
+  const showRealizedSection =
+    activeSection === "all" || activeSection === "realized";
+  const showSnapshotsSection =
+    activeSection === "all" || activeSection === "snapshots";
+  const sectionOptions = [
+    {
+      value: "overview" as const,
+      label: t("history.sectionOverview"),
+      count: chartData.length,
+    },
+    {
+      value: "realized" as const,
+      label: t("history.sectionRealized"),
+      count: plData.timeline.length,
+    },
+    {
+      value: "snapshots" as const,
+      label: t("history.sectionSnapshots"),
+      count: snapshots.length,
+    },
+    {
+      value: "all" as const,
+      label: t("history.sectionAll"),
+      count: chartData.length + plData.timeline.length + snapshots.length,
+    },
+  ];
+  const valueChartSummary = useMemo(() => {
+    if (chartData.length === 0) return "";
+    const firstPoint = chartData[0];
+    const lastPoint = chartData[chartData.length - 1];
+    return t("history.valueChartSummary", {
+      count: chartData.length,
+      start: new Date(firstPoint.date).toLocaleDateString(),
+      end: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.value),
+    });
+  }, [chartData, t]);
+  const realizedChartSummary = useMemo(() => {
+    if (plData.timeline.length === 0) return "";
+    const lastPoint = plData.timeline[plData.timeline.length - 1];
+    return t("history.realizedChartSummary", {
+      count: plData.timeline.length,
+      date: new Date(lastPoint.date).toLocaleDateString(),
+      latest: formatUsd(lastPoint.cumulativePL),
+    });
+  }, [plData.timeline, t]);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={t("history.title")}
+          description={t("history.subtitle")}
+        />
+        <ChartSkeleton />
+        <div className="rounded-md border border-border bg-bg-card p-6">
+          <Skeleton className="mb-4 h-5 w-24" />
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title={t("history.title")}
+        description={t("history.subtitle")}
+      />
+
+      <AnalyticsNavigation />
+
+      <SectionNavigator
+        baseId={sectionsBaseId}
+        label={t("history.focusView")}
+        description={t("history.subtitle")}
+        value={activeSection}
+        onChange={setActiveSection}
+        options={sectionOptions}
+      />
+
+      <SectionPanel baseId={sectionsBaseId} value={activeSection}>
+      {showOverviewSection && (
+        <>
+          <MetricBand columns={3}>
+            <Metric label={t("history.snapshots")} value={snapshots.length} />
+            <Metric
+              label={t("dashboard.totalValue")}
+              value={latestSnapshot ? formatUsd(latestSnapshot.totalValueUsd) : "-"}
+              sub={
+                latestSnapshot
+                  ? new Date(latestSnapshot.snapshotAt).toLocaleString()
+                  : undefined
+              }
+            />
+            <Metric
+              label={t("history.realizedPLTimeline")}
+              value={`${plData.totalRealizedPL >= 0 ? "+" : ""}${formatUsd(plData.totalRealizedPL)}`}
+              tone={plData.totalRealizedPL >= 0 ? "positive" : "negative"}
+              sub={plData.timeline.length}
+            />
+          </MetricBand>
+
+          <Card>
+            <CardSectionHeader title={t("history.valueOverTime")} />
+            <CardContent>
+              {chartData.length > 0 ? (
+                <AccessibleChartFrame
+                  summary={valueChartSummary}
+                >
+                  <PortfolioLineChart data={chartData} />
+                </AccessibleChartFrame>
+              ) : (
+                <EmptyState
+                  title={t("history.noHistoryYet")}
+                  description={t("history.noHistoryHelp")}
+                  action={
+                    <Link href="/portfolio/add">
+                      <Button size="sm" variant="outline">
+                        {t("portfolio.addTransaction")}
+                      </Button>
+                    </Link>
+                  }
+                  className="py-8"
+                />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {showRealizedSection && (
+        <Card>
+          <CardSectionHeader
+            title={t("history.realizedPLTimeline")}
+            actions={
+              <span
+                className={cn(
+                  "font-mono text-num-lg tabular",
+                  plData.totalRealizedPL >= 0
+                    ? "text-status-positive"
+                    : "text-status-negative"
+                )}
+              >
+                {plData.totalRealizedPL >= 0 ? "+" : ""}
+                {formatUsd(plData.totalRealizedPL)}
+              </span>
+            }
+          />
+          <CardContent>
+            {plData.timeline.length > 0 ? (
+              <AccessibleChartFrame
+                summary={realizedChartSummary}
+              >
+                <RealizedPlLineChart
+                  timeline={plData.timeline}
+                  totalRealizedPL={plData.totalRealizedPL}
+                  cumulativeLabel={t("history.cumulativePL")}
+                />
+              </AccessibleChartFrame>
+            ) : (
+              <EmptyState
+                title={t("history.noRealizedPLYet")}
+                description={t("history.noRealizedPLHelp")}
+                action={
+                  <Link href="/portfolio/add">
+                    <Button size="sm" variant="outline">
+                      {t("portfolio.addTransaction")}
+                    </Button>
+                  </Link>
+                }
+                className="py-8"
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {showSnapshotsSection && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("history.snapshots")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentSnapshots.length > 0 ? (
+              <div className="space-y-2">
+                {recentSnapshots.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex flex-col gap-2 border-b border-border-faint px-1 py-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="font-mono text-num-sm tabular text-text-muted">
+                      {new Date(s.snapshotAt).toLocaleString()}
+                    </span>
+                    <span className="font-mono text-num-md tabular text-text-primary">
+                      {formatUsd(s.totalValueUsd)}
+                    </span>
+                  </div>
+                ))}
+                {remainingSnapshotsCount > 0 ? (
+                  <p className="text-caption text-text-muted">
+                    {t("common.more", { count: remainingSnapshotsCount.toString() })}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <EmptyState
+                title={t("history.noHistoryYet")}
+                description={t("history.noSnapshotsHelp")}
+                action={
+                  <Link href="/dashboard">
+                    <Button size="sm" variant="outline">
+                      {t("dashboard.title")}
+                    </Button>
+                  </Link>
+                }
+                className="py-8"
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
+      </SectionPanel>
+    </div>
+  );
+}

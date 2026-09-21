@@ -2,6 +2,7 @@
 
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface ErrorStateProps {
   title?: string;
@@ -10,23 +11,32 @@ interface ErrorStateProps {
   actionLabel?: string;
 }
 
+/**
+ * The failure intent of EmptyState. Copy defaults come from i18n — the
+ * previous version hard-coded English defaults while the keys already
+ * existed in all four locales.
+ */
 export function ErrorState({
-  title = "Failed to load data",
-  message = "Something went wrong. Please try again.",
+  title,
+  message,
   onRetry,
-  actionLabel = "Try Again",
+  actionLabel,
 }: ErrorStateProps) {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-status-negative-soft">
-        <AlertCircle className="h-6 w-6 text-status-negative" />
-      </div>
-      <p className="mb-2 text-lg font-medium text-text-muted">{title}</p>
-      <p className="mb-6 max-w-md text-sm text-text-subtle">{message}</p>
+    <div className="flex flex-col items-center justify-center px-6 py-8 text-center">
+      <AlertCircle className="h-6 w-6 text-status-negative" aria-hidden="true" />
+      <p className="mt-3 text-heading text-text-primary">
+        {title ?? t("common.loadError")}
+      </p>
+      <p className="mt-1.5 max-w-sm text-body text-text-secondary">
+        {message ?? t("common.loadErrorMessage")}
+      </p>
       {onRetry && (
-        <Button variant="outline" size="sm" onClick={onRetry}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          {actionLabel}
+        <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+          {actionLabel ?? t("common.tryAgain")}
         </Button>
       )}
     </div>

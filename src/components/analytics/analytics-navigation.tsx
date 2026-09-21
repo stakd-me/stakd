@@ -9,19 +9,16 @@ import { cn } from "@/lib/utils";
 const items = [
   {
     href: "/analytics",
-    legacyPath: "/reports",
-    labelKey: "reports.sectionOverview" as const,
+    labelKey: "reports.tabSummary" as const,
     icon: ChartNoAxesCombined,
   },
   {
     href: "/analytics/history",
-    legacyPath: "/history",
     labelKey: "history.title" as const,
     icon: Clock3,
   },
   {
     href: "/analytics/allocation",
-    legacyPath: "/allocation-history",
     labelKey: "allocationHistory.title" as const,
     icon: Table2,
   },
@@ -32,12 +29,10 @@ export function AnalyticsNavigation() {
   const { t } = useTranslation();
 
   return (
-    <nav aria-label={t("nav.analytics")} className="flex gap-1 overflow-x-auto border-b border-border-subtle">
-      {items.map(({ href, legacyPath, labelKey, icon: Icon }) => {
+    <nav aria-label={t("nav.analytics")} className="flex gap-5 overflow-x-auto border-b border-border">
+      {items.map(({ href, labelKey, icon: Icon }) => {
         const active =
-          pathname === href ||
-          pathname === legacyPath ||
-          (href !== "/analytics" && pathname.startsWith(`${href}/`));
+          href === "/analytics" ? pathname === href : pathname.startsWith(href);
 
         return (
           <Link
@@ -45,10 +40,11 @@ export function AnalyticsNavigation() {
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition-colors",
+              "-mb-px flex shrink-0 items-center gap-2 border-b-2 pb-2.5 text-body font-semibold",
+              "transition-colors duration-[120ms] ease-out",
               active
                 ? "border-accent text-text-primary"
-                : "border-transparent text-text-subtle hover:text-text-primary"
+                : "border-transparent text-text-muted hover:text-text-primary"
             )}
           >
             <Icon className="h-4 w-4" />

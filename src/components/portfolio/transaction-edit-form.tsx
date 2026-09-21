@@ -90,7 +90,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
             key={typ}
             type="button"
             onClick={() => onTypeChange(typ)}
-            className={`rounded-md px-3 py-1 text-xs font-semibold transition-colors ${getTxTypeToggleClass(
+            className={`rounded-md px-3 py-1 text-caption font-semibold transition-colors ${getTxTypeToggleClass(
               typ,
               type === typ
             )}`}
@@ -98,13 +98,13 @@ export const TransactionEditForm = memo(function TransactionEditForm({
             {typ.charAt(0).toUpperCase() + typ.slice(1)}
           </button>
         ))}
-        <span className="ml-1 self-center text-sm font-medium text-text-muted">
+        <span className="ml-1 self-center text-body font-semibold text-text-muted">
           {tx.tokenSymbol}
         </span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div>
-          <label className="mb-1 block text-xs text-text-subtle">
+          <label className="mb-1 block text-caption text-text-muted">
             {t("portfolio.quantity")} *
           </label>
           <Input
@@ -116,7 +116,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-text-subtle">
+          <label className="mb-1 block text-caption text-text-muted">
             {t("portfolio.pricePerUnit")}
           </label>
           <Input
@@ -129,7 +129,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
         </div>
         {type === "buy" || type === "sell" ? (
           <div>
-            <label className="mb-1 block text-xs text-text-subtle">
+            <label className="mb-1 block text-caption text-text-muted">
               {t("portfolio.feePercent")}
             </label>
             <Input
@@ -144,7 +144,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
           <div />
         )}
         <div>
-          <label className="mb-1 block text-xs text-text-subtle">
+          <label className="mb-1 block text-caption text-text-muted">
             {t("common.date")}
           </label>
           <Input
@@ -154,7 +154,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-text-subtle">
+          <label className="mb-1 block text-caption text-text-muted">
             {t("common.note") + " (" + t("common.optional") + ")"}
           </label>
           <Input
@@ -165,7 +165,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
         </div>
       </div>
       {quantity && price && (
-        <div className="space-y-1 text-xs text-text-subtle">
+        <div className="space-y-1 text-caption text-text-muted">
           <div>
           {t("common.total") + ":"}{" "}
           {formatUsd(editTotalCost)}
@@ -178,7 +178,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
         </div>
       )}
       {settlementPreview ? (
-        <div className="text-xs text-text-subtle">
+        <div className="text-caption text-text-muted">
           {t("portfolio.transactionSettlementSummary", {
             token: settlementPreview.tokenSymbol,
             direction:
@@ -190,12 +190,12 @@ export const TransactionEditForm = memo(function TransactionEditForm({
           {t("portfolio.transactionSettlementWillRecalculate")}
         </div>
       ) : tx.settlement ? (
-        <div className="text-xs text-text-subtle">
+        <div className="text-caption text-text-muted">
           {t("portfolio.transactionSettlementRemoved")}
         </div>
       ) : null}
       {error && (
-        <div className="text-xs text-status-negative" role="alert" aria-live="assertive">
+        <div className="text-caption text-status-negative" role="alert" aria-live="assertive">
           {error}
         </div>
       )}

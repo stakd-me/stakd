@@ -18,16 +18,16 @@ export function RiskParityTargetsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-status-info">
+        <CardTitle className="text-body text-status-info">
           {t("rebalance.riskParityTargets")}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="mb-3 text-sm text-text-subtle">
+        <p className="mb-3 text-body text-text-muted">
           {t("rebalance.riskParityDescription")}
         </p>
         {usesFallback ? (
-          <p className="mb-3 rounded-md border border-status-warning-border bg-status-warning-soft px-3 py-2 text-xs text-status-warning">
+          <p className="mb-3 rounded-md border border-status-warning-border bg-status-warning-soft px-3 py-2 text-caption text-status-warning">
             {t("rebalance.riskParityFallback")}
           </p>
         ) : null}
@@ -43,7 +43,7 @@ export function RiskParityTargetsSection({
                   <p className="font-medium text-text-primary">
                     {target.tokenSymbol}
                   </p>
-                  <p className="text-xs text-text-subtle">
+                  <p className="text-caption text-text-muted">
                     {t("rebalance.volatility")}:{" "}
                     {target.hasVolatilityData
                       ? `${target.volatility.toFixed(1)}%`
@@ -51,7 +51,7 @@ export function RiskParityTargetsSection({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-text-subtle">
+                  <p className="text-caption text-text-muted">
                     {t("rebalance.computedTarget")}
                   </p>
                   <p className="font-semibold text-status-info">
@@ -64,10 +64,10 @@ export function RiskParityTargetsSection({
         </div>
 
         <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <caption className="sr-only">{t("rebalance.riskParityTargets")}</caption>
             <thead>
-              <tr className="border-b border-border text-left text-text-subtle">
+              <tr className="border-b border-border text-left text-text-muted">
                 <th scope="col" className="pb-2 pr-4">
                   {t("rebalance.token")}
                 </th>
@@ -79,10 +79,10 @@ export function RiskParityTargetsSection({
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="font-mono text-num-md tabular">
               {targets.map((target) => (
                 <tr key={target.tokenSymbol} className="border-b border-border-subtle">
-                  <th scope="row" className="py-2 pr-4 text-left font-medium text-text-primary">
+                  <th scope="row" className="py-2 pr-4 text-left font-sans text-body font-semibold text-text-primary">
                     {target.tokenSymbol}
                   </th>
                   <td className="py-2 pr-4 text-right text-text-muted">

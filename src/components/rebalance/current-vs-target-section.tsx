@@ -54,7 +54,7 @@ export function CurrentVsTargetSection({
           <div className="flex items-center gap-3">
             <CardTitle>{t("rebalance.currentVsTarget")}</CardTitle>
             {hasConcentrationAlerts && (
-              <span className="flex items-center gap-1.5 rounded-full border border-status-negative-border bg-status-negative-soft px-2.5 py-0.5 text-xs font-medium text-status-negative">
+              <span className="flex items-center gap-1.5 rounded-full border border-status-negative-border bg-status-negative-soft px-2.5 py-0.5 text-caption font-semibold text-status-negative">
                 <ShieldAlert className="h-3 w-3" />
                 {t("rebalance.concentrationRisk")} ({concentrationThresholdLabel}%)
               </span>
@@ -69,7 +69,7 @@ export function CurrentVsTargetSection({
               <Download className="mr-2 h-4 w-4" />
               {t("rebalance.exportCsv")}
             </Button>
-            <span className="text-sm text-text-subtle">
+            <span className="text-body text-text-muted">
               {t("rebalance.totalPortfolio")}: {formatUsd(totalValue)}
             </span>
           </div>
@@ -84,10 +84,10 @@ export function CurrentVsTargetSection({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <caption className="sr-only">{t("rebalance.currentVsTarget")}</caption>
               <thead>
-                <tr className="border-b border-border text-left text-text-subtle">
+                <tr className="border-b border-border text-left text-text-muted">
                   <th scope="col" className="pb-3 pr-4">{t("rebalance.token")}</th>
                   <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.targetPercent")}</th>
                   <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
@@ -98,7 +98,7 @@ export function CurrentVsTargetSection({
                   <th scope="col" className="pb-3 text-right">{t("rebalance.amount")}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="font-mono text-num-md tabular">
                 {suggestions.map((suggestion) => {
                   const concAlert = concentrationBySymbol.get(suggestion.tokenSymbol);
                   return (
@@ -106,7 +106,7 @@ export function CurrentVsTargetSection({
                       key={suggestion.tokenSymbol}
                       className={`border-b border-border-subtle ${getDeviationBg(suggestion.deviation)}`}
                     >
-                      <th scope="row" className="py-3 pr-4 text-left font-medium text-text-primary">
+                      <th scope="row" className="py-2.5 pr-4 text-left font-sans text-body font-semibold text-text-primary">
                         <div className="flex items-center gap-2">
                           {suggestion.tokenSymbol}
                           {concAlert && (
@@ -135,7 +135,7 @@ export function CurrentVsTargetSection({
                       </td>
                       <td className="py-3 pr-4 text-center">
                         <span
-                          className={`inline-block rounded-full border px-2 py-0.5 text-xs font-medium uppercase ${getActionBadge(suggestion.action)}`}
+                          className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
                         >
                           {suggestion.action}
                         </span>
@@ -147,7 +147,7 @@ export function CurrentVsTargetSection({
                         {suggestion.action !== "hold" ? formatUsd(suggestion.amount) : "-"}
                         {suggestion.action !== "hold" &&
                         (suggestion.estimatedSlippage > 0 || suggestion.estimatedFee > 0) ? (
-                          <div className="mt-0.5 text-xs text-text-dim">
+                          <div className="mt-0.5 text-caption text-text-muted">
                             {t("rebalance.fees")}: {formatUsd(suggestion.estimatedFee)} | {t("rebalance.slip")}: {formatUsd(suggestion.estimatedSlippage)}
                           </div>
                         ) : null}

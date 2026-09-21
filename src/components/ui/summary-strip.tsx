@@ -18,17 +18,26 @@ interface SummaryStripProps extends HTMLAttributes<HTMLDivElement> {
   align?: StatCardAlign;
 }
 
+/**
+ * A row of figures built from data. Same shape as MetricBand — one
+ * outlined object divided by rules, not a row of separate boxes.
+ */
 export function SummaryStrip({
   items,
   columnsClassName,
-  size = "default",
+  size = "md",
   align = "left",
   className,
   ...props
 }: SummaryStripProps) {
   return (
     <div
-      className={cn("grid grid-cols-1 gap-4", columnsClassName, className)}
+      className={cn(
+        "grid grid-cols-2 gap-px border border-border bg-border-subtle",
+        "[&>*]:bg-bg-card",
+        columnsClassName,
+        className
+      )}
       {...props}
     >
       {items.map((item, index) => (

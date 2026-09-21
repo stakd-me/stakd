@@ -54,7 +54,7 @@ export function TokenGroupsSection({
     if (status === "partial") {
       return "border border-status-warning-border bg-status-warning-soft text-status-warning";
     }
-    return "border border-border bg-bg-muted text-text-subtle";
+    return "border border-border bg-bg-muted text-text-muted";
   };
 
   const getMemberTrackingLabel = (status: "tracked" | "requested" | "untracked") => {
@@ -70,7 +70,7 @@ export function TokenGroupsSection({
     if (status === "requested") {
       return "bg-status-info-soft text-status-info";
     }
-    return "bg-bg-muted text-text-subtle";
+    return "bg-bg-muted text-text-muted";
   };
 
   const resetForm = () => {
@@ -141,7 +141,7 @@ export function TokenGroupsSection({
           <div className="mb-4 space-y-3 rounded-lg border border-border bg-bg-card p-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("rebalance.groupName")}
                 </label>
                 <Input
@@ -151,7 +151,7 @@ export function TokenGroupsSection({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-text-subtle">
+                <label className="mb-1 block text-caption text-text-muted">
                   {t("rebalance.symbolsLabel")}
                 </label>
                 <Input
@@ -185,7 +185,7 @@ export function TokenGroupsSection({
         )}
 
         {groups.length === 0 && !showGroupForm ? (
-          <p className="text-sm text-text-subtle">
+          <p className="text-body text-text-muted">
             {t("rebalance.noGroups")}
           </p>
         ) : (
@@ -199,18 +199,18 @@ export function TokenGroupsSection({
                   <div>
                     <span className="font-medium text-text-primary">{group.name}</span>
                     {group.totalValueUsd != null && (
-                      <span className="ml-3 text-sm text-text-subtle">
+                      <span className="ml-3 text-body text-text-muted">
                         {formatUsd(group.totalValueUsd)}
                       </span>
                     )}
                     {group.tracking && (
                       <>
                         <span
-                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${getGroupTrackingClass(group.tracking.status)}`}
+                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getGroupTrackingClass(group.tracking.status)}`}
                         >
                           {getGroupTrackingLabel(group.tracking.status)}
                         </span>
-                        <span className="ml-2 text-xs text-text-dim">
+                        <span className="ml-2 text-caption text-text-muted">
                           {t("rebalance.groupTrackedCount", {
                             tracked: group.tracking.trackedCount,
                             total: group.tracking.totalCount,
@@ -223,7 +223,7 @@ export function TokenGroupsSection({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-text-subtle hover:text-status-info"
+                      className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => onTrackGroup(group.id)}
                       disabled={trackingPending || isSubmitting}
                       aria-label={`Track group ${group.name}`}
@@ -236,7 +236,7 @@ export function TokenGroupsSection({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-text-subtle hover:text-status-info"
+                      className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => openEditForm(group)}
                       disabled={isSubmitting}
                       aria-label={`Edit group ${group.name}`}
@@ -246,7 +246,7 @@ export function TokenGroupsSection({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-text-subtle hover:text-status-negative"
+                      className="h-8 w-8 text-text-muted hover:text-status-negative"
                       onClick={() =>
                         onConfirmDelete(group.id, `group "${group.name}"`)
                       }
@@ -262,13 +262,13 @@ export function TokenGroupsSection({
                     {group.members.map((m) => (
                       <span
                         key={`${m.symbol}-${m.coingeckoId ?? "none"}`}
-                        className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2.5 py-1 text-xs font-medium text-text-tertiary"
+                        className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                       >
                         {m.symbol}
-                        <span className="text-text-subtle">
+                        <span className="text-text-muted">
                           {m.percentInGroup.toFixed(1)}%
                         </span>
-                        <span className="text-text-dim">
+                        <span className="text-text-muted">
                           {formatUsd(m.valueUsd)}
                         </span>
                         {m.trackingStatus && (

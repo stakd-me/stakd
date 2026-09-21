@@ -33,13 +33,13 @@ export function RebalanceHistorySection({
           <Clock className="h-5 w-5" />
           <CardTitle>{t("rebalance.history")}</CardTitle>
           <span className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-xs text-text-subtle">
+            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
               {logs.length}
             </span>
             {historyExpanded ? (
-              <ChevronUp className="h-5 w-5 text-text-subtle" />
+              <ChevronUp className="h-5 w-5 text-text-muted" />
             ) : (
-              <ChevronDown className="h-5 w-5 text-text-subtle" />
+              <ChevronDown className="h-5 w-5 text-text-muted" />
             )}
           </span>
         </button>
@@ -53,7 +53,7 @@ export function RebalanceHistorySection({
                 className="rounded-md bg-bg-card px-4 py-3"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-text-subtle">
+                  <span className="text-body text-text-muted">
                     {new Date(log.loggedAt).toLocaleString()}
                   </span>
                   <span className="font-medium text-text-primary">
@@ -64,7 +64,7 @@ export function RebalanceHistorySection({
                   {log.deviationsSnapshot.map((deviation) => (
                     <span
                       key={deviation.tokenSymbol}
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-semibold ${
                         Math.abs(deviation.deviation) > 5
                           ? "bg-status-negative-soft text-status-negative"
                           : Math.abs(deviation.deviation) > 1

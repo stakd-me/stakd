@@ -28,7 +28,7 @@ export function LanguageToggle() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="rounded-md px-2 py-1.5 text-xs font-medium text-text-subtle transition-colors hover:bg-bg-hover hover:text-text-primary"
+        className="h-control-sm rounded-md border border-border-subtle px-2 font-mono text-[11px] uppercase text-text-secondary transition-colors duration-[120ms] ease-out hover:bg-bg-hover hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
         aria-label={t("language.toggle")}
         title={t("language.toggle")}
         aria-haspopup="true"
@@ -42,7 +42,7 @@ export function LanguageToggle() {
             <button
               key={option.code}
               type="button"
-              className={`block w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-bg-hover ${
+              className={`block w-full px-3 py-1.5 text-left text-caption transition-colors hover:bg-bg-hover ${
                 option.code === locale
                   ? "text-text-primary"
                   : "text-text-subtle"
