@@ -6,14 +6,10 @@ const vi: Record<TranslationKeys, string> = {
   "nav.dashboard": "Tổng quan",
   "nav.portfolio": "Danh mục đầu tư",
   "nav.rebalance": "Tái cân bằng",
-  "nav.history": "Lịch sử",
-  "nav.allocationHistory": "Lịch sử phân bổ",
   "nav.settings": "Cài đặt",
-  "nav.lock": "Khóa",
   "nav.openMenu": "Mở menu",
   "nav.closeMenu": "Đóng menu",
   "nav.guide": "Hướng dẫn",
-  "nav.reports": "Báo cáo",
   "nav.analytics": "Phân tích",
 
   // Common/Shared

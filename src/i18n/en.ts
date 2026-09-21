@@ -4,14 +4,10 @@ const en = {
   "nav.dashboard": "Dashboard",
   "nav.portfolio": "Portfolio",
   "nav.rebalance": "Rebalance",
-  "nav.history": "History",
-  "nav.allocationHistory": "Allocation History",
   "nav.settings": "Settings",
-  "nav.lock": "Lock",
   "nav.openMenu": "Open menu",
   "nav.closeMenu": "Close menu",
   "nav.guide": "Guide",
-  "nav.reports": "Reports",
   "nav.analytics": "Analytics",
 
   // Common/Shared

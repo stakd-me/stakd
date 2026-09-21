@@ -31,36 +31,7 @@ export function ChartSkeleton() {
   );
 }
 
-export function TableRowSkeleton({ cols = 5 }: { cols?: number }) {
-  return (
-    <tr>
-      {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} className="py-3 pr-4">
-          <Skeleton className="h-4 w-full" />
-        </td>
-      ))}
-    </tr>
-  );
-}
-
-export function WalletCardSkeleton() {
-  return (
-    <div className="rounded-lg border border-border bg-bg-card p-6">
-      <div className="mb-3 flex items-center justify-between">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-5 w-16 rounded-full" />
-      </div>
-      <Skeleton className="mb-1 h-4 w-40" />
-      <Skeleton className="mb-4 h-3 w-24" />
-      <div className="flex items-center gap-2">
-        <Skeleton className="h-8 flex-1" />
-        <Skeleton className="h-8 w-8" />
-      </div>
-    </div>
-  );
-}
-
-export function ListItemSkeleton() {
+function ListItemSkeleton() {
   return (
     <div className="flex items-center justify-between rounded-md bg-bg-card px-4 py-3">
       <div className="flex items-center gap-3">
@@ -105,16 +76,6 @@ export function DashboardSkeleton() {
           <ListItemSkeleton />
         </div>
       </div>
-    </div>
-  );
-}
-
-export function WalletListSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <WalletCardSkeleton />
-      <WalletCardSkeleton />
-      <WalletCardSkeleton />
     </div>
   );
 }
