@@ -13,12 +13,13 @@ export interface DataTableColumn<T> {
    * - `identity` — the row header, top-left of the card (exactly one)
    * - `primary`  — the headline figure, top-right of the card (exactly one)
    * - `meta`     — a labelled value in the card's grid
+   * - `note`     — prose, full width under the grid
    * - `hidden`   — dropped on phones
    *
    * A card that reproduces every column is just a rotated table, so
    * demote freely: three or four `meta` columns is the working maximum.
    */
-  mobile?: "identity" | "primary" | "meta" | "hidden";
+  mobile?: "identity" | "primary" | "meta" | "note" | "hidden";
   /** A short label for the card grid, when the header is too long. */
   mobileLabel?: ReactNode;
   className?: string;
@@ -61,6 +62,7 @@ export function DataTable<T>({
     columns.find((column) => column.mobile === "identity") ?? columns[0];
   const primary = columns.find((column) => column.mobile === "primary");
   const meta = columns.filter((column) => column.mobile === "meta");
+  const notes = columns.filter((column) => column.mobile === "note");
 
   return (
     <div className={className}>
@@ -155,6 +157,14 @@ export function DataTable<T>({
                 ))}
               </div>
             ) : null}
+            {notes.map((column) => (
+              <p
+                key={column.key}
+                className={cn("mt-1.5 text-caption text-text-secondary", column.className)}
+              >
+                {column.cell(row)}
+              </p>
+            ))}
           </li>
         ))}
       </ul>

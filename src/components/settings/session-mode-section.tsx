@@ -86,17 +86,17 @@ export function SessionModeSection() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border-subtle bg-bg-card p-4">
-        <p className="text-sm font-medium text-text-primary">
+      <div className="border border-border-subtle bg-bg-inset p-4">
+        <p className="text-body font-semibold text-text-primary">
           {t("settings.sessionSecurity")}
         </p>
-        <p className="mt-2 text-sm text-text-subtle">
+        <p className="mt-2 text-body text-text-secondary">
           {t("settings.sessionModeLabel")}{" "}
           <span className="font-medium text-text-primary">
             {sessionModeText}
           </span>
         </p>
-        <p className="mt-1 text-xs text-text-dim">
+        <p className="mt-1 text-caption text-text-muted">
           {t("settings.sessionSecurityDesc")}
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -121,7 +121,7 @@ export function SessionModeSection() {
             {t("settings.rememberDevice")}
           </Button>
         </div>
-        <p className="mt-2 text-xs text-text-dim" role="status" aria-live="polite">
+        <p className="mt-2 text-caption text-text-muted" role="status" aria-live="polite">
           {sessionModeSaving
             ? t("settings.updatingSessionMode")
             : t("settings.sessionModeChangeHint")}

@@ -1,8 +1,9 @@
 "use client";
 
+import { PageHeader } from "@/components/ui/page-header";
 import { useTranslation } from "@/hooks/use-translation";
 import { Card, CardContent } from "@/components/ui/card";
-import { GuideTOC } from "@/components/guide/guide-toc";
+import { GuideTOC, GuideTocChips } from "@/components/guide/guide-toc";
 import { GuideSection } from "@/components/guide/guide-section";
 import { StrategyComparisonTable } from "@/components/guide/strategy-comparison-table";
 import { RiskMetricsAccordion } from "@/components/guide/risk-metrics-accordion";
@@ -19,21 +20,34 @@ import {
   GitBranch,
 } from "lucide-react";
 
+const TOC_KEYS = [
+  { id: "what-is", key: "guide.whatIs" as const },
+  { id: "why-rebalance", key: "guide.whyRebalance" as const },
+  { id: "strategies", key: "guide.strategies" as const },
+  { id: "comparison", key: "guide.comparison" as const },
+  { id: "risk-metrics", key: "guide.riskMetrics" as const },
+  { id: "crypto-vs-trad", key: "guide.cryptoVsTrad" as const },
+  { id: "find-strategy", key: "guide.findStrategy" as const },
+];
+
 export default function RebalanceGuidePage() {
   const { t } = useTranslation();
+  const tocItems = TOC_KEYS.map(({ id, key }) => ({ id, label: t(key) }));
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{t("guide.title")}</h1>
-        <p className="text-text-subtle">{t("guide.subtitle")}</p>
-      </div>
+      <PageHeader
+        eyebrow={t("guide.subtitle")}
+        title={t("guide.title")}
+      />
+
+      <GuideTocChips items={tocItems} />
 
       <div className="flex gap-8">
         {/* Sticky TOC sidebar */}
-        <div className="hidden w-52 shrink-0 lg:block">
-          <div className="sticky top-6">
-            <GuideTOC />
+        <div className="hidden w-56 shrink-0 lg:block">
+          <div className="sticky top-20">
+            <GuideTOC items={tocItems} />
           </div>
         </div>
 
@@ -44,8 +58,8 @@ export default function RebalanceGuidePage() {
             <Card>
               <CardContent className="space-y-3 pt-6">
                 <p className="text-text-muted">{t("guide.whatIsDesc")}</p>
-                <div className="rounded-lg border border-border bg-bg-card p-4">
-                  <p className="text-sm text-text-subtle">{t("guide.whatIsExample")}</p>
+                <div className="border border-border-subtle bg-bg-inset p-4">
+                  <p className="text-body text-text-secondary">{t("guide.whatIsExample")}</p>
                 </div>
               </CardContent>
             </Card>
@@ -63,7 +77,7 @@ export default function RebalanceGuidePage() {
                   <CardContent className="pt-6">
                     <Icon className="mb-2 h-6 w-6 text-status-info" />
                     <h3 className="mb-1 font-semibold text-text-primary">{t(titleKey)}</h3>
-                    <p className="text-sm text-text-muted">{t(descKey)}</p>
+                    <p className="text-body text-text-muted">{t(descKey)}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -85,7 +99,7 @@ export default function RebalanceGuidePage() {
                     <Icon className="mt-0.5 h-5 w-5 shrink-0 text-status-info" />
                     <div>
                       <h3 className="mb-1 font-semibold text-text-primary">{t(nameKey)}</h3>
-                      <p className="text-sm text-text-muted">{t(descKey)}</p>
+                      <p className="text-body text-text-muted">{t(descKey)}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -119,12 +133,12 @@ export default function RebalanceGuidePage() {
                     { icon: DollarSign, titleKey: "guide.cryptoFees" as const, descKey: "guide.cryptoFeesDesc" as const },
                     { icon: GitBranch, titleKey: "guide.cryptoCorrelation" as const, descKey: "guide.cryptoCorrelationDesc" as const },
                   ].map(({ icon: Icon, titleKey, descKey }) => (
-                    <div key={titleKey} className="rounded-lg border border-border bg-bg-card p-4">
+                    <div key={titleKey} className="border border-border-subtle bg-bg-inset p-4">
                       <div className="mb-2 flex items-center gap-2">
-                        <Icon className="h-4 w-4 text-text-subtle" />
+                        <Icon className="h-4 w-4 text-text-muted" />
                         <h4 className="font-medium text-text-primary">{t(titleKey)}</h4>
                       </div>
-                      <p className="text-sm text-text-muted">{t(descKey)}</p>
+                      <p className="text-body text-text-muted">{t(descKey)}</p>
                     </div>
                   ))}
                 </div>

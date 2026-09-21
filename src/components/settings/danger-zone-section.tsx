@@ -200,7 +200,7 @@ export function DangerZoneSection() {
       </CardHeader>
       <CardContent>
         <div className="max-w-xl space-y-4">
-          <p className="text-sm text-text-subtle">
+          <p className="text-body text-text-secondary">
             {t("settings.dangerDesc")}
           </p>
 
@@ -243,7 +243,7 @@ export function DangerZoneSection() {
                 {t("settings.dangerActionAccount")}
               </option>
             </Select>
-            <p className="mt-1 text-xs text-status-warning">
+            <p className="mt-1 text-caption text-status-warning">
               {t("settings.recordsToDelete", { count: selectedDangerCount })}
             </p>
           </FormField>
@@ -277,7 +277,7 @@ export function DangerZoneSection() {
           </div>
 
           {dangerCountdown > 0 && (
-            <p className="text-xs text-status-warning">
+            <p className="text-caption text-status-warning">
               {t("settings.waitBeforeDelete", {
                 seconds: dangerCountdown,
               })}
@@ -285,7 +285,7 @@ export function DangerZoneSection() {
           )}
 
           {dangerError && (
-            <p className="text-sm text-status-negative">{dangerError}</p>
+            <p className="text-body text-status-negative">{dangerError}</p>
           )}
 
           <Button

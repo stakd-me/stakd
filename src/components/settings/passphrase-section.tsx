@@ -198,12 +198,12 @@ export function PassphraseSection() {
             </Button>
 
             {passphraseError && (
-              <p className="text-sm text-status-negative" role="alert" aria-live="assertive">
+              <p className="text-body text-status-negative" role="alert" aria-live="assertive">
                 {passphraseError}
               </p>
             )}
             {passphraseSuccess && (
-              <p className="text-sm text-status-positive" role="status" aria-live="polite">
+              <p className="text-body text-status-positive" role="status" aria-live="polite">
                 {t("settings.passwordChanged")}
               </p>
             )}

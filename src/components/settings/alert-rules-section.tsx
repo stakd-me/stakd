@@ -115,11 +115,11 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-text-subtle">{t("alertRules.description")}</p>
+        <p className="text-body text-text-secondary">{t("alertRules.description")}</p>
 
         {/* Existing rules */}
         {rules.length === 0 && (
-          <p className="py-4 text-center text-sm text-text-dim">
+          <p className="py-4 text-center text-body text-text-muted">
             {t("alertRules.noRules")}
           </p>
         )}
@@ -130,19 +130,19 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
             <div
               key={rule.id}
               className={cn(
-                "rounded-lg border border-border-subtle bg-bg-input p-4",
+                "rounded-md border border-border-subtle bg-bg-input p-4",
                 !rule.enabled && "opacity-50"
               )}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-text-subtle" />
-                  <span className="text-sm font-medium text-text-primary">
+                  <Icon className="h-4 w-4 text-text-muted" />
+                  <span className="text-body font-semibold text-text-primary">
                     {t(`alertRules.type.${rule.type}`)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-text-subtle">
+                  <label className="flex items-center gap-1.5 text-caption text-text-muted">
                     <input
                       type="checkbox"
                       checked={rule.enabled}
@@ -156,7 +156,7 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                   <button
                     type="button"
                     onClick={() => removeRule(rule.id)}
-                    className="rounded-md p-1 text-text-dim hover:bg-bg-hover hover:text-status-negative"
+                    className="rounded-md p-1 text-text-muted hover:bg-bg-hover hover:text-status-negative"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -208,7 +208,7 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                             })
                           }
                         />
-                        <span className="text-sm text-text-subtle">%</span>
+                        <span className="text-body text-text-secondary">%</span>
                       </div>
                     </FormField>
                   </div>
@@ -234,13 +234,13 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                           })
                         }
                       />
-                      <span className="text-sm text-text-subtle">/ 100</span>
+                      <span className="text-body text-text-secondary">/ 100</span>
                     </div>
                   </FormField>
                 )}
 
                 {rule.type === "stablecoin-reserve" && (
-                  <div className="text-xs text-text-subtle">
+                  <div className="text-caption text-text-muted">
                     <p>{t("alertRules.reserveAutoDesc")}</p>
                     <div className="mt-2 flex flex-wrap gap-3">
                       {Object.entries(PHASE_RESERVE_MAP).map(([phase, pct]) => (

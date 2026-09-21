@@ -1,11 +1,20 @@
 "use client";
 
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useTranslation } from "@/hooks/use-translation";
+
+interface StrategyRow {
+  name: string;
+  complexity: string;
+  frequency: string;
+  cost: string;
+  bestFor: string;
+}
 
 export function StrategyComparisonTable() {
   const { t } = useTranslation();
 
-  const strategies = [
+  const strategies: StrategyRow[] = [
     {
       name: t("guide.stratThreshold"),
       complexity: t("guide.compLow"),
@@ -43,30 +52,54 @@ export function StrategyComparisonTable() {
     },
   ];
 
+  // "Best for" is the column a person actually reads, so on a phone it
+  // stays as prose under the card rather than being squeezed into the
+  // three-up grid or dropped.
+  const columns: DataTableColumn<StrategyRow>[] = [
+    {
+      key: "name",
+      header: t("guide.strategies"),
+      align: "left",
+      mobile: "identity",
+      cell: (row) => row.name,
+    },
+    {
+      key: "complexity",
+      header: t("guide.compComplexity"),
+      align: "left",
+      mobile: "meta",
+      cell: (row) => row.complexity,
+    },
+    {
+      key: "frequency",
+      header: t("guide.compTradingFreq"),
+      align: "left",
+      mobile: "meta",
+      cell: (row) => row.frequency,
+    },
+    {
+      key: "cost",
+      header: t("guide.compCostEfficiency"),
+      align: "left",
+      mobile: "meta",
+      cell: (row) => row.cost,
+    },
+    {
+      key: "bestFor",
+      header: t("guide.compBestFor"),
+      align: "left",
+      mobile: "note",
+      className: "font-sans text-body",
+      cell: (row) => row.bestFor,
+    },
+  ];
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-text-subtle">
-            <th className="pb-3 pr-4 font-medium">{t("guide.strategies")}</th>
-            <th className="pb-3 pr-4 font-medium">{t("guide.compComplexity")}</th>
-            <th className="pb-3 pr-4 font-medium">{t("guide.compTradingFreq")}</th>
-            <th className="pb-3 pr-4 font-medium">{t("guide.compCostEfficiency")}</th>
-            <th className="pb-3 font-medium">{t("guide.compBestFor")}</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border/50">
-          {strategies.map((s) => (
-            <tr key={s.name} className="text-text-tertiary">
-              <td className="py-3 pr-4 font-medium text-text-primary">{s.name}</td>
-              <td className="py-3 pr-4">{s.complexity}</td>
-              <td className="py-3 pr-4">{s.frequency}</td>
-              <td className="py-3 pr-4">{s.cost}</td>
-              <td className="py-3">{s.bestFor}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      caption={t("guide.comparison")}
+      columns={columns}
+      rows={strategies}
+      rowKey={(row) => row.name}
+    />
   );
 }
