@@ -12,7 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { formatUsd, formatCompactUsd } from "@/lib/utils";
-import { useChartTheme } from "@/hooks/use-chart-theme";
+import { useChartTheme, withAlpha } from "@/hooks/use-chart-theme";
 import { useTranslation } from "@/hooks/use-translation";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler);
@@ -38,8 +38,8 @@ export const RealizedPlLineChart = memo(function RealizedPlLineChart({
   const chartTheme = useChartTheme();
   const { formatDate } = useTranslation();
   const isPositive = totalRealizedPL >= 0;
-  const lineColor = isPositive ? "#22c55e" : "#ef4444";
-  const fillColor = isPositive ? "rgba(34, 197, 94, 0.1)" : "rgba(239, 68, 68, 0.1)";
+  const lineColor = isPositive ? chartTheme.positive : chartTheme.negative;
+  const fillColor = withAlpha(lineColor, 0.12);
 
   return (
     <div className="h-64">

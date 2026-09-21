@@ -56,14 +56,14 @@ export function TargetVsCurrentChartSection({
                   {
                     label: t("rebalance.targetLabel"),
                     data: chartData.map((datum) => datum.Target),
-                    backgroundColor: "#3b82f6",
-                    borderRadius: 4,
+                    backgroundColor: chartTheme.series[0],
+                    borderRadius: 0,
                   },
                   {
                     label: t("rebalance.currentLabel"),
                     data: chartData.map((datum) => datum.Current),
-                    backgroundColor: "#8b5cf6",
-                    borderRadius: 4,
+                    backgroundColor: chartTheme.series[1],
+                    borderRadius: 0,
                   },
                 ],
               }}

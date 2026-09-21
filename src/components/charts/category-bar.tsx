@@ -37,11 +37,10 @@ export const CategoryBarChart = memo(function CategoryBarChart({
             {
               label: allocationLabel,
               data: data.map((cb) => cb.percent),
-              backgroundColor: [
-                "#3b82f6", "#8b5cf6", "#f59e0b", "#10b981", "#ef4444",
-                "#ec4899", "#06b6d4", "#84cc16", "#f97316",
-              ],
-              borderRadius: 4,
+              backgroundColor: data.map(
+                (_, index) => chartTheme.series[index % chartTheme.series.length]
+              ),
+              borderRadius: 0,
             },
           ],
         }}

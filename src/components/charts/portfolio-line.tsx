@@ -12,7 +12,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import { formatUsd, formatCompactUsd } from "@/lib/utils";
-import { useChartTheme } from "@/hooks/use-chart-theme";
+import { useChartTheme, withAlpha } from "@/hooks/use-chart-theme";
 import { useTranslation } from "@/hooks/use-translation";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler);
@@ -46,11 +46,11 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
     const area = chart.chartArea;
     if (!area) return;
     const gradient = ctx.createLinearGradient(0, area.top, 0, area.bottom);
-    gradient.addColorStop(0, "rgba(59, 130, 246, 0.3)");
-    gradient.addColorStop(1, "rgba(59, 130, 246, 0)");
+    gradient.addColorStop(0, withAlpha(chartTheme.accent, 0.3));
+    gradient.addColorStop(1, withAlpha(chartTheme.accent, 0));
     chart.data.datasets[0].backgroundColor = gradient;
     chart.update("none");
-  }, [sanitizedData]);
+  }, [sanitizedData, chartTheme.accent]);
 
   const labels = useMemo(
     () =>
@@ -77,15 +77,15 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
             {
               label: t("charts.portfolioValue"),
               data: sanitizedData.map((d) => d.value),
-              borderColor: "#3b82f6",
+              borderColor: chartTheme.accent,
               borderWidth: 2,
               fill: true,
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
+              backgroundColor: withAlpha(chartTheme.accent, 0.1),
               tension: 0.3,
               pointRadius: compactSeries ? 4 : 0,
               pointHoverRadius: compactSeries ? 6 : 4,
-              pointBackgroundColor: "#3b82f6",
-              pointBorderColor: "#3b82f6",
+              pointBackgroundColor: chartTheme.accent,
+              pointBorderColor: chartTheme.accent,
               pointBorderWidth: 1,
               pointHitRadius: 10,
             },
