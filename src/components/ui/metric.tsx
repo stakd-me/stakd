@@ -90,16 +90,9 @@ export function MetricBand({ children, columns = 4, className }: MetricBandProps
   return (
     <div
       className={cn(
-        "grid grid-cols-2 border border-border bg-bg-card",
+        "grid grid-cols-2 gap-px border border-border bg-border-subtle",
         columnClass[columns],
-        "[&>*]:border-border-subtle [&>*]:border-b [&>*]:border-r",
-        "[&>*:nth-child(2n)]:border-r-0 md:[&>*]:border-b-0 md:[&>*]:border-r",
-        columns === 2
-          ? "md:[&>*:nth-child(2n)]:border-r-0"
-          : columns === 3
-            ? "md:[&>*:nth-child(2n)]:border-r md:[&>*:nth-child(3n)]:border-r-0"
-            : "md:[&>*:nth-child(2n)]:border-r md:[&>*:nth-child(4n)]:border-r-0",
-        "[&>*:last-child]:border-b-0 [&>*:last-child]:border-r-0",
+        "[&>*]:bg-bg-card",
         className
       )}
     >

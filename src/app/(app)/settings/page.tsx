@@ -127,7 +127,6 @@ export default function SettingsPage() {
         value={activeSection}
         onChange={setActiveSection}
         options={settingsSectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>

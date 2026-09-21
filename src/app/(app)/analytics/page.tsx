@@ -254,6 +254,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={report.window.label}
         title={t("reports.title")}
         description={t("reports.subtitle")}
         actions={
@@ -278,37 +279,40 @@ export default function ReportsPage() {
 
       <AnalyticsNavigation />
 
-      <div
-        role="group"
-        aria-label={t("reports.periodSelector")}
-        className="flex flex-wrap gap-2"
-      >
-        {PERIOD_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setPeriod(option)}
-            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page ${
-              period === option
-                ? "border-border-subtle bg-bg-hover text-text-primary"
-                : "border-border-subtle bg-bg-card text-text-subtle hover:bg-bg-hover hover:text-text-primary"
-            }`}
-            aria-pressed={period === option}
-          >
-            {periodLabels[option]}
-          </button>
-        ))}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <SectionNavigator
+          baseId={sectionsBaseId}
+          label={t("reports.focusView")}
+          value={activeSection}
+          onChange={setActiveSection}
+          options={sectionOptions}
+          className="min-w-0 grow"
+        />
+        <div
+          role="group"
+          aria-label={t("reports.periodSelector")}
+          className="inline-flex shrink-0 self-start border border-border lg:self-auto"
+        >
+          {PERIOD_OPTIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setPeriod(option)}
+              aria-pressed={period === option}
+              className={cn(
+                "border-r border-border-subtle px-3 py-1.5 font-mono text-num-sm last:border-r-0",
+                "transition-colors duration-[120ms] ease-out",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset",
+                period === option
+                  ? "bg-ink text-text-inverse"
+                  : "text-text-muted hover:bg-bg-hover hover:text-text-primary"
+              )}
+            >
+              {periodLabels[option]}
+            </button>
+          ))}
+        </div>
       </div>
-
-      <SectionNavigator
-        baseId={sectionsBaseId}
-        label={t("reports.focusView")}
-        description={report.window.label}
-        value={activeSection}
-        onChange={setActiveSection}
-        options={sectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
-      />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
       {showOverviewSection && (
@@ -370,7 +374,7 @@ export default function ReportsPage() {
                     valueClassName: "text-2xl font-bold",
                   },
                 ]}
-                columnsClassName="md:grid-cols-2 xl:grid-cols-4"
+                columnsClassName="md:grid-cols-4"
               />
 
               <SummaryStrip
@@ -396,7 +400,7 @@ export default function ReportsPage() {
                     value: formatUsd(report.activity.totalFeesUsd),
                   },
                 ]}
-                columnsClassName="md:grid-cols-2 xl:grid-cols-4"
+                columnsClassName="md:grid-cols-4"
               />
 
               <div className={`rounded-lg border px-4 py-3 text-sm ${reconciliationClass}`}>

@@ -485,7 +485,6 @@ export default function PortfolioPage() {
         value={activeSection}
         onChange={setActiveSection}
         options={sectionOptions}
-        columnsClassName="grid-cols-2"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>

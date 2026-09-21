@@ -223,7 +223,6 @@ export default function HistoryPage() {
         value={activeSection}
         onChange={setActiveSection}
         options={sectionOptions}
-        columnsClassName="grid-cols-2 xl:grid-cols-4"
       />
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
