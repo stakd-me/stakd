@@ -7,7 +7,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
-import { KpiCard } from "@/components/ui/kpi-card";
+import { Metric, MetricBand } from "@/components/ui/metric";
+import { ActionBlock } from "@/components/ui/action-block";
 import { PriceFlash } from "@/components/ui/price-flash";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import { cn, formatUsd, formatUsdPrice, formatCrypto, formatTimeAgo } from "@/lib/utils";
@@ -24,7 +25,7 @@ const PortfolioLineChart = dynamic(
   () => import("@/components/charts/portfolio-line").then((m) => ({ default: m.PortfolioLineChart })),
   { ssr: false }
 );
-import { AlertTriangle, CheckCircle2, Plus, Scale, TrendingUp } from "lucide-react";
+import { CheckCircle2, Plus, Scale, TrendingUp } from "lucide-react";
 import { useState, useMemo } from "react";
 
 const CategoryBarChart = dynamic(
@@ -347,8 +348,6 @@ export default function DashboardPage() {
       );
   }, [alerts]);
   const hasAlerts = alerts.length > 0;
-  const primaryAlert = mergedAlertBadges[0] ?? null;
-  const highestAlertSeverity = primaryAlert?.severity ?? "low";
   const severityLabels: Record<DashboardAlertSeverity, string> = {
     high: t("common.severityHigh"),
     medium: t("common.severityMedium"),
@@ -410,55 +409,59 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow={t("dashboard.subtitle")}
         title={t("dashboard.title")}
-        description={t("dashboard.subtitle")}
         actions={
           <Link href="/portfolio/add">
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
+            <Button variant="accent">
+              <Plus className="h-4 w-4" aria-hidden="true" />
               {t("portfolio.addTransaction")}
             </Button>
           </Link>
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-        <KpiCard
+      <MetricBand>
+        <Metric
           label={t("dashboard.totalValue")}
           value={<PriceFlash value={totalValue}>{formatValue(totalValue)}</PriceFlash>}
-          valueSize="3xl"
-          secondary={
+          sub={
             lastPriceUpdate && isPriceStale
               ? t("dashboard.prices", {
                   time: formatTimeAgo(new Date(lastPriceUpdate)),
                 })
+              : `${t("dashboard.totalInvested")}: ${formatUsd(analytics.totalInvested)}`
+          }
+          subTone={isPriceStale ? "warning" : "muted"}
+        />
+        <Metric
+          label={t("dashboard.totalPL")}
+          value={
+            <PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}</PriceFlash>
+          }
+          tone={totalPL >= 0 ? "positive" : "negative"}
+          sub={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
+          subTone={analytics.totalReturnPercent >= 0 ? "positive" : "negative"}
+        />
+        <Metric
+          label={t("portfolio.change24h")}
+          value={
+            <PriceFlash value={totals.change24h}>{`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}</PriceFlash>
+          }
+          tone={totals.change24h >= 0 ? "positive" : "negative"}
+          sub={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}
+          subTone={change24hUsdt >= 0 ? "positive" : "negative"}
+        />
+        <Metric
+          label={t("dashboard.assets")}
+          value={breakdown.length}
+          sub={
+            totals.totalFeesPaid > 0
+              ? `${t("dashboard.totalFees")}: ${formatUsd(totals.totalFeesPaid)}`
               : undefined
           }
-          secondaryTone={isPriceStale ? "warning" : "muted"}
-          tertiary={`${t("dashboard.totalInvested")}: ${formatUsd(analytics.totalInvested)} · ${breakdown.length} ${t("dashboard.assets").toLowerCase()}`}
-          className="xl:col-span-2"
         />
-
-        <KpiCard
-          label={t("dashboard.totalPL")}
-          value={<PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}</PriceFlash>}
-          valueTone={totalPL >= 0 ? "positive" : "negative"}
-          valueSize="3xl"
-          secondary={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
-          secondaryTone={analytics.totalReturnPercent >= 0 ? "positive" : "negative"}
-          tertiary={totals.totalFeesPaid > 0 ? `${t("dashboard.totalFees")}: ${formatUsd(totals.totalFeesPaid)}` : undefined}
-        />
-
-        <KpiCard
-          label={t("portfolio.change24h")}
-          value={<PriceFlash value={totals.change24h}>{`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}</PriceFlash>}
-          valueTone={totals.change24h >= 0 ? "positive" : "negative"}
-          valueSize="3xl"
-          secondary={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}
-          secondaryTone={change24hUsdt >= 0 ? "positive" : "negative"}
-          tertiary={t("portfolio.weightedChangeDesc")}
-        />
-      </div>
+      </MetricBand>
 
       {ruleAlertCount > 0 ? (
         <AlertsSection
@@ -469,74 +472,73 @@ export default function DashboardPage() {
         />
       ) : null}
 
-      <StatusBanner
-        tone={
-          hasAlerts
-            ? highestAlertSeverity === "high"
-              ? "danger"
-              : "warning"
-            : "success"
-        }
-        heading={t("dashboard.rebalanceStatus")}
-        icon={
-          hasAlerts ? (
-            <AlertTriangle className="h-5 w-5" />
-          ) : (
-            <CheckCircle2 className="h-5 w-5" />
-          )
-        }
-        action={
-          <Link href="/rebalance">
-            <Button size="sm" variant={hasAlerts ? "default" : "outline"}>
-              <Scale className="mr-2 h-4 w-4" />
-              {t("dashboard.viewDetails")}
-            </Button>
-          </Link>
-        }
-        description={
-          hasAlerts ? t("dashboard.actionRequired") : t("dashboard.noRebalanceAlerts")
-        }
-      >
-        {hasAlerts ? (
-          <div className="flex flex-wrap gap-2">
-            {mergedAlertBadges.slice(0, 5).map((alert) => (
-              <div key={alert.tokenSymbol} className="flex flex-col gap-0.5">
-                <StatusPill
-                  tone={
-                    alert.severity === "high"
-                      ? "danger"
-                      : alert.severity === "medium"
-                        ? "warning"
-                        : "info"
-                  }
-                  bordered={false}
-                >
-                  {severityLabels[alert.severity]}: {alert.tokenSymbol} {alert.value >= 0 ? "+" : ""}
-                  {alert.value.toFixed(1)}%
-                </StatusPill>
-                {alert.smartHint && (
-                  <span className="max-w-48 text-[10px] leading-tight text-text-dim">
-                    {alert.smartHint}
-                  </span>
-                )}
-              </div>
-            ))}
-            {mergedAlertBadges.length > 5 ? (
-              <span className="text-xs text-text-subtle">
-                {t("common.more", {
-                  count: (mergedAlertBadges.length - 5).toString(),
-                })}
-              </span>
-            ) : null}
-          </div>
-        ) : (
-          <p className="text-sm text-text-subtle">
+      {hasAlerts ? (
+        <ActionBlock
+          title={`${t("dashboard.rebalanceStatus")} · ${t("dashboard.actionRequired")}`}
+          detail={
+            <div className="flex flex-wrap items-start gap-2">
+              {mergedAlertBadges.slice(0, 5).map((alert) => (
+                <div key={alert.tokenSymbol} className="flex flex-col gap-0.5">
+                  <StatusPill
+                    tone={
+                      alert.severity === "high"
+                        ? "danger"
+                        : alert.severity === "medium"
+                          ? "warning"
+                          : "info"
+                    }
+                  >
+                    {severityLabels[alert.severity]}: {alert.tokenSymbol}{" "}
+                    {alert.value >= 0 ? "+" : ""}
+                    {alert.value.toFixed(1)}%
+                  </StatusPill>
+                  {alert.smartHint ? (
+                    <span className="max-w-48 text-caption leading-tight text-text-muted">
+                      {alert.smartHint}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+              {mergedAlertBadges.length > 5 ? (
+                <span className="text-caption text-text-muted">
+                  {t("common.more", {
+                    count: (mergedAlertBadges.length - 5).toString(),
+                  })}
+                </span>
+              ) : null}
+            </div>
+          }
+          action={
+            <Link href="/rebalance">
+              <Button>
+                <Scale className="h-4 w-4" aria-hidden="true" />
+                {t("dashboard.viewDetails")}
+              </Button>
+            </Link>
+          }
+        />
+      ) : (
+        <StatusBanner
+          tone="success"
+          heading={t("dashboard.rebalanceStatus")}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          description={t("dashboard.noRebalanceAlerts")}
+          action={
+            <Link href="/rebalance">
+              <Button variant="outline" size="sm">
+                <Scale className="h-4 w-4" aria-hidden="true" />
+                {t("dashboard.viewDetails")}
+              </Button>
+            </Link>
+          }
+        >
+          <p className="text-body text-text-secondary">
             {t("dashboard.portfolioWithinThresholds")}
           </p>
-        )}
-      </StatusBanner>
+        </StatusBanner>
+      )}
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
         <Card>
           <CardSectionHeader
             title={t("dashboard.portfolioHistory")}
@@ -627,7 +629,7 @@ export default function DashboardPage() {
         className={cn(
           "grid grid-cols-1 gap-6",
           categoryBreakdown.length > 0 && topHoldings.length > 0
-            ? "xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
+            ? "lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]"
             : ""
         )}
       >

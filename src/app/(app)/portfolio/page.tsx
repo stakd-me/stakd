@@ -469,36 +469,12 @@ export default function PortfolioPage() {
           </p>
         }
         actions={
-          <>
-          <Button size="sm" variant="outline" onClick={exportCsv}>
-            <Download className="mr-2 h-4 w-4" />
-            {t("common.export")}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openImportModal(true)}
-            title="Ctrl/Cmd + I"
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            {t("common.import")}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setShowManualEntries((value) => !value)}
-            aria-expanded={showManualEntries}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            {t("portfolio.quickAddHoldings")}
-          </Button>
           <Link href="/portfolio/add">
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" />
+            <Button variant="accent">
+              <Plus className="h-4 w-4" aria-hidden="true" />
               {t("portfolio.addTransaction")}
             </Button>
           </Link>
-          </>
         }
       />
 
@@ -514,19 +490,48 @@ export default function PortfolioPage() {
 
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
 
-      {canSearchCurrentSection && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-subtle" />
-          <Input
-            ref={searchInputRef}
-            placeholder={t("portfolio.searchByToken")}
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="pl-10"
-            aria-label={t("portfolio.searchByToken")}
-          />
+      <div className="flex flex-wrap items-center gap-2">
+        {canSearchCurrentSection && (
+          <div className="relative min-w-0 grow sm:max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted"
+              aria-hidden="true"
+            />
+            <Input
+              ref={searchInputRef}
+              placeholder={t("portfolio.searchByToken")}
+              value={search}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9 font-mono"
+              aria-label={t("portfolio.searchByToken")}
+            />
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowManualEntries((value) => !value)}
+            aria-expanded={showManualEntries}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("portfolio.quickAddHoldings")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => openImportModal(true)}
+            title="Ctrl/Cmd + I"
+          >
+            <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("common.import")}
+          </Button>
+          <Button size="sm" variant="outline" onClick={exportCsv}>
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("common.export")}
+          </Button>
         </div>
-      )}
+      </div>
 
       {showManualSection && (
         <ManualEntriesPanel

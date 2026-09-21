@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
-import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
+import { Stepper } from "@/components/ui/stepper";
 import { StatusPill } from "@/components/ui/status-pill";
 import { StatusBanner } from "@/components/ui/status-banner";
 import { formatTimeAgo } from "@/lib/utils";
@@ -47,7 +47,6 @@ const RebalanceHistorySection = dynamic(
 // ── Page Component ──────────────────────────────────────────────
 
 export default function RebalancePage() {
-  const phasesBaseId = "rebalance-phases";
   const { t } = useTranslation();
   const rb = useRebalance();
 
@@ -126,19 +125,17 @@ export default function RebalancePage() {
         </div>
       )}
 
-      <SectionNavigator
-        baseId={phasesBaseId}
+      <Stepper
         label={t("rebalance.focusView")}
         value={rb.activePhase}
         onChange={(value) => {
           rb.setActivePhase(value);
           rb.setPhaseInitialized(true);
         }}
-        options={rb.phaseOptions}
-        columnsClassName="grid-cols-3"
+        steps={rb.phaseSteps}
       />
 
-      <SectionPanel baseId={phasesBaseId} value={rb.activePhase}>
+      <section aria-label={t("rebalance.focusView")} className="space-y-6">
       {/* ── 3. Target Allocation ─────────────────────────────── */}
       {rb.showSetupPhase && (
         <TargetAllocationSection
@@ -271,7 +268,7 @@ export default function RebalancePage() {
       )}
 
       {/* ── DCA Schedule ─────────────────────────────────────── */}
-      {rb.showAnalysisPhase &&
+      {rb.showExecutionPhase &&
       rb.suggestionsData?.dcaChunks &&
       rb.suggestionsData.dcaChunks.length > 0 ? (
         <DcaScheduleSection
@@ -316,12 +313,12 @@ export default function RebalancePage() {
       )}
 
       {/* ── 14. What-If Calculator ───────────────────────────── */}
-      {rb.showAnalysisPhase && (
+      {rb.showExecutionPhase && (
         <WhatIfCalculatorSection symbolOptions={rb.tokenSymbolOptions} />
       )}
 
       {/* ── 15. Rebalance History ────────────────────────────── */}
-      {rb.showAnalysisPhase ? <RebalanceHistorySection logs={rb.logs} /> : null}
+      {rb.showExecutionPhase ? <RebalanceHistorySection logs={rb.logs} /> : null}
 
       {/* ── 16. Empty state ──────────────────────────────────── */}
       {(!rb.suggestionsData || rb.suggestionsData.targets.length === 0) &&
@@ -343,7 +340,7 @@ export default function RebalancePage() {
             className="py-12"
           />
         )}
-      </SectionPanel>
+      </section>
 
       {/* ── Confirm Dialog ───────────────────────────────────── */}
       <ConfirmDialog

@@ -138,6 +138,7 @@ export function useRebalance() {
     showAnalysisPhase,
     showExecutionPhase,
     phaseOptions,
+    phaseSteps,
   } = useRebalancePhases({
     activePhase,
     setActivePhase,
@@ -239,6 +240,7 @@ export function useRebalance() {
     showAnalysisPhase,
     showExecutionPhase,
     phaseOptions,
+    phaseSteps,
 
     // Handlers
     handleToggleTargetExpanded,

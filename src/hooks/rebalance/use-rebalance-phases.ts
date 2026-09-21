@@ -102,14 +102,14 @@ export function useRebalancePhases({
     groups.length +
     categories.length;
   const analysisPhaseCount =
-    targetedSuggestions.length +
-    concentrationAlerts.length +
-    (suggestionsData?.dcaChunks?.length ?? 0) +
-    logs.length;
+    targetedSuggestions.length + concentrationAlerts.length;
+  // DCA chunks and the session log belong to Execute, where they are read.
   const executionPhaseCount =
     (suggestionsData?.executionSteps?.length ?? 0) +
+    (suggestionsData?.dcaChunks?.length ?? 0) +
     activeSessions.length +
-    pastSessions.length;
+    pastSessions.length +
+    logs.length;
   const phaseOptions = useMemo(
     () => [
       {
@@ -136,10 +136,24 @@ export function useRebalancePhases({
     ]
   );
 
+  // A step is done once the flow has moved past it, which is what a
+  // stepper's tick means — not "this section has rows in it".
+  const phaseSteps = useMemo(() => {
+    const order: RebalancePhase[] = ["setup", "analysis", "execution"];
+    const activeIndex = order.indexOf(activePhase);
+    return phaseOptions.map((option, index) => ({
+      id: option.value,
+      title: option.label,
+      caption: option.count > 0 ? String(option.count) : undefined,
+      done: index < activeIndex,
+    }));
+  }, [activePhase, phaseOptions]);
+
   return {
     showSetupPhase,
     showAnalysisPhase,
     showExecutionPhase,
     phaseOptions,
+    phaseSteps,
   };
 }

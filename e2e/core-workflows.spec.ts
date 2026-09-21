@@ -43,7 +43,8 @@ test.describe.serial("core portfolio workflows", () => {
     await page.getByPlaceholder("Token symbol (e.g. ETH)").fill("BTC");
     await page.getByPlaceholder("Target %").fill("100");
     await page.getByRole("button", { name: "Save Targets" }).first().click();
-    await expect(page.getByRole("tab", { name: /Analysis/ })).toBeVisible();
+    // The three phases are a stepper now, not a tab strip.
+    await expect(page.getByRole("button", { name: /Analysis/ })).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("rebalance-desktop.png"),
       fullPage: true,
