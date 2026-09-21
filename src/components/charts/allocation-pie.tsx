@@ -66,7 +66,7 @@ export const AllocationPieChart = memo(function AllocationPieChart({ data }: { d
       </div>
       <div className="mt-4 flex flex-wrap justify-center gap-3">
         {data.map((item) => (
-          <div key={item.symbol} className="flex items-center gap-1.5 text-xs">
+          <div key={item.symbol} className="flex items-center gap-1.5 font-mono text-num-sm tabular">
             <div
               className="h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: item.color }}

@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
-import { KpiCard } from "@/components/ui/kpi-card";
+import { Metric, MetricBand } from "@/components/ui/metric";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import dynamic from "next/dynamic";
 
@@ -195,7 +195,7 @@ export default function HistoryPage() {
           description={t("history.subtitle")}
         />
         <ChartSkeleton />
-        <div className="rounded-lg border border-border bg-bg-card p-6">
+        <div className="rounded-md border border-border bg-bg-card p-6">
           <Skeleton className="mb-4 h-5 w-24" />
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -228,30 +228,24 @@ export default function HistoryPage() {
       <SectionPanel baseId={sectionsBaseId} value={activeSection}>
       {showOverviewSection && (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <KpiCard
-              label={t("history.snapshots")}
-              value={snapshots.length}
-              valueSize="2xl"
-            />
-            <KpiCard
+          <MetricBand columns={3}>
+            <Metric label={t("history.snapshots")} value={snapshots.length} />
+            <Metric
               label={t("dashboard.totalValue")}
               value={latestSnapshot ? formatUsd(latestSnapshot.totalValueUsd) : "-"}
-              valueSize="2xl"
-              tertiary={
+              sub={
                 latestSnapshot
                   ? new Date(latestSnapshot.snapshotAt).toLocaleString()
                   : undefined
               }
             />
-            <KpiCard
+            <Metric
               label={t("history.realizedPLTimeline")}
               value={`${plData.totalRealizedPL >= 0 ? "+" : ""}${formatUsd(plData.totalRealizedPL)}`}
-              valueTone={plData.totalRealizedPL >= 0 ? "positive" : "negative"}
-              valueSize="2xl"
-              tertiary={plData.timeline.length}
+              tone={plData.totalRealizedPL >= 0 ? "positive" : "negative"}
+              sub={plData.timeline.length}
             />
-          </div>
+          </MetricBand>
 
           <Card>
             <CardSectionHeader title={t("history.valueOverTime")} />
@@ -288,7 +282,7 @@ export default function HistoryPage() {
             actions={
               <span
                 className={cn(
-                  "text-lg font-bold",
+                  "font-mono text-num-lg tabular",
                   plData.totalRealizedPL >= 0
                     ? "text-status-positive"
                     : "text-status-negative"
@@ -339,18 +333,18 @@ export default function HistoryPage() {
                 {recentSnapshots.map((s) => (
                   <div
                     key={s.id}
-                    className="flex flex-col gap-2 rounded-md bg-bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-2 border-b border-border-faint px-1 py-2.5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <span className="text-sm text-text-subtle">
+                    <span className="font-mono text-num-sm tabular text-text-muted">
                       {new Date(s.snapshotAt).toLocaleString()}
                     </span>
-                    <span className="font-medium text-text-primary">
+                    <span className="font-mono text-num-md tabular text-text-primary">
                       {formatUsd(s.totalValueUsd)}
                     </span>
                   </div>
                 ))}
                 {remainingSnapshotsCount > 0 ? (
-                  <p className="text-xs text-text-subtle">
+                  <p className="text-caption text-text-muted">
                     {t("common.more", { count: remainingSnapshotsCount.toString() })}
                   </p>
                 ) : null}

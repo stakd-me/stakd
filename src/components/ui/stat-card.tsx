@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export type StatCardTone = "default" | "info" | "positive" | "warning" | "negative";
 export type StatCardAlign = "left" | "center";
-export type StatCardSize = "default" | "compact";
+export type StatCardSize = "md" | "lg";
 
 interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
   label: ReactNode;
@@ -34,7 +34,7 @@ export function StatCard({
   hint,
   tone = "default",
   align = "left",
-  size = "default",
+  size = "md",
   className,
   valueClassName,
   ...props
@@ -42,7 +42,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        size === "default" ? "px-4 py-3" : "px-3 py-2.5",
+        size === "lg" ? "px-4 py-3.5" : "px-4 py-3",
         align === "center" ? "text-center" : "",
         className
       )}
@@ -52,7 +52,7 @@ export function StatCard({
       <p
         className={cn(
           "mt-1.5 font-mono tabular",
-          size === "default" ? "text-num-lg" : "text-num-xl",
+          size === "lg" ? "text-num-xl" : "text-num-lg",
           toneClass[tone],
           valueClassName
         )}

@@ -8,21 +8,18 @@ import type { TranslationKeys } from "@/i18n";
 import { X, XCircle, Bell } from "lucide-react";
 import Link from "next/link";
 
-const SEVERITY_STYLES: Record<AlertSeverity, { card: string; icon: string; badge: string }> = {
+const SEVERITY_STYLES: Record<AlertSeverity, { card: string; icon: string }> = {
   critical: {
     card: "border-status-negative-border bg-status-negative-soft",
     icon: "text-status-negative",
-    badge: "bg-status-negative/20 text-status-negative",
   },
   warning: {
     card: "border-status-warning-border bg-status-warning-soft",
     icon: "text-status-warning",
-    badge: "bg-status-warning/20 text-status-warning",
   },
   info: {
     card: "border-status-info-border bg-status-info-soft",
     icon: "text-status-info",
-    badge: "bg-status-info/20 text-status-info",
   },
 };
 
@@ -52,23 +49,23 @@ function AlertCard({
   const suggestedAction = useAlertMessage(alert.suggestedAction);
 
   return (
-    <div className={cn("rounded-lg border p-4", styles.card)}>
+    <div className={cn("rounded-md border p-4", styles.card)}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <div className={cn("mt-0.5 flex-shrink-0 rounded-full p-1", styles.badge)}>
-            <Icon className="h-4 w-4" />
-          </div>
+          <span className={cn("mt-0.5 shrink-0", styles.icon)}>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className={cn("text-sm font-bold", styles.icon)}>
+              <span className="text-body font-semibold text-text-primary">
                 {headline}
               </span>
-              <span className="rounded-md bg-bg-hover px-1.5 py-0.5 text-[10px] font-medium text-text-subtle">
+              <span className="rounded-sm border border-border-subtle bg-bg-input px-1.5 font-mono text-[11px] leading-4 text-text-muted">
                 {t(`alertRules.type.${alert.ruleType}`)}
               </span>
             </div>
-            <p className="text-sm text-text-secondary">{explanation}</p>
-            <p className="text-xs font-medium text-text-primary">
+            <p className="text-body text-text-secondary">{explanation}</p>
+            <p className="text-caption font-semibold text-text-primary">
               {suggestedAction}
             </p>
           </div>
@@ -76,7 +73,7 @@ function AlertCard({
         <button
           type="button"
           onClick={onDismiss}
-          className="flex-shrink-0 rounded-md p-1 text-text-dim hover:bg-bg-hover hover:text-text-secondary"
+          className="shrink-0 rounded-sm p-1 text-text-muted hover:bg-bg-hover hover:text-text-primary"
           aria-label={t("alertRules.dismiss")}
         >
           <X className="h-3.5 w-3.5" />
@@ -107,12 +104,12 @@ export function AlertsSection({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4 text-text-subtle" />
-          <h3 className="text-sm font-semibold text-text-primary">
+          <Bell className="h-4 w-4 text-text-muted" />
+          <h3 className="text-label uppercase text-text-primary">
             {t("alertRules.activeAlerts")}
           </h3>
           {totalAlertCount > 0 && (
-            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-status-negative-soft px-1.5 text-xs font-bold text-status-negative">
+            <span className="rounded-sm border border-status-negative-border bg-status-negative-soft px-1.5 font-mono text-[11px] leading-4 text-status-negative">
               {totalAlertCount}
             </span>
           )}
@@ -122,13 +119,13 @@ export function AlertsSection({
             <button
               type="button"
               onClick={onDismissAll}
-              className="flex items-center gap-1 text-xs text-text-dim hover:text-text-secondary"
+              className="flex items-center gap-1 text-caption text-text-muted hover:text-text-primary"
             >
               <XCircle className="h-3.5 w-3.5" />
               {t("alertRules.dismissAll")}
             </button>
           )}
-          <Link href="/settings" className="text-xs text-text-dim hover:text-text-secondary">
+          <Link href="/settings" className="text-caption text-text-muted hover:text-text-primary">
             {t("alertRules.configureRules")}
           </Link>
         </div>
@@ -145,7 +142,7 @@ export function AlertsSection({
           ))}
         </div>
       ) : (
-        <p className="text-xs text-text-dim">{t("alertRules.allDismissed")}</p>
+        <p className="text-caption text-text-muted">{t("alertRules.allDismissed")}</p>
       )}
     </div>
   );

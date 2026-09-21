@@ -25,7 +25,7 @@ interface SummaryStripProps extends HTMLAttributes<HTMLDivElement> {
 export function SummaryStrip({
   items,
   columnsClassName,
-  size = "default",
+  size = "md",
   align = "left",
   className,
   ...props

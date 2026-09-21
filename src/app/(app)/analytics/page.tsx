@@ -338,7 +338,6 @@ export default function ReportsPage() {
                     label: t("reports.endValue"),
                     value: formatValue(report.summary.endValueUsd),
                     hint: `${t("reports.startValue")}: ${formatValue(report.summary.startValueUsd)}`,
-                    valueClassName: "text-2xl font-bold",
                   },
                   {
                     key: "period-pl",
@@ -348,7 +347,6 @@ export default function ReportsPage() {
                       ? `${t("reports.previousPnlDelta")}: ${getSignedCurrency(pnlDelta)}`
                       : undefined,
                     tone: report.summary.pnlUsd >= 0 ? "positive" : "negative",
-                    valueClassName: "text-2xl font-bold",
                   },
                   {
                     key: "return",
@@ -363,7 +361,6 @@ export default function ReportsPage() {
                       </>
                     ),
                     tone: report.summary.returnPercent >= 0 ? "positive" : "negative",
-                    valueClassName: "text-2xl font-bold",
                   },
                   {
                     key: "drawdown",
@@ -371,9 +368,9 @@ export default function ReportsPage() {
                     value: `-${report.summary.maxDrawdownPercent.toFixed(2)}%`,
                     hint: `${t("reports.volatility")}: ${report.summary.annualizedVolatilityPercent.toFixed(2)}%`,
                     tone: "negative",
-                    valueClassName: "text-2xl font-bold",
                   },
                 ]}
+                size="lg"
                 columnsClassName="md:grid-cols-4"
               />
 
@@ -403,24 +400,24 @@ export default function ReportsPage() {
                 columnsClassName="md:grid-cols-4"
               />
 
-              <div className={`rounded-lg border px-4 py-3 text-sm ${reconciliationClass}`}>
+              <div className={`rounded-md border px-4 py-3 text-body ${reconciliationClass}`}>
                 <p className="font-medium">{t("reports.reconciliation")}</p>
                 <p className="mt-1">
                   {formatValue(report.summary.startValueUsd)} + {getSignedCurrency(report.summary.capitalNetFlowUsd)} +{" "}
                   {getSignedCurrency(report.summary.pnlUsd)} = {formatValue(reconciledEnd)}
                 </p>
-                <p className="mt-1 text-xs">
+                <p className="mt-1 text-caption">
                   {t("reports.reportedEnd")}: {formatValue(report.summary.endValueUsd)} · {t("reports.gap")}:{" "}
                   {getSignedCurrency(report.summary.reconciliationGapUsd)}
                 </p>
               </div>
 
               {report.dataQuality.notes.length > 0 ? (
-                <div className="rounded-lg border border-border-subtle bg-bg-card px-4 py-3">
-                  <p className="text-sm font-medium text-text-primary">
+                <div className="rounded-md border border-border-subtle bg-bg-card px-4 py-3">
+                  <p className="text-body font-semibold text-text-primary">
                     {t("reports.dataQuality")}
                   </p>
-                  <div className="mt-2 space-y-1 text-xs text-text-dim">
+                  <div className="mt-2 space-y-1 text-caption text-text-muted">
                     {report.dataQuality.notes.map((note, index) => (
                       <p key={`${note}-${index}`}>{note}</p>
                     ))}
@@ -520,7 +517,6 @@ export default function ReportsPage() {
                     },
                   ]}
                   columnsClassName="sm:grid-cols-2"
-                  size="compact"
                   className="gap-3"
                 />
               </CardContent>
@@ -559,12 +555,11 @@ export default function ReportsPage() {
                     },
                   ]}
                   columnsClassName="sm:grid-cols-2"
-                  size="compact"
                   className="gap-3"
                 />
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.bestPerformer")}</p>
+                    <p className="text-text-muted">{t("reports.bestPerformer")}</p>
                     <p className="font-semibold text-status-positive">
                       {report.bestPerformer
                         ? `${report.bestPerformer.symbol} ${getSignedPercent(
@@ -573,7 +568,7 @@ export default function ReportsPage() {
                         : t("reports.notAvailable")}
                     </p>
                     {report.bestPerformer ? (
-                      <p className="text-xs text-text-dim">
+                      <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.bestPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
                         {getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.bestPerformer.annualizedReturnPercent)}
@@ -581,7 +576,7 @@ export default function ReportsPage() {
                     ) : null}
                   </div>
                   <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
-                    <p className="text-text-subtle">{t("reports.worstPerformer")}</p>
+                    <p className="text-text-muted">{t("reports.worstPerformer")}</p>
                     <p className="font-semibold text-status-negative">
                       {report.worstPerformer
                         ? `${report.worstPerformer.symbol} ${getSignedPercent(
@@ -590,7 +585,7 @@ export default function ReportsPage() {
                         : t("reports.notAvailable")}
                     </p>
                     {report.worstPerformer ? (
-                      <p className="text-xs text-text-dim">
+                      <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.worstPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
                         {getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.worstPerformer.annualizedReturnPercent)}
@@ -636,30 +631,30 @@ export default function ReportsPage() {
                   {report.topHoldings.map((holding) => (
                     <div
                       key={holding.symbol}
-                      className="rounded-lg border border-border-subtle bg-bg-card p-4"
+                      className="rounded-md border border-border-subtle bg-bg-card p-4"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="font-medium text-text-primary">
+                          <p className="text-body font-semibold text-text-primary">
                             {holding.symbol}
                           </p>
-                          <p className="text-xs text-text-subtle">
+                          <p className="font-mono text-num-sm tabular text-text-muted">
                             {t("reports.held")}: {holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-text-primary">
+                          <p className="font-mono text-num-md tabular text-text-primary">
                             {formatUsd(holding.valueUsd)}
                           </p>
-                          <p className="text-xs text-text-subtle">
+                          <p className="font-mono text-num-sm tabular text-text-muted">
                             {holding.percent.toFixed(2)}%
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      <div className="mt-4 grid grid-cols-2 gap-3 font-mono text-num-sm tabular">
                         <div>
-                          <p className="text-xs text-text-subtle">
+                          <p className="text-meta uppercase text-text-muted">
                             {t("reports.unrealizedPL")}
                           </p>
                           <p
@@ -673,7 +668,7 @@ export default function ReportsPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-text-subtle">
+                          <p className="text-meta uppercase text-text-muted">
                             {t("reports.return")}
                           </p>
                           <p
@@ -687,7 +682,7 @@ export default function ReportsPage() {
                           </p>
                         </div>
                         <div className="col-span-2">
-                          <p className="text-xs text-text-subtle">
+                          <p className="text-meta uppercase text-text-muted">
                             {t("reports.unrealizedPLPerDay")}
                           </p>
                           <p
@@ -706,26 +701,26 @@ export default function ReportsPage() {
                 </div>
 
                 <div className="hidden overflow-x-auto md:block">
-                  <table className="min-w-full text-left text-sm">
+                  <table className="min-w-full text-left text-body">
                     <caption className="sr-only">{t("reports.topHoldings")}</caption>
                     <thead>
-                      <tr className="border-b border-border-subtle text-text-subtle">
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.token")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.value")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.weight")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.held")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.unrealizedPL")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.unrealizedPLPerDay")}</th>
-                        <th scope="col" className="px-2 py-2 font-medium">{t("reports.return")}</th>
+                      <tr className="border-b border-border text-text-muted">
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.token")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.value")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.weight")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.held")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPL")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPLPerDay")}</th>
+                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.return")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {report.topHoldings.map((holding) => (
                         <tr
                           key={holding.symbol}
-                          className="border-b border-border-subtle/60 text-text-primary"
+                          className="border-b border-border-faint font-mono text-num-md tabular text-text-secondary"
                         >
-                          <th scope="row" className="px-2 py-2 text-left font-medium">{holding.symbol}</th>
+                          <th scope="row" className="px-2 py-2 text-left font-sans text-body font-semibold text-text-primary">{holding.symbol}</th>
                           <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
                           <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
                           <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>

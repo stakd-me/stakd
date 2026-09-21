@@ -554,10 +554,10 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setTimeRange(r.value)}
                     className={cn(
-                      "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                      "rounded-md px-2 py-1 text-caption font-semibold transition-colors",
                       timeRange === r.value
                         ? "bg-accent text-bg-page shadow-sm"
-                        : "text-text-subtle hover:bg-bg-hover hover:text-text-tertiary"
+                        : "text-text-muted hover:bg-bg-hover hover:text-text-secondary"
                     )}
                     aria-pressed={timeRange === r.value}
                   >
@@ -669,29 +669,29 @@ export default function DashboardPage() {
                 {topHoldings.map((item) => (
                   <div
                     key={item.holdingKey}
-                    className="flex flex-col gap-3 rounded-md border border-border-subtle bg-bg-input px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-3 border border-border-subtle bg-bg-inset px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className="h-3 w-3 rounded-full"
+                        className="h-2.5 w-2.5 rounded-sm"
                         style={{ backgroundColor: item.color }}
                       />
                       <div>
-                        <p className="font-medium text-text-primary">
+                        <p className="text-body font-semibold text-text-primary">
                           {item.symbol}
                         </p>
-                        <p className="text-xs text-text-subtle">
+                        <p className="font-mono text-num-sm tabular text-text-muted">
                           {formatCrypto(item.quantity)} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
                         </p>
                       </div>
                     </div>
-                    <div className="text-left sm:text-right">
-                      <p className="font-medium text-text-primary">
+                    <div className="font-mono tabular text-left sm:text-right">
+                      <p className="text-num-md text-text-primary">
                         {formatValue(item.value)}
                         {item.change24h !== null && (
                           <span
                             className={cn(
-                              "ml-2 text-xs font-normal",
+                              "ml-2 text-num-sm",
                               item.change24h >= 0
                                 ? "text-status-positive"
                                 : "text-status-negative"
@@ -702,12 +702,12 @@ export default function DashboardPage() {
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-text-subtle">
+                      <p className="text-num-sm text-text-muted">
                         {item.percent.toFixed(1)}%
                       </p>
                       <p
                         className={cn(
-                          "text-xs",
+                          "text-num-sm",
                           item.unrealizedPL >= 0
                             ? "text-status-positive"
                             : "text-status-negative"
@@ -721,7 +721,7 @@ export default function DashboardPage() {
                       {item.realizedPL !== 0 && (
                         <p
                           className={cn(
-                            "text-xs",
+                            "text-num-sm",
                             item.realizedPL >= 0
                               ? "text-status-positive"
                               : "text-status-negative"
@@ -735,7 +735,7 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {remainingHoldingsCount > 0 ? (
-                  <p className="text-xs text-text-subtle">
+                  <p className="text-caption text-text-muted">
                     {t("common.more", {
                       count: remainingHoldingsCount.toString(),
                     })}

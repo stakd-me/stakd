@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { KpiCard } from "@/components/ui/kpi-card";
+import { Metric, MetricBand } from "@/components/ui/metric";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { useTranslation } from "@/hooks/use-translation";
@@ -105,31 +105,28 @@ export default function AllocationHistoryPage() {
 
       <AnalyticsNavigation />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <KpiCard
+      <MetricBand columns={3}>
+        <Metric
           label={t("allocationHistory.totalUpdates")}
           value={sortedSnapshots.length}
-          valueSize="2xl"
         />
-        <KpiCard
+        <Metric
           label={t("allocationHistory.trackedCoins")}
           value={symbols.length}
-          valueSize="2xl"
         />
-        <KpiCard
+        <Metric
           label={t("allocationHistory.latestUpdate")}
           value={
             latestSnapshot ? formatAllocationUpdateDate(latestSnapshot) : "-"
           }
-          valueSize="2xl"
         />
-      </div>
+      </MetricBand>
 
       {showTrendChart && (
         <Card>
           <CardHeader>
             <CardTitle>{t("allocationHistory.chartTitle")}</CardTitle>
-            <p className="text-xs text-text-subtle">
+            <p className="text-caption text-text-muted">
               {t("allocationHistory.chartHint")}
             </p>
           </CardHeader>
@@ -207,16 +204,16 @@ export default function AllocationHistoryPage() {
               <div className="hidden overflow-x-auto md:block">
                 <table
                   id="allocation-history-table"
-                  className="w-full min-w-max text-left text-sm"
+                  className="w-full min-w-max text-left text-body"
                 >
                   <caption className="sr-only">
                     {t("allocationHistory.tableTitle")}
                   </caption>
                   <thead>
-                    <tr className="border-b border-border text-text-subtle">
+                    <tr className="border-b border-border text-text-muted">
                       <th
                         scope="col"
-                        className="sticky left-0 z-10 bg-bg-card pb-3 pr-6 font-medium"
+                        className="sticky left-0 z-10 bg-bg-card px-0 pb-2 pr-6 font-mono text-meta font-normal uppercase"
                       >
                         {t("allocationHistory.update")}
                       </th>
@@ -224,7 +221,7 @@ export default function AllocationHistoryPage() {
                         <th
                           key={symbol}
                           scope="col"
-                          className="pb-3 px-4 text-right font-medium"
+                          className="px-4 pb-2 text-right font-mono text-meta font-normal uppercase"
                         >
                           {symbol}
                         </th>
@@ -240,7 +237,7 @@ export default function AllocationHistoryPage() {
                           key={snapshot.id}
                           className="border-b border-border-subtle last:border-0"
                         >
-                          <td className="sticky left-0 z-10 whitespace-nowrap bg-bg-card py-3 pr-6 font-medium text-text-primary">
+                          <td className="sticky left-0 z-10 whitespace-nowrap bg-bg-card py-2.5 pr-6 font-mono text-num-sm tabular text-text-primary">
                             {formatAllocationUpdateDate(snapshot)}
                           </td>
                           {symbols.map((symbol) => (
@@ -269,7 +266,7 @@ export default function AllocationHistoryPage() {
 
               <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p
-                  className="text-xs text-text-subtle"
+                  className="text-caption text-text-muted"
                   role="status"
                   aria-live="polite"
                 >
@@ -291,7 +288,7 @@ export default function AllocationHistoryPage() {
                     {t("portfolio.prevPage")}
                   </Button>
                   <span
-                    className="text-xs text-text-subtle"
+                    className="text-caption text-text-muted"
                     role="status"
                     aria-live="polite"
                   >
