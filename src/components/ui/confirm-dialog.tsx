@@ -40,7 +40,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay-scrim"
         onClick={onCancel}
         aria-hidden="true"
       />
@@ -53,20 +53,20 @@ export function ConfirmDialog({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className="relative mx-4 w-full max-w-md rounded-lg border border-border bg-bg-sidebar p-6 shadow-xl animate-fade-in-scale"
+        className="relative mx-4 w-full max-w-md rounded-overlay border border-border bg-bg-card p-5 shadow-overlay animate-fade-in-scale"
       >
         <div className="flex items-start gap-4">
           {variant === "danger" && (
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-status-negative-soft">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-status-negative-soft">
               <AlertTriangle className="h-5 w-5 text-status-negative" aria-hidden="true" />
             </div>
           )}
           <div className="flex-1">
-            <h3 id={titleId} className="text-lg font-semibold text-text-primary">
+            <h3 id={titleId} className="text-display-sm text-text-primary">
               {title}
             </h3>
             {description && (
-              <p id={descriptionId} className="mt-1 text-sm text-text-subtle">
+              <p id={descriptionId} className="mt-1.5 text-body text-text-secondary">
                 {description}
               </p>
             )}

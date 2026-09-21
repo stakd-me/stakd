@@ -64,24 +64,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               aria-live={toastItem.type === "error" ? "assertive" : "polite"}
               aria-atomic="true"
               className={cn(
-                "flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg animate-slide-in-right",
+                "flex items-center gap-3 rounded-md border px-4 py-3 shadow-overlay animate-slide-in-right",
                 "min-w-[280px] max-w-[420px]",
                 {
                   "border-status-positive-border bg-status-positive-soft text-status-positive":
                     toastItem.type === "success",
                   "border-status-negative-border bg-status-negative-soft text-status-negative":
                     toastItem.type === "error",
-                  "border-border bg-bg-input/90 text-text-tertiary":
+                  "border-border bg-bg-card text-text-secondary":
                     toastItem.type === "info",
                 }
               )}
             >
               <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="flex-1 text-sm">{toastItem.message}</span>
+              <span className="flex-1 text-body">{toastItem.message}</span>
               <button
                 type="button"
                 onClick={() => dismiss(toastItem.id)}
-                className="shrink-0 rounded-md p-0.5 hover:bg-white/10"
+                className="shrink-0 rounded-sm p-0.5 hover:bg-bg-hover"
                 aria-label={translate("common.close")}
               >
                 <X className="h-3.5 w-3.5" />

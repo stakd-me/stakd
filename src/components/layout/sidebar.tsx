@@ -135,7 +135,7 @@ export function Sidebar() {
 
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-overlay-scrim md:hidden"
           onClick={() => setMobileOpenPath(null)}
         />
       )}

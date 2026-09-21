@@ -83,7 +83,7 @@ export function EditHoldingDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay-scrim backdrop-blur-sm"
         onClick={onCancel}
         aria-hidden="true"
       />

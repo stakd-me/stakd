@@ -7,7 +7,7 @@ export function Skeleton({
 }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-bg-muted/50", className)}
+      className={cn("animate-pulse rounded-md bg-bg-input", className)}
       {...props}
     />
   );
@@ -15,7 +15,7 @@ export function Skeleton({
 
 export function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-bg-card p-6">
+    <div className="rounded-md border border-border bg-bg-card p-5">
       <Skeleton className="mb-2 h-4 w-24" />
       <Skeleton className="h-8 w-32" />
     </div>
@@ -24,7 +24,7 @@ export function CardSkeleton() {
 
 export function ChartSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-bg-card p-6">
+    <div className="rounded-md border border-border bg-bg-card p-5">
       <Skeleton className="mb-4 h-5 w-28" />
       <Skeleton className="h-64 w-full" />
     </div>
@@ -68,7 +68,7 @@ export function DashboardSkeleton() {
         <ChartSkeleton />
         <ChartSkeleton />
       </div>
-      <div className="rounded-lg border border-border bg-bg-card p-6">
+      <div className="rounded-md border border-border bg-bg-card p-5">
         <Skeleton className="mb-4 h-5 w-20" />
         <div className="space-y-3">
           <ListItemSkeleton />
@@ -83,7 +83,7 @@ export function DashboardSkeleton() {
 export function TokenListSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-border bg-bg-card p-6">
+      <div className="rounded-md border border-border bg-bg-card p-5">
         <Skeleton className="mb-4 h-5 w-32" />
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (

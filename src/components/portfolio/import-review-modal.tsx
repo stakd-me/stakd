@@ -46,7 +46,7 @@ export function ImportReviewModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 px-4 py-6" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-overlay-scrim px-4 py-6" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center">
         <Card
           ref={dialogRef}
