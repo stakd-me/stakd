@@ -786,7 +786,6 @@ const es: Record<TranslationKeys, string> = {
   "theme.light": "Claro",
   "theme.dark": "Oscuro",
   "language.toggle": "Toggle idioma",
-  "chart.value": "Valor: {amount}",
   "appGuide.title": "App Guide",
   "appGuide.subtitle": "Operating handbook for portfolio tracking, reporting, and manual execution.",
   "appGuide.toc": "Table of contents",

@@ -786,7 +786,6 @@ const de: Record<TranslationKeys, string> = {
   "theme.light": "Hell",
   "theme.dark": "Dunkel",
   "language.toggle": "Toggle Sprache",
-  "chart.value": "Wert: {amount}",
   "appGuide.title": "App Guide",
   "appGuide.subtitle": "Operating handbook for portfolio tracking, reporting, and manual execution.",
   "appGuide.toc": "Table of contents",

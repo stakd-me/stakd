@@ -812,7 +812,6 @@ const vi: Record<TranslationKeys, string> = {
   "language.toggle": "Chuyển đổi ngôn ngữ",
 
   // Chart tooltips
-  "chart.value": "Giá trị: {amount}",
 
   // App Guide
   "appGuide.title": "Hướng dẫn ứng dụng",

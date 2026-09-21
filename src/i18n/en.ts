@@ -810,7 +810,6 @@ const en = {
   "language.toggle": "Toggle language",
 
   // Chart tooltips
-  "chart.value": "Value: {amount}",
 
   // App Guide
   "appGuide.title": "App Guide",

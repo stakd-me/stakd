@@ -162,7 +162,49 @@ export default function AllocationHistoryPage() {
             />
           ) : (
             <>
-              <div className="overflow-x-auto">
+              {/* Phones: one card per snapshot. The matrix grows a column
+                  per token, so sideways scrolling is not a usable form of
+                  it on a 390px screen. */}
+              <ul className="md:hidden">
+                {paginatedSnapshots.map(({ snapshot, previousSnapshot }) => {
+                  const percentMap = getAllocationPercentMap(snapshot);
+                  return (
+                    <li
+                      key={snapshot.id}
+                      className="border-b border-border-subtle py-3 last:border-b-0"
+                    >
+                      <p className="font-mono text-meta uppercase text-text-muted">
+                        {formatAllocationUpdateDate(snapshot)}
+                      </p>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        {symbols.map((symbol) => (
+                          <span key={symbol}>
+                            <span className="block font-mono text-meta uppercase text-text-muted">
+                              {symbol}
+                            </span>
+                            <span
+                              className={cn(
+                                "font-mono text-num-sm tabular",
+                                getPercentChangeClass(
+                                  getAllocationPercentChange(
+                                    snapshot,
+                                    previousSnapshot,
+                                    symbol
+                                  )
+                                )
+                              )}
+                            >
+                              {formatPercent(percentMap[symbol])}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="hidden overflow-x-auto md:block">
                 <table
                   id="allocation-history-table"
                   className="w-full min-w-max text-left text-sm"
