@@ -3,12 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Lock } from "lucide-react";
-import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useVaultStore } from "@/lib/store";
-import { usePrices } from "@/hooks/use-prices";
+import { useRebalanceAlertCount } from "@/hooks/use-rebalance-alert-count";
 import { useTranslation } from "@/hooks/use-translation";
-import { getRebalanceAlertTokenCount } from "@/lib/services/rebalance-alerts";
 import { isNavigationPathActive } from "@/lib/navigation";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 
@@ -20,13 +17,7 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 export function NavRail() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const vault = useVaultStore((s) => s.vault);
-  const { priceMap } = usePrices();
-
-  const alertCount = useMemo(
-    () => getRebalanceAlertTokenCount(vault, priceMap),
-    [vault, priceMap]
-  );
+  const alertCount = useRebalanceAlertCount();
 
   return (
     <aside className="hidden h-screen w-rail shrink-0 flex-col border-r border-border bg-bg-sidebar md:flex">
@@ -59,6 +50,7 @@ export function NavRail() {
               <span className="grow truncate">{t(labelKey)}</span>
               {href === "/rebalance" && alertCount > 0 ? (
                 <span
+                  aria-hidden="true"
                   className={cn(
                     "shrink-0 rounded-sm border px-1.5 font-mono text-[11px] leading-4",
                     active
@@ -68,6 +60,9 @@ export function NavRail() {
                 >
                   {alertCount}
                 </span>
+              ) : null}
+              {href === "/rebalance" && alertCount > 0 ? (
+                <span className="sr-only">{t("nav.alertCount", { count: alertCount })}</span>
               ) : null}
             </Link>
           );

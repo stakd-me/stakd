@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
@@ -30,6 +30,7 @@ import { getPortfolioSummary } from "@/lib/services/portfolio-calculator";
 import { expandTransactionForBalance } from "@/lib/transactions";
 import Link from "next/link";
 import type { RealizedPlPoint as PLPoint } from "@/components/charts/realized-pl-line";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 type HistorySection = "overview" | "realized" | "snapshots" | "all";
 
@@ -101,6 +102,7 @@ function computeRealizedPLTimeline(transactions: VaultTransaction[]): {
 }
 
 export default function HistoryPage() {
+  const { mask } = usePrivacy();
   const sectionsBaseId = "history-sections";
   const [activeSection, setActiveSection] = useState<HistorySection>("overview");
   const { t } = useTranslation();
@@ -174,18 +176,18 @@ export default function HistoryPage() {
       count: chartData.length,
       start: new Date(firstPoint.date).toLocaleDateString(),
       end: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.value),
+      latest: mask(formatUsd(lastPoint.value)),
     });
-  }, [chartData, t]);
+  }, [chartData, t, mask]);
   const realizedChartSummary = useMemo(() => {
     if (plData.timeline.length === 0) return "";
     const lastPoint = plData.timeline[plData.timeline.length - 1];
     return t("history.realizedChartSummary", {
       count: plData.timeline.length,
       date: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.cumulativePL),
+      latest: mask(formatUsd(lastPoint.cumulativePL)),
     });
-  }, [plData.timeline, t]);
+  }, [plData.timeline, t, mask]);
 
   if (isLoading) {
     return (
@@ -232,7 +234,7 @@ export default function HistoryPage() {
             <Metric label={t("history.snapshots")} value={snapshots.length} />
             <Metric
               label={t("dashboard.totalValue")}
-              value={latestSnapshot ? formatUsd(latestSnapshot.totalValueUsd) : "-"}
+              value={latestSnapshot ? mask(formatUsd(latestSnapshot.totalValueUsd)) : "-"}
               sub={
                 latestSnapshot
                   ? new Date(latestSnapshot.snapshotAt).toLocaleString()
@@ -241,7 +243,7 @@ export default function HistoryPage() {
             />
             <Metric
               label={t("history.realizedPLTimeline")}
-              value={`${plData.totalRealizedPL >= 0 ? "+" : ""}${formatUsd(plData.totalRealizedPL)}`}
+              value={`${plData.totalRealizedPL >= 0 ? "+" : ""}${mask(formatUsd(plData.totalRealizedPL))}`}
               tone={plData.totalRealizedPL >= 0 ? "positive" : "negative"}
               sub={plData.timeline.length}
             />
@@ -261,10 +263,8 @@ export default function HistoryPage() {
                   title={t("history.noHistoryYet")}
                   description={t("history.noHistoryHelp")}
                   action={
-                    <Link href="/portfolio/add">
-                      <Button size="sm" variant="outline">
-                        {t("portfolio.addTransaction")}
-                      </Button>
+                    <Link href="/portfolio/add" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("portfolio.addTransaction")}
                     </Link>
                   }
                   className="py-8"
@@ -289,7 +289,7 @@ export default function HistoryPage() {
                 )}
               >
                 {plData.totalRealizedPL >= 0 ? "+" : ""}
-                {formatUsd(plData.totalRealizedPL)}
+                {mask(formatUsd(plData.totalRealizedPL))}
               </span>
             }
           />
@@ -309,10 +309,8 @@ export default function HistoryPage() {
                 title={t("history.noRealizedPLYet")}
                 description={t("history.noRealizedPLHelp")}
                 action={
-                  <Link href="/portfolio/add">
-                    <Button size="sm" variant="outline">
-                      {t("portfolio.addTransaction")}
-                    </Button>
+                  <Link href="/portfolio/add" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("portfolio.addTransaction")}
                   </Link>
                 }
                 className="py-8"
@@ -339,7 +337,7 @@ export default function HistoryPage() {
                       {new Date(s.snapshotAt).toLocaleString()}
                     </span>
                     <span className="font-mono text-num-md tabular text-text-primary">
-                      {formatUsd(s.totalValueUsd)}
+                      {mask(formatUsd(s.totalValueUsd))}
                     </span>
                   </div>
                 ))}
@@ -354,10 +352,8 @@ export default function HistoryPage() {
                 title={t("history.noHistoryYet")}
                 description={t("history.noSnapshotsHelp")}
                 action={
-                  <Link href="/dashboard">
-                    <Button size="sm" variant="outline">
-                      {t("dashboard.title")}
-                    </Button>
+                  <Link href="/dashboard" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("dashboard.title")}
                   </Link>
                 }
                 className="py-8"

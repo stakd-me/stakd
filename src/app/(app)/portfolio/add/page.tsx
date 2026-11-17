@@ -5,10 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn, formatUsd, toLocalDatetimeString } from "@/lib/utils";
+import { TxTypePicker } from "@/components/portfolio/tx-type-picker";
 import { FormField } from "@/components/ui/form-field";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -19,7 +20,7 @@ import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { apiFetch } from "@/lib/api-client";
 import { useVaultStore } from "@/lib/store";
-import { usePrices } from "@/hooks/use-prices";
+import { useEnsurePrices } from "@/hooks/use-prices";
 import { rankTokenSearchResults } from "@/lib/search/token-search";
 import {
   buildStablecoinSymbolSet,
@@ -50,33 +51,16 @@ interface StablecoinOption {
 
 type TxType = "buy" | "sell" | "receive" | "send";
 
-function getTxTypeToggleClass(type: TxType, isActive: boolean): string {
-  if (!isActive) {
-    return "border-border-subtle bg-transparent text-text-muted hover:bg-bg-hover hover:text-text-primary";
-  }
-  // The selected type is stated in its own semantic colour: money in,
-  // money out, and the two transfers that move neither.
-  if (type === "buy") {
-    return "border-status-positive bg-status-positive-soft text-status-positive";
-  }
-  if (type === "sell") {
-    return "border-status-negative bg-status-negative-soft text-status-negative";
-  }
-  if (type === "receive") {
-    return "border-accent bg-accent-soft text-accent";
-  }
-  return "border-status-caution bg-status-caution-soft text-status-caution";
-}
-
 export default function AddTransactionPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { ensurePrices } = usePrices();
+  const ensurePrices = useEnsurePrices();
   const vault = useVaultStore((state) => state.vault);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [coinHighlight, setCoinHighlight] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [type, setType] = useState<TxType>("buy");
@@ -106,6 +90,8 @@ export default function AddTransactionPage() {
     },
     staleTime: Infinity,
   });
+
+  const coinListOpen = showDropdown && searchQuery.length >= 1;
 
   // Client-side search — relevance ranking with canonical asset preference.
   const filteredCoins = useMemo(() => {
@@ -445,10 +431,8 @@ export default function AddTransactionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-center gap-3">
-        <Link href="/portfolio" aria-label={t("portfolioAdd.back")}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </Button>
+        <Link href="/portfolio" aria-label={t("portfolioAdd.back")} className={buttonVariants({ variant: "ghost", size: "icon" })}>
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </Link>
         <PageHeader
           eyebrow={t("portfolioAdd.subtitle")}
@@ -467,34 +451,12 @@ export default function AddTransactionPage() {
             </h2>
           </div>
           <div className="space-y-3 p-5">
-            <div
-              role="group"
-              aria-label={t("portfolioAdd.stepType")}
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-            >
-              {(["buy", "sell", "receive", "send"] as const).map((txType) => (
-                <button
-                  key={txType}
-                  type="button"
-                  onClick={() => setType(txType)}
-                  aria-pressed={type === txType}
-                  className={cn(
-                    "h-control-lg border text-body font-semibold",
-                    "transition-colors duration-[120ms] ease-out",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
-                    getTxTypeToggleClass(txType, type === txType)
-                  )}
-                >
-                  {txType === "buy"
-                    ? t("portfolio.buy")
-                    : txType === "sell"
-                      ? t("portfolio.sell")
-                      : txType === "receive"
-                        ? t("portfolio.receive")
-                        : t("portfolio.send")}
-                </button>
-              ))}
-            </div>
+            <TxTypePicker
+              size="lg"
+              value={type}
+              onChange={setType}
+              label={t("portfolioAdd.stepType")}
+            />
             {(type === "receive" || type === "send") && (
               <p className="text-caption text-text-muted">
                 {t("portfolioAdd.receiveSendHint", {
@@ -528,33 +490,74 @@ export default function AddTransactionPage() {
                   />
                   <Input
                     id="coin-search"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={coinListOpen}
+                    aria-controls={coinListOpen ? "coin-search-results" : undefined}
+                    aria-activedescendant={
+                      coinListOpen && filteredCoins.length > 0
+                        ? `coin-option-${coinHighlight}`
+                        : undefined
+                    }
+                    autoComplete="off"
                     placeholder={t("portfolioAdd.searchPlaceholder")}
                     value={searchQuery}
-                    aria-expanded={showDropdown && searchQuery.length >= 1}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
                       setShowDropdown(true);
+                      setCoinHighlight(0);
                     }}
                     onFocus={() => {
                       if (searchQuery.length >= 1) setShowDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setShowDropdown(false);
+                        return;
+                      }
+                      if (!coinListOpen || filteredCoins.length === 0) return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setCoinHighlight((h) => (h + 1) % filteredCoins.length);
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setCoinHighlight(
+                          (h) => (h - 1 + filteredCoins.length) % filteredCoins.length
+                        );
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        const coin = filteredCoins[coinHighlight];
+                        if (coin) void selectCoin(coin);
+                      }
                     }}
                     className="pl-9"
                   />
                 </div>
               </FormField>
-              {showDropdown && searchQuery.length >= 1 && (
-                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-bg-card shadow-overlay">
+              {coinListOpen && (
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-overlay border border-border bg-bg-card shadow-overlay">
                   {filteredCoins.length === 0 ? (
-                    <p className="px-4 py-3 text-body text-text-muted">
+                    <p className="px-4 py-3 text-body text-text-muted" role="status">
                       {t("portfolioAdd.noResults")}
                     </p>
                   ) : (
-                    filteredCoins.map((coin) => (
-                      <button
+                    <ul id="coin-search-results" role="listbox" aria-label={t("portfolioAdd.searchCoinGecko")}>
+                    {filteredCoins.map((coin, coinIndex) => (
+                      <li
                         key={coin.id}
-                        type="button"
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset"
-                        onClick={() => selectCoin(coin)}
+                        id={`coin-option-${coinIndex}`}
+                        role="option"
+                        aria-selected={coinIndex === coinHighlight}
+                        className={cn(
+                          "flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-body hover:bg-bg-hover max-md:min-h-control-lg",
+                          coinIndex === coinHighlight && "bg-bg-hover"
+                        )}
+                        onMouseDown={(e) => {
+                          // Keep focus in the input; select on press.
+                          e.preventDefault();
+                          void selectCoin(coin);
+                        }}
+                        onMouseMove={() => setCoinHighlight(coinIndex)}
                       >
                         <span className="font-semibold text-text-primary">
                           {coin.symbol.toUpperCase()}
@@ -567,8 +570,9 @@ export default function AddTransactionPage() {
                             Binance
                           </StatusPill>
                         )}
-                      </button>
-                    ))
+                      </li>
+                    ))}
+                    </ul>
                   )}
                 </div>
               )}
@@ -798,10 +802,8 @@ export default function AddTransactionPage() {
         )}
 
         <div className="sticky bottom-0 flex gap-2 border-t border-border bg-bg-page py-3">
-          <Link href="/portfolio" className="grow sm:grow-0">
-            <Button type="button" variant="outline" size="lg" className="w-full">
-              {t("portfolioAdd.back")}
-            </Button>
+          <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "lg", className: "grow sm:grow-0" })}>
+            {t("portfolioAdd.back")}
           </Link>
           <Button
             type="submit"

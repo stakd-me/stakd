@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
+import { saveVaultToServer } from "@/lib/services/vault-sync";
 import { computeAutocompleteSuggestions } from "@/lib/services/rebalance-view";
 import type { StrategyContext } from "@/lib/services/rebalance-strategies";
 import type { TargetRow, Suggestion, TokenGroup } from "@/components/rebalance/types";
@@ -115,7 +116,7 @@ export function useRebalanceTargets(
 
   // ── Mutations (vault updates) ─────────────────────────────────
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     setSavePending(true);
     setSaveError(null);
     try {
@@ -155,6 +156,9 @@ export function useRebalanceTargets(
           updatedAt: new Date().toISOString(),
         })),
       }));
+      // Report "saved" only once the server has it, not when the local
+      // store does — a reload right after used to lose the targets.
+      await saveVaultToServer();
       toast(t("rebalance.targetsSaved"), "success");
     } catch (err) {
       const message = err instanceof Error ? err.message : t("rebalance.failedSaveTargets");

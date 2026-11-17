@@ -7,6 +7,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import type { ExecutionStep } from "@/components/rebalance/types";
 import { Play } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface ExecutionPlanSectionProps {
   steps: ExecutionStep[];
@@ -20,6 +21,7 @@ function actionTone(action: string) {
 }
 
 export function ExecutionPlanSection({ steps }: ExecutionPlanSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   // This is the list a person works through while placing orders, often on
@@ -50,14 +52,14 @@ export function ExecutionPlanSection({ steps }: ExecutionPlanSectionProps) {
       key: "amount",
       header: t("rebalance.amount"),
       mobile: "primary",
-      cell: (step) => formatUsd(step.amount),
+      cell: (step) => mask(formatUsd(step.amount)),
     },
     {
       key: "fees",
       header: t("rebalance.feesSlip"),
       mobile: "meta",
       className: "text-text-muted",
-      cell: (step) => formatUsd(step.estimatedSlippage + step.estimatedFee),
+      cell: (step) => mask(formatUsd(step.estimatedSlippage + step.estimatedFee)),
     },
     {
       key: "cash",
@@ -73,7 +75,7 @@ export function ExecutionPlanSection({ steps }: ExecutionPlanSectionProps) {
               : "text-status-negative"
           }
         >
-          {formatUsd(step.runningCashAfter)}
+          {mask(formatUsd(step.runningCashAfter))}
         </span>
       ),
     },

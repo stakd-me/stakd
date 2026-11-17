@@ -1,14 +1,16 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, memo, type ReactNode } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import type { PortfolioTransaction } from "@/components/portfolio/types";
+import { usePrivacy } from "@/hooks/use-privacy";
+import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 
 interface TransactionRange {
   from: number;
@@ -37,7 +39,11 @@ interface TransactionsSectionProps {
   pageSizeOptions: readonly number[];
 }
 
-export function TransactionsSection({
+/**
+ * Memoised: transactions do not depend on live prices, so a price tick that
+ * re-renders the portfolio page must not re-render this list.
+ */
+export const TransactionsSection = memo(function TransactionsSection({
   transactions,
   filteredTransactions,
   paginatedTransactions,
@@ -57,6 +63,7 @@ export function TransactionsSection({
   onOpenImportModal,
   pageSizeOptions,
 }: TransactionsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -69,11 +76,9 @@ export function TransactionsSection({
           <div className="space-y-4 py-6 text-center">
             <p className="text-text-muted">{t("portfolio.noTransactions")}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/portfolio/add">
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("portfolio.addTransaction")}
-                </Button>
+              <Link href="/portfolio/add" className={buttonVariants({ size: "sm" })}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("portfolio.addTransaction")}
               </Link>
               <Button size="sm" variant="outline" onClick={onOpenImportModal}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -108,14 +113,14 @@ export function TransactionsSection({
                       </div>
                       <div className="text-right">
                         <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
+                          className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                             tx.type
                           )}`}
                         >
-                          {tx.type.toUpperCase()}
+                          {t(TX_TYPE_LABEL_KEYS[tx.type])}
                         </span>
-                        <p className="mt-2 font-semibold text-text-primary">
-                          {formatUsd(Number.parseFloat(tx.totalCost))}
+                        <p className="mt-2 font-mono font-semibold tabular text-text-primary">
+                          {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                         </p>
                       </div>
                     </div>
@@ -123,13 +128,13 @@ export function TransactionsSection({
                     <div className="mt-4 grid grid-cols-2 gap-3 text-body">
                       <div>
                         <p className="text-caption text-text-muted">{t("portfolio.qty")}</p>
-                        <p className="font-mono text-text-primary">
-                          {formatCrypto(tx.quantity)}
+                        <p className="font-mono tabular text-text-primary">
+                          {mask(formatCrypto(tx.quantity))}
                         </p>
                       </div>
                       <div>
                         <p className="text-caption text-text-muted">{t("portfolio.price")}</p>
-                        <p className="text-text-primary">
+                        <p className="font-mono tabular text-text-primary">
                           {formatUsdPrice(Number.parseFloat(tx.pricePerUnit))}
                         </p>
                       </div>
@@ -151,9 +156,9 @@ export function TransactionsSection({
                                 tx.settlement.direction === "out"
                                   ? t("portfolio.transactionSettlementOut")
                                   : t("portfolio.transactionSettlementIn"),
-                              amount: formatUsd(
+                              amount: mask(formatUsd(
                                 Number.parseFloat(tx.settlement.totalCost)
-                              ),
+                              )),
                             })}
                           </p>
                         </div>
@@ -231,11 +236,11 @@ export function TransactionsSection({
                           </td>
                           <td className="py-3 pr-4">
                             <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
+                              className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                                 tx.type
                               )}`}
                             >
-                              {tx.type.toUpperCase()}
+                              {t(TX_TYPE_LABEL_KEYS[tx.type])}
                             </span>
                           </td>
                           <th scope="row" className="py-3 pr-4 text-left font-sans text-body">
@@ -249,21 +254,21 @@ export function TransactionsSection({
                                     tx.settlement.direction === "out"
                                       ? t("portfolio.transactionSettlementOut")
                                       : t("portfolio.transactionSettlementIn"),
-                                  amount: formatUsd(
+                                  amount: mask(formatUsd(
                                     Number.parseFloat(tx.settlement.totalCost)
-                                  ),
+                                  )),
                                 })}
                               </p>
                             ) : null}
                           </th>
                           <td className="py-3 pr-4 text-right font-mono">
-                            {formatCrypto(tx.quantity)}
+                            {mask(formatCrypto(tx.quantity))}
                           </td>
                           <td className="py-3 pr-4 text-right">
                             {formatUsdPrice(Number.parseFloat(tx.pricePerUnit))}
                           </td>
                           <td className="py-3 pr-4 text-right">
-                            {formatUsd(Number.parseFloat(tx.totalCost))}
+                            {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                           </td>
                           <td className="py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -377,4 +382,4 @@ export function TransactionsSection({
       </CardContent>
     </Card>
   );
-}
+});

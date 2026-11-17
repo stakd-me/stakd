@@ -40,6 +40,18 @@ function hexToBytes(hex: string): Uint8Array | null {
   return bytes;
 }
 
+/**
+ * Load the vault *before* marking the session authenticated. setAuth is what
+ * renders the app, so doing it first let someone edit an empty store that the
+ * arriving vault then overwrote — and autosave could push that empty base.
+ * apiFetch only needs the access token, so set that alone while loading.
+ */
+async function openVaultThenApp(userId: string, accessToken: string): Promise<void> {
+  useAuthStore.getState().setAccessToken(accessToken);
+  await loadVaultFromServer();
+  useAuthStore.getState().setAuth(userId, accessToken);
+}
+
 export function AuthScreen() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("login");
@@ -119,10 +131,9 @@ export function AuthScreen() {
 
       await storeEncKey(encKey, { persist: rememberMe });
 
-      useAuthStore.getState().setAuth(loginData.userId, loginData.accessToken);
-
-      await loadVaultFromServer();
+      await openVaultThenApp(loginData.userId, loginData.accessToken);
     } catch (err) {
+      useAuthStore.getState().clearAuth();
       setError(err instanceof Error ? err.message : t("auth.loginFailed"));
     } finally {
       setLoading(false);
@@ -190,8 +201,7 @@ export function AuthScreen() {
   const handleDismissWarning = async () => {
     if (pendingAuthRef.current) {
       const { userId, accessToken } = pendingAuthRef.current;
-      useAuthStore.getState().setAuth(userId, accessToken);
-      await loadVaultFromServer();
+      await openVaultThenApp(userId, accessToken);
       pendingAuthRef.current = null;
     }
 

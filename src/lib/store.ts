@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Locale } from "@/i18n";
 import type { VaultData } from "@/lib/crypto/vault-types";
 import { createEmptyVault } from "@/lib/crypto/vault-types";
+import { setNumberLocale } from "@/lib/utils";
 
 // ── Auth Store ───────────────────────────────────────────────────────
 
@@ -36,6 +37,11 @@ interface VaultState {
   vault: VaultData;
   vaultVersion: number;
   isDirty: boolean;
+  /**
+   * Bumped on every local edit. A save records the revision it encrypted and
+   * only marks the vault clean if nothing changed while it was in flight.
+   */
+  revision: number;
   setVault: (vault: VaultData, version: number) => void;
   updateVault: (fn: (prev: VaultData) => VaultData) => void;
   markClean: () => void;
@@ -46,13 +52,19 @@ export const useVaultStore = create<VaultState>((set) => ({
   vault: createEmptyVault(),
   vaultVersion: 0,
   isDirty: false,
+  revision: 0,
   setVault: (vault, vaultVersion) =>
-    set({ vault, vaultVersion, isDirty: false }),
+    set((state) => ({ vault, vaultVersion, isDirty: false, revision: state.revision + 1 })),
   updateVault: (fn) =>
-    set((state) => ({ vault: fn(state.vault), isDirty: true })),
+    set((state) => ({ vault: fn(state.vault), isDirty: true, revision: state.revision + 1 })),
   markClean: () => set({ isDirty: false }),
   clearVault: () =>
-    set({ vault: createEmptyVault(), vaultVersion: 0, isDirty: false }),
+    set((state) => ({
+      vault: createEmptyVault(),
+      vaultVersion: 0,
+      isDirty: false,
+      revision: state.revision + 1,
+    })),
 }));
 
 // ── Preferences Store ────────────────────────────────────────────────
@@ -60,7 +72,10 @@ export const useVaultStore = create<VaultState>((set) => ({
 interface PreferencesState {
   locale: Locale;
   theme: string;
+  /** Mask balances, quantities and P&L amounts on screen (device-local). */
+  hideValues: boolean;
   setLocale: (locale: Locale) => void;
+  setHideValues: (hideValues: boolean) => void;
   setTheme: (theme: string) => void;
   setPreferences: (prefs: Partial<PreferencesState>) => void;
 }
@@ -70,12 +85,28 @@ export const usePreferencesStore = create<PreferencesState>()(
     (set) => ({
       locale: "en",
       theme: "dark",
+      hideValues: false,
       setLocale: (locale) => set({ locale }),
+      setHideValues: (hideValues) => set({ hideValues }),
       setTheme: (theme) => set({ theme }),
       setPreferences: (prefs) => set(prefs),
     }),
     { name: "portfolio-preferences" }
   )
+);
+
+// Figures follow the UI locale. The subscription runs before React
+// re-renders, so components that re-render on a locale change (everything
+// using useTranslation) format with the new locale.
+const NUMBER_LOCALES: Record<Locale, string> = {
+  en: "en-US",
+  vi: "vi-VN",
+  es: "es-ES",
+  de: "de-DE",
+};
+setNumberLocale(NUMBER_LOCALES[usePreferencesStore.getState().locale] ?? "en-US");
+usePreferencesStore.subscribe((state) =>
+  setNumberLocale(NUMBER_LOCALES[state.locale] ?? "en-US")
 );
 
 // ── Backward Compat ──────────────────────────────────────────────────

@@ -33,6 +33,8 @@ interface DataTableProps<T> {
   rowKey: (row: T) => string;
   /** Rendered in place of the table when there are no rows. */
   empty?: ReactNode;
+  /** Per-row ground, e.g. a deviation tint. Applied to the row and the card. */
+  rowClassName?: (row: T) => string | undefined;
   className?: string;
 }
 
@@ -52,6 +54,7 @@ export function DataTable<T>({
   rows,
   rowKey,
   empty,
+  rowClassName,
   className,
 }: DataTableProps<T>) {
   if (rows.length === 0 && empty) {
@@ -89,7 +92,7 @@ export function DataTable<T>({
           {rows.map((row) => (
             <tr
               key={rowKey(row)}
-              className="border-b border-border-faint last:border-b-0"
+              className={cn("border-b border-border-faint last:border-b-0", rowClassName?.(row))}
             >
               {columns.map((column) => {
                 const content = column.cell(row);
@@ -125,7 +128,7 @@ export function DataTable<T>({
         {rows.map((row) => (
           <li
             key={rowKey(row)}
-            className="border-b border-border-faint px-4 py-3 last:border-b-0"
+            className={cn("border-b border-border-faint px-4 py-3 last:border-b-0", rowClassName?.(row))}
           >
             <div className="flex items-baseline gap-2">
               <span className="text-body font-semibold text-text-primary">

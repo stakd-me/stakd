@@ -7,6 +7,7 @@ import { AppBar } from "@/components/layout/app-bar";
 import { AppSplash } from "@/components/layout/app-splash";
 import { BottomTabs } from "@/components/layout/bottom-tabs";
 import { NavRail } from "@/components/layout/nav-rail";
+import { PriceErrorStrip } from "@/components/layout/price-error-strip";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultAutosave } from "@/hooks/use-vault-autosave";
 import { WeeklyAllocationSnapshotRecorder } from "@/hooks/use-weekly-allocation-snapshots";
@@ -88,7 +89,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="flex min-w-0 grow flex-col">
         <AppBar />
         <main id="main" className="grow overflow-auto p-4 md:p-6">
-          <div className="mx-auto w-full max-w-content">{children}</div>
+          <div className="mx-auto w-full max-w-content">
+            <PriceErrorStrip />
+            {children}
+          </div>
         </main>
         <BottomTabs />
       </div>

@@ -20,8 +20,10 @@ interface AllocationData {
 }
 
 import { memo } from "react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 export const AllocationPieChart = memo(function AllocationPieChart({ data }: { data: AllocationData[] }) {
+  const { mask } = usePrivacy();
   const chartTheme = useChartTheme();
 
   return (
@@ -56,7 +58,7 @@ export const AllocationPieChart = memo(function AllocationPieChart({ data }: { d
                 callbacks: {
                   label: (item) => {
                     const entry = data[item.dataIndex];
-                    return `${entry.symbol}: ${formatUsd(entry.value)} (${entry.percent.toFixed(1)}%)`;
+                    return `${entry.symbol}: ${mask(formatUsd(entry.value))} (${entry.percent.toFixed(1)}%)`;
                   },
                 },
               },

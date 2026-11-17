@@ -9,6 +9,7 @@ import { formatCrypto } from "@/lib/utils";
 import { ChevronDown, ChevronUp, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ManualEntry, PortfolioCoinListItem } from "@/components/portfolio/types";
 import { cn } from "@/lib/utils";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface ManualEntriesSectionProps {
   isAllSectionsView: boolean;
@@ -87,6 +88,7 @@ export function ManualEntriesSection({
   onCancelEditEntry,
   onDeleteEntry,
 }: ManualEntriesSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -159,7 +161,7 @@ export function ManualEntriesSection({
                   autoComplete="off"
                 />
                 {showManualSymbolSuggestions && manualSymbolSuggestions.length > 0 ? (
-                  <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-72 overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-72 overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay">
                     {manualSymbolSuggestions.map((coin) => (
                       <button
                         key={coin.id}
@@ -304,14 +306,14 @@ export function ManualEntriesSection({
                         </span>
                         <span className="text-body text-text-muted">{entry.tokenName}</span>
                         <span className="font-mono text-body text-text-secondary">
-                          {formatCrypto(entry.quantity)}
+                          {mask(formatCrypto(entry.quantity))}
                         </span>
                         {entry.note ? (
                           <span className="text-caption italic text-text-muted">
                             {entry.note}
                           </span>
                         ) : null}
-                        <span className="inline-flex rounded-full bg-status-info-soft px-2 py-0.5 text-caption text-status-info">
+                        <span className="inline-flex rounded-sm bg-status-info-soft px-2 py-0.5 text-caption text-status-info">
                           {t("portfolio.manual")}
                         </span>
                       </div>

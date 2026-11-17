@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useVaultStore } from "@/lib/store";
-import { usePrices } from "@/hooks/use-prices";
+import { useRebalanceAlertCount } from "@/hooks/use-rebalance-alert-count";
 import { useTranslation } from "@/hooks/use-translation";
-import { getRebalanceAlertTokenCount } from "@/lib/services/rebalance-alerts";
 import { isNavigationPathActive } from "@/lib/navigation";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 
@@ -18,18 +15,12 @@ import { NAV_ITEMS } from "@/components/layout/nav-items";
 export function BottomTabs() {
   const pathname = usePathname();
   const { t } = useTranslation();
-  const vault = useVaultStore((s) => s.vault);
-  const { priceMap } = usePrices();
-
-  const alertCount = useMemo(
-    () => getRebalanceAlertTokenCount(vault, priceMap),
-    [vault, priceMap]
-  );
+  const alertCount = useRebalanceAlertCount();
 
   return (
     <nav
       aria-label={t("nav.title")}
-      className="sticky bottom-0 z-30 grid grid-cols-5 border-t border-border bg-bg-sidebar md:hidden"
+      className="sticky bottom-0 z-30 grid grid-cols-5 border-t border-border bg-bg-sidebar pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
         const active = isNavigationPathActive(pathname, href);
@@ -56,9 +47,15 @@ export function BottomTabs() {
               {t(labelKey)}
             </span>
             {href === "/rebalance" && alertCount > 0 ? (
-              <span className="absolute right-3 top-2 rounded-sm border border-status-warning-border bg-status-warning-soft px-1 font-mono text-[10px] leading-4 text-status-warning">
-                {alertCount}
-              </span>
+              <>
+                <span
+                  aria-hidden="true"
+                  className="absolute right-3 top-2 rounded-sm border border-status-warning-border bg-status-warning-soft px-1 font-mono text-[10px] leading-4 text-status-warning"
+                >
+                  {alertCount}
+                </span>
+                <span className="sr-only">{t("nav.alertCount", { count: alertCount })}</span>
+              </>
             ) : null}
           </Link>
         );

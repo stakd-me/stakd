@@ -11,6 +11,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { isKnownStablecoinSymbol } from "@/lib/constants/stablecoins";
 import type { TokenCategory, CategoryBreakdown } from "./types";
 import { VALID_CATEGORIES } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface AssetCategoriesSectionProps {
   categories: TokenCategory[];
@@ -31,6 +32,7 @@ export function AssetCategoriesSection({
   onConfirmDelete,
   deletePending,
 }: AssetCategoriesSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [categorySymbol, setCategorySymbol] = useState("");
   const [categoryValue, setCategoryValue] = useState("");
@@ -92,7 +94,7 @@ export function AssetCategoriesSection({
               autoComplete="off"
             />
             {showSymbolSuggestions && filteredSymbolOptions.length > 0 && (
-              <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-36 overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
+              <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-36 overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay">
                 {filteredSymbolOptions.map((symbol) => (
                   <button
                     key={symbol}
@@ -166,7 +168,7 @@ export function AssetCategoriesSection({
                     {cb.percent.toFixed(1)}%
                   </p>
                   <p className="text-caption text-text-muted">
-                    {formatUsd(cb.valueUsd)}
+                    {mask(formatUsd(cb.valueUsd))}
                   </p>
                 </div>
               ))}
@@ -183,7 +185,7 @@ export function AssetCategoriesSection({
               {categories.map((cat) => (
                 <span
                   key={cat.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-sm bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                 >
                   {cat.tokenSymbol}: {cat.category}
                   <button
@@ -192,11 +194,11 @@ export function AssetCategoriesSection({
                     onClick={() =>
                       onConfirmDelete(
                         cat.tokenSymbol,
-                        `category for ${cat.tokenSymbol}`
+                        cat.tokenSymbol
                       )
                     }
                     disabled={deletePending}
-                    aria-label={`Remove category for ${cat.tokenSymbol}`}
+                    aria-label={t("rebalance.removeCategoryLabel", { symbol: cat.tokenSymbol })}
                   >
                     x
                   </button>

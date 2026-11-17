@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { StatusPill } from "@/components/ui/status-pill";
-import { SummaryStrip } from "@/components/ui/summary-strip";
+import { Metric, MetricBand } from "@/components/ui/metric";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import dynamic from "next/dynamic";
 
@@ -30,6 +31,7 @@ import { cn, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Download } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 const PERIOD_OPTIONS: ReportPeriod[] = [
   "weekly",
@@ -43,6 +45,18 @@ type ReportsSection = "overview" | "activity" | "risk" | "holdings";
 
 function getSignedPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+interface SummaryItem {
+  key: string;
+  label: ReactNode;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: "positive" | "negative";
+}
+
+function plTone(value: number): string {
+  return value >= 0 ? "text-status-positive" : "text-status-negative";
 }
 
 function getSignedCurrency(value: number): string {
@@ -150,6 +164,7 @@ function toCsv(report: PortfolioPeriodReport): string {
 }
 
 export default function ReportsPage() {
+  const { mask } = usePrivacy();
   const sectionsBaseId = "reports-sections";
   const [period, setPeriod] = useState<ReportPeriod>("monthly");
   const [activeSection, setActiveSection] = useState<ReportsSection>("overview");
@@ -243,9 +258,9 @@ export default function ReportsPage() {
       count: reportTimeline.length,
       start: new Date(firstPoint.date).toLocaleDateString(),
       end: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.value),
+      latest: mask(formatUsd(lastPoint.value)),
     });
-  }, [reportTimeline, t]);
+  }, [reportTimeline, t, mask]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -331,20 +346,21 @@ export default function ReportsPage() {
               }
             />
             <CardContent className="space-y-4">
-              <SummaryStrip
-                items={[
+              <MetricBand columns={4}>
+                {(
+                  [
                   {
                     key: "end-value",
                     label: t("reports.endValue"),
-                    value: formatValue(report.summary.endValueUsd),
-                    hint: `${t("reports.startValue")}: ${formatValue(report.summary.startValueUsd)}`,
+                    value: mask(formatValue(report.summary.endValueUsd)),
+                    hint: `${t("reports.startValue")}: ${mask(formatValue(report.summary.startValueUsd))}`,
                   },
                   {
                     key: "period-pl",
                     label: t("reports.periodPL"),
-                    value: getSignedCurrency(report.summary.pnlUsd),
+                    value: mask(getSignedCurrency(report.summary.pnlUsd)),
                     hint: showPreviousComparison
-                      ? `${t("reports.previousPnlDelta")}: ${getSignedCurrency(pnlDelta)}`
+                      ? `${t("reports.previousPnlDelta")}: ${mask(getSignedCurrency(pnlDelta))}`
                       : undefined,
                     tone: report.summary.pnlUsd >= 0 ? "positive" : "negative",
                   },
@@ -369,46 +385,64 @@ export default function ReportsPage() {
                     hint: `${t("reports.volatility")}: ${report.summary.annualizedVolatilityPercent.toFixed(2)}%`,
                     tone: "negative",
                   },
-                ]}
-                size="lg"
-                columnsClassName="md:grid-cols-4"
-              />
+                ] as SummaryItem[]
+                ).map((item) => (
+                  <Metric
+                    key={item.key}
+                    label={item.label}
+                    value={item.value}
+                    sub={item.hint}
+                    tone={item.tone}
+                    size="lg"
+                  />
+                ))}
+              </MetricBand>
 
-              <SummaryStrip
-                items={[
+              <MetricBand columns={4}>
+                {(
+                  [
                   {
                     key: "capital-flow",
                     label: t("reports.capitalNetFlow"),
-                    value: getSignedCurrency(report.summary.capitalNetFlowUsd),
+                    value: mask(getSignedCurrency(report.summary.capitalNetFlowUsd)),
                   },
                   {
                     key: "external-flow",
                     label: t("reports.externalNetFlow"),
-                    value: getSignedCurrency(report.summary.externalNetFlowUsd),
+                    value: mask(getSignedCurrency(report.summary.externalNetFlowUsd)),
                   },
                   {
                     key: "turnover",
                     label: t("reports.tradingTurnover"),
-                    value: formatValue(report.summary.tradingTurnoverUsd),
+                    value: mask(formatValue(report.summary.tradingTurnoverUsd)),
                   },
                   {
                     key: "fees",
                     label: t("reports.totalFees"),
-                    value: formatUsd(report.activity.totalFeesUsd),
+                    value: mask(formatUsd(report.activity.totalFeesUsd)),
                   },
-                ]}
-                columnsClassName="md:grid-cols-4"
-              />
+                ] as SummaryItem[]
+                ).map((item) => (
+                  <Metric
+                    key={item.key}
+                    label={item.label}
+                    value={item.value}
+                    sub={item.hint}
+                    tone={item.tone}
+                    size="md"
+                  />
+                ))}
+              </MetricBand>
 
               <div className={`rounded-md border px-4 py-3 text-body ${reconciliationClass}`}>
                 <p className="font-medium">{t("reports.reconciliation")}</p>
                 <p className="mt-1">
-                  {formatValue(report.summary.startValueUsd)} + {getSignedCurrency(report.summary.capitalNetFlowUsd)} +{" "}
-                  {getSignedCurrency(report.summary.pnlUsd)} = {formatValue(reconciledEnd)}
+                  {mask(formatValue(report.summary.startValueUsd))} + {mask(getSignedCurrency(report.summary.capitalNetFlowUsd))} +{" "}
+                  {mask(getSignedCurrency(report.summary.pnlUsd))} = {mask(formatValue(reconciledEnd))}
                 </p>
                 <p className="mt-1 text-caption">
-                  {t("reports.reportedEnd")}: {formatValue(report.summary.endValueUsd)} · {t("reports.gap")}:{" "}
-                  {getSignedCurrency(report.summary.reconciliationGapUsd)}
+                  {t("reports.reportedEnd")}: {mask(formatValue(report.summary.endValueUsd))} · {t("reports.gap")}:{" "}
+                  {mask(getSignedCurrency(report.summary.reconciliationGapUsd))}
                 </p>
               </div>
 
@@ -444,10 +478,8 @@ export default function ReportsPage() {
                   title={t("reports.timelineEmpty")}
                   description={t("reports.timelineEmptyDesc")}
                   action={
-                    <Link href="/portfolio">
-                      <Button size="sm" variant="outline">
-                        {t("portfolio.title")}
-                      </Button>
+                    <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("portfolio.title")}
                     </Link>
                   }
                   className="py-8"
@@ -471,8 +503,9 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.activity")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <SummaryStrip
-                  items={[
+                <MetricBand columns={2}>
+                  {(
+                    [
                     {
                       key: "transactions",
                       label: t("reports.transactions"),
@@ -481,7 +514,7 @@ export default function ReportsPage() {
                     {
                       key: "fees",
                       label: t("reports.totalFees"),
-                      value: formatUsd(report.activity.totalFeesUsd),
+                      value: mask(formatUsd(report.activity.totalFeesUsd)),
                     },
                     {
                       key: "estimated",
@@ -496,29 +529,35 @@ export default function ReportsPage() {
                     {
                       key: "buy",
                       label: t("reports.buyVolume"),
-                      value: formatUsd(report.activity.buyVolumeUsd),
-                      tone: "positive",
+                      value: mask(formatUsd(report.activity.buyVolumeUsd)),
                     },
                     {
                       key: "sell",
                       label: t("reports.sellVolume"),
-                      value: formatUsd(report.activity.sellVolumeUsd),
-                      tone: "negative",
+                      value: mask(formatUsd(report.activity.sellVolumeUsd)),
                     },
                     {
                       key: "receive",
                       label: t("reports.receiveVolume"),
-                      value: formatUsd(report.activity.receiveVolumeUsd),
+                      value: mask(formatUsd(report.activity.receiveVolumeUsd)),
                     },
                     {
                       key: "send",
                       label: t("reports.sendVolume"),
-                      value: formatUsd(report.activity.sendVolumeUsd),
+                      value: mask(formatUsd(report.activity.sendVolumeUsd)),
                     },
-                  ]}
-                  columnsClassName="sm:grid-cols-2"
-                  className="gap-3"
-                />
+                  ] as SummaryItem[]
+                  ).map((item) => (
+                    <Metric
+                      key={item.key}
+                      label={item.label}
+                      value={item.value}
+                      sub={item.hint}
+                      tone={item.tone}
+                      size="md"
+                    />
+                  ))}
+                </MetricBand>
               </CardContent>
             </Card>
           )}
@@ -529,8 +568,9 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.riskSnapshot")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <SummaryStrip
-                  items={[
+                <MetricBand columns={2}>
+                  {(
+                    [
                     {
                       key: "active-assets",
                       label: t("reports.activeAssets"),
@@ -553,10 +593,18 @@ export default function ReportsPage() {
                       label: t("reports.diversificationScore"),
                       value: report.risk.diversificationScore.toFixed(2),
                     },
-                  ]}
-                  columnsClassName="sm:grid-cols-2"
-                  className="gap-3"
-                />
+                  ] as SummaryItem[]
+                  ).map((item) => (
+                    <Metric
+                      key={item.key}
+                      label={item.label}
+                      value={item.value}
+                      sub={item.hint}
+                      tone={item.tone}
+                      size="md"
+                    />
+                  ))}
+                </MetricBand>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
                     <p className="text-text-muted">{t("reports.bestPerformer")}</p>
@@ -564,13 +612,13 @@ export default function ReportsPage() {
                       {report.bestPerformer
                         ? `${report.bestPerformer.symbol} ${getSignedPercent(
                             report.bestPerformer.returnPercent
-                          )} (${getSignedCurrency(report.bestPerformer.pnlUsd)})`
+                          )} (${mask(getSignedCurrency(report.bestPerformer.pnlUsd))})`
                         : t("reports.notAvailable")}
                     </p>
                     {report.bestPerformer ? (
                       <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.bestPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
-                        {getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
+                        {mask(getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd))} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.bestPerformer.annualizedReturnPercent)}
                       </p>
                     ) : null}
@@ -581,13 +629,13 @@ export default function ReportsPage() {
                       {report.worstPerformer
                         ? `${report.worstPerformer.symbol} ${getSignedPercent(
                             report.worstPerformer.returnPercent
-                          )} (${getSignedCurrency(report.worstPerformer.pnlUsd)})`
+                          )} (${mask(getSignedCurrency(report.worstPerformer.pnlUsd))})`
                         : t("reports.notAvailable")}
                     </p>
                     {report.worstPerformer ? (
                       <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.worstPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
-                        {getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
+                        {mask(getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd))} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.worstPerformer.annualizedReturnPercent)}
                       </p>
                     ) : null}
@@ -604,10 +652,8 @@ export default function ReportsPage() {
           <CardSectionHeader
             title={t("reports.topHoldings")}
             actions={
-              <Link href="/portfolio">
-                <Button size="sm" variant="outline">
-                  {t("portfolio.title")}
-                </Button>
+              <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {t("portfolio.title")}
               </Link>
             }
           />
@@ -617,149 +663,75 @@ export default function ReportsPage() {
                 title={t("reports.noActiveHoldings")}
                 description={t("reports.noActiveHoldingsDesc")}
                 action={
-                  <Link href="/portfolio">
-                    <Button size="sm" variant="outline">
-                      {t("portfolio.title")}
-                    </Button>
+                  <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("portfolio.title")}
                   </Link>
                 }
                 className="py-8"
               />
             ) : (
-              <>
-                <div className="space-y-3 md:hidden">
-                  {report.topHoldings.map((holding) => (
-                    <div
-                      key={holding.symbol}
-                      className="rounded-md border border-border-subtle bg-bg-card p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-body font-semibold text-text-primary">
-                            {holding.symbol}
-                          </p>
-                          <p className="font-mono text-num-sm tabular text-text-muted">
-                            {t("reports.held")}: {holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-num-md tabular text-text-primary">
-                            {formatUsd(holding.valueUsd)}
-                          </p>
-                          <p className="font-mono text-num-sm tabular text-text-muted">
-                            {holding.percent.toFixed(2)}%
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3 font-mono text-num-sm tabular">
-                        <div>
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.unrealizedPL")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPLUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedCurrency(holding.unrealizedPLUsd)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.return")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPLPercent >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedPercent(holding.unrealizedPLPercent)}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.unrealizedPLPerDay")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPnlPerHeldDayUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="min-w-full text-left text-body">
-                    <caption className="sr-only">{t("reports.topHoldings")}</caption>
-                    <thead>
-                      <tr className="border-b border-border text-text-muted">
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.token")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.value")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.weight")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.held")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPL")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPLPerDay")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.return")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {report.topHoldings.map((holding) => (
-                        <tr
-                          key={holding.symbol}
-                          className="border-b border-border-faint font-mono text-num-md tabular text-text-secondary"
-                        >
-                          <th scope="row" className="px-2 py-2 text-left font-sans text-body font-semibold text-text-primary">{holding.symbol}</th>
-                          <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
-                          <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
-                          <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
-                          <td
-                            className={cn(
-                              "px-2 py-2",
-                              holding.unrealizedPLUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedCurrency(holding.unrealizedPLUsd)}
-                          </td>
-                          <td
-                            className={cn(
-                              "px-2 py-2",
-                              holding.unrealizedPnlPerHeldDayUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
-                          </td>
-                          <td
-                            className={cn(
-                              "px-2 py-2",
-                              holding.unrealizedPLPercent >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedPercent(holding.unrealizedPLPercent)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+                <DataTable
+                  caption={t("reports.topHoldings")}
+                  rows={report.topHoldings}
+                  rowKey={(holding) => holding.symbol}
+                  columns={[
+                    {
+                      key: "token",
+                      header: t("reports.token"),
+                      align: "left",
+                      mobile: "identity",
+                      cell: (holding) => holding.symbol,
+                    },
+                    {
+                      key: "value",
+                      header: t("reports.value"),
+                      mobile: "primary",
+                      cell: (holding) => mask(formatUsd(holding.valueUsd)),
+                    },
+                    {
+                      key: "weight",
+                      header: t("reports.weight"),
+                      mobile: "meta",
+                      cell: (holding) => `${holding.percent.toFixed(2)}%`,
+                    },
+                    {
+                      key: "held",
+                      header: t("reports.held"),
+                      mobile: "hidden",
+                      cell: (holding) => (holding.heldDays > 0 ? `${holding.heldDays}d` : "-"),
+                    },
+                    {
+                      key: "pl",
+                      header: t("reports.unrealizedPL"),
+                      mobile: "meta",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPLUsd)}>
+                          {mask(getSignedCurrency(holding.unrealizedPLUsd))}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "plPerDay",
+                      header: t("reports.unrealizedPLPerDay"),
+                      mobile: "hidden",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPnlPerHeldDayUsd)}>
+                          {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "return",
+                      header: t("reports.return"),
+                      mobile: "meta",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPLPercent)}>
+                          {getSignedPercent(holding.unrealizedPLPercent)}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
             )}
           </CardContent>
         </Card>

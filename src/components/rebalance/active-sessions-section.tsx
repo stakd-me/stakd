@@ -10,6 +10,7 @@ import type {
   RecordedTradeDraft,
 } from "@/components/rebalance/types";
 import { CheckCircle2, Play, XCircle } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface SessionCompletionPayload {
   id: string | number;
@@ -49,6 +50,7 @@ export function ActiveSessionsSection({
   onSaveRecordedTrades,
   onCancelRecording,
 }: ActiveSessionsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -87,9 +89,9 @@ export function ActiveSessionsSection({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 h-2 w-full rounded-full bg-bg-muted">
+              <div className="mb-4 h-2 w-full bg-bg-muted">
                 <div
-                  className="h-2 rounded-full bg-status-info transition-all"
+                  className="h-2 bg-status-info transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -104,7 +106,7 @@ export function ActiveSessionsSection({
                         type="button"
                         onClick={() => onToggleTrade(session.id, trade.id)}
                         className="text-text-muted hover:text-text-primary"
-                        aria-label={`Toggle ${trade.tokenSymbol} trade as ${trade.status === "completed" ? "pending" : "completed"}`}
+                        aria-label={t(trade.status === "completed" ? "rebalance.markTradePending" : "rebalance.markTradeCompleted", { symbol: trade.tokenSymbol })}
                       >
                         {trade.status === "completed" ? (
                           <CheckCircle2 className="h-5 w-5 text-status-positive" />
@@ -123,7 +125,7 @@ export function ActiveSessionsSection({
                       </span>
                     </div>
                     <span className="text-body text-text-muted">
-                      {formatUsd(trade.amountUsd)}
+                      {mask(formatUsd(trade.amountUsd))}
                     </span>
                   </div>
                 ))}
@@ -192,7 +194,7 @@ export function ActiveSessionsSection({
                         {trade.tokenSymbol}
                       </span>
                       <span className="text-body text-text-muted">
-                        {formatUsd(trade.amountUsd)}
+                        {mask(formatUsd(trade.amountUsd))}
                       </span>
                       <Input
                         type="number"

@@ -13,6 +13,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
 import { usePrices } from "@/hooks/use-prices";
@@ -35,6 +36,35 @@ export function WhatIfCalculatorSection({
   const [whatIfResults, setWhatIfResults] = useState<WhatIfResult[] | null>(
     null
   );
+
+  const whatIfColumns: DataTableColumn<WhatIfResult>[] = [
+    {
+      key: "token",
+      header: t("rebalance.tokenCol"),
+      align: "left",
+      mobile: "identity",
+      cell: (r) => r.tokenSymbol,
+    },
+    {
+      key: "current",
+      header: t("rebalance.currentPercent"),
+      mobile: "meta",
+      cell: (r) => `${r.currentPercent.toFixed(1)}%`,
+    },
+    {
+      key: "simulated",
+      header: t("rebalance.simulatedPercent"),
+      mobile: "meta",
+      cell: (r) => `${r.simulatedPercent.toFixed(1)}%`,
+    },
+    {
+      // A weight shift, not money up or down, so it stays untinted.
+      key: "change",
+      header: t("rebalance.change"),
+      mobile: "primary",
+      cell: (r) => `${r.change >= 0 ? "+" : ""}${r.change.toFixed(1)}%`,
+    },
+  ];
   const [whatIfLoading, setWhatIfLoading] = useState(false);
 
   const vault = useVaultStore((s) => s.vault);
@@ -169,7 +199,7 @@ export function WhatIfCalculatorSection({
                 />
                 <Input
                   type="number"
-                  placeholder="Amount USD"
+                  placeholder={t("rebalance.amountUsdPlaceholder")}
                   value={trade.amountUsd}
                   onChange={(e) => {
                     const updated = [...whatIfTrades];
@@ -227,43 +257,13 @@ export function WhatIfCalculatorSection({
             )}
 
             {whatIfResults && (
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-body">
-                  <caption className="sr-only">{t("rebalance.whatIfCalc")}</caption>
-                  <thead>
-                    <tr className="border-b border-border text-left text-text-muted">
-                      <th scope="col" className="pb-2 pr-4">{t("rebalance.tokenCol")}</th>
-                      <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                      <th scope="col" className="pb-2 pr-4 text-right">{t("rebalance.simulatedPercent")}</th>
-                      <th scope="col" className="pb-2 text-right">{t("rebalance.change")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="font-mono text-num-md tabular">
-                    {whatIfResults.map((r) => (
-                      <tr
-                        key={r.tokenSymbol}
-                        className="border-b border-border-subtle"
-                      >
-                        <th scope="row" className="py-2 pr-4 text-left font-sans text-body font-semibold text-text-primary">
-                          {r.tokenSymbol}
-                        </th>
-                        <td className="py-2 pr-4 text-right">
-                          {r.currentPercent.toFixed(1)}%
-                        </td>
-                        <td className="py-2 pr-4 text-right">
-                          {r.simulatedPercent.toFixed(1)}%
-                        </td>
-                        <td
-                          className={`py-2 text-right font-medium ${r.change > 0 ? "text-status-positive" : r.change < 0 ? "text-status-negative" : "text-text-muted"}`}
-                        >
-                          {r.change >= 0 ? "+" : ""}
-                          {r.change.toFixed(1)}%
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                className="mt-4"
+                caption={t("rebalance.whatIfCalc")}
+                columns={whatIfColumns}
+                rows={whatIfResults}
+                rowKey={(r) => r.tokenSymbol}
+              />
             )}
           </div>
         </CardContent>

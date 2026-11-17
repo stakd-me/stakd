@@ -2,13 +2,14 @@
 
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn, formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Copy, Minus, Package, Pencil, Plus } from "lucide-react";
 import { PriceFlash } from "@/components/ui/price-flash";
 import type { BreakdownItem } from "@/components/portfolio/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 type HoldingActionType = "buy" | "sell";
 
@@ -56,6 +57,7 @@ export function HoldingsSection({
   onEditHolding,
   onOpenManualSection,
 }: HoldingsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -68,11 +70,9 @@ export function HoldingsSection({
           <div className="space-y-4 py-6 text-center">
             <p className="text-text-muted">{t("portfolio.noHoldings")}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/portfolio/add">
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("portfolio.addTransaction")}
-                </Button>
+              <Link href="/portfolio/add" className={buttonVariants({ size: "sm" })}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("portfolio.addTransaction")}
               </Link>
               <Button size="sm" variant="outline" onClick={onOpenManualSection}>
                 <Package className="mr-2 h-4 w-4" />
@@ -107,10 +107,10 @@ export function HoldingsSection({
                       </div>
                       <div className="text-right">
                         <p className="font-mono text-num-md tabular text-text-primary">
-                          <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
+                          <PriceFlash value={item.value}>{mask(formatUsd(item.value))}</PriceFlash>
                         </p>
                         <p className="font-mono text-num-sm tabular text-text-muted">
-                          {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
+                          {mask(formatCrypto(item.quantity))} · {item.percent.toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -142,7 +142,7 @@ export function HoldingsSection({
                           )}
                         >
                           {item.unrealizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.unrealizedPL)}
+                          {mask(formatUsd(item.unrealizedPL))}
                           <span className="ml-1 text-caption">
                             ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                             {item.unrealizedPLPercent.toFixed(1)}%)
@@ -161,13 +161,13 @@ export function HoldingsSection({
                           )}
                         >
                           {item.realizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.realizedPL)}
+                          {mask(formatUsd(item.realizedPL))}
                         </p>
                       </div>
                       <div>
                         <p className="text-meta uppercase text-text-muted">{t("portfolio.fees")}</p>
-                        <p className="text-status-caution">
-                          {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
+                        <p className="text-text-primary">
+                          {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                         </p>
                       </div>
                       <div>
@@ -181,7 +181,6 @@ export function HoldingsSection({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-status-positive hover:bg-status-positive-soft hover:text-status-positive"
                         onClick={() =>
                           isExpanded && txType === "buy"
                             ? onCloseInlineForm()
@@ -194,7 +193,6 @@ export function HoldingsSection({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-status-negative hover:bg-status-negative-soft hover:text-status-negative"
                         onClick={() =>
                           isExpanded && txType === "sell"
                             ? onCloseInlineForm()
@@ -287,10 +285,10 @@ export function HoldingsSection({
                           {/* Holdings: value + amount + allocation */}
                           <td className="py-3 pr-4 text-right">
                             <div className="text-text-primary">
-                              <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
+                              <PriceFlash value={item.value}>{mask(formatUsd(item.value))}</PriceFlash>
                             </div>
                             <div className="text-num-sm text-text-muted">
-                              {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
+                              {mask(formatCrypto(item.quantity))} · {item.percent.toFixed(1)}%
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right">
@@ -305,7 +303,7 @@ export function HoldingsSection({
                             )}
                           >
                             {item.unrealizedPL >= 0 ? "+" : ""}
-                            {formatUsd(item.unrealizedPL)}
+                            {mask(formatUsd(item.unrealizedPL))}
                             <span className="ml-1 text-caption">
                               ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                               {item.unrealizedPLPercent.toFixed(1)}%)
@@ -320,10 +318,10 @@ export function HoldingsSection({
                             )}
                           >
                             {item.realizedPL >= 0 ? "+" : ""}
-                            {formatUsd(item.realizedPL)}
+                            {mask(formatUsd(item.realizedPL))}
                           </td>
-                          <td className="py-3 pr-4 text-right text-status-caution">
-                            {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
+                          <td className="py-3 pr-4 text-right">
+                            {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                           </td>
                           <td className="py-3 pr-4 text-center">
                             {getHeldDurationBadge(item.firstBuyDate)}
@@ -333,7 +331,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-status-positive hover:bg-status-positive-soft hover:text-status-positive"
+                                className="h-8 w-8"
                                 onClick={() =>
                                   isExpanded && txType === "buy"
                                     ? onCloseInlineForm()
@@ -347,7 +345,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-status-negative hover:bg-status-negative-soft hover:text-status-negative"
+                                className="h-8 w-8"
                                 onClick={() =>
                                   isExpanded && txType === "sell"
                                     ? onCloseInlineForm()

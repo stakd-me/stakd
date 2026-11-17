@@ -6,6 +6,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import type { RebalanceLog } from "@/components/rebalance/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface RebalanceHistorySectionProps {
   logs: RebalanceLog[];
@@ -14,6 +15,7 @@ interface RebalanceHistorySectionProps {
 export function RebalanceHistorySection({
   logs,
 }: RebalanceHistorySectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
@@ -33,7 +35,7 @@ export function RebalanceHistorySection({
           <Clock className="h-5 w-5" />
           <CardTitle>{t("rebalance.history")}</CardTitle>
           <span className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
+            <span className="rounded-sm bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
               {logs.length}
             </span>
             {historyExpanded ? (
@@ -57,14 +59,14 @@ export function RebalanceHistorySection({
                     {new Date(log.loggedAt).toLocaleString()}
                   </span>
                   <span className="font-medium text-text-primary">
-                    {formatUsd(log.totalValueUsd)}
+                    {mask(formatUsd(log.totalValueUsd))}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {log.deviationsSnapshot.map((deviation) => (
                     <span
                       key={deviation.tokenSymbol}
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-semibold ${
+                      className={`inline-flex items-center rounded-sm px-2 py-0.5 text-caption font-semibold ${
                         Math.abs(deviation.deviation) > 5
                           ? "bg-status-negative-soft text-status-negative"
                           : Math.abs(deviation.deviation) > 1

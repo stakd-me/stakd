@@ -8,6 +8,7 @@ import { Plus, Trash2, Layers, Pencil, RefreshCw } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TokenGroup } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface TokenGroupsSectionProps {
   groups: TokenGroup[];
@@ -32,6 +33,7 @@ export function TokenGroupsSection({
   onConfirmDelete,
   deletePending,
 }: TokenGroupsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | number | null>(null);
@@ -200,13 +202,13 @@ export function TokenGroupsSection({
                     <span className="font-medium text-text-primary">{group.name}</span>
                     {group.totalValueUsd != null && (
                       <span className="ml-3 text-body text-text-muted">
-                        {formatUsd(group.totalValueUsd)}
+                        {mask(formatUsd(group.totalValueUsd))}
                       </span>
                     )}
                     {group.tracking && (
                       <>
                         <span
-                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getGroupTrackingClass(group.tracking.status)}`}
+                          className={`ml-2 inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getGroupTrackingClass(group.tracking.status)}`}
                         >
                           {getGroupTrackingLabel(group.tracking.status)}
                         </span>
@@ -226,7 +228,7 @@ export function TokenGroupsSection({
                       className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => onTrackGroup(group.id)}
                       disabled={trackingPending || isSubmitting}
-                      aria-label={`Track group ${group.name}`}
+                      aria-label={t("rebalance.trackGroupLabel", { name: group.name })}
                       title={t("rebalance.trackGroup")}
                     >
                       <RefreshCw
@@ -239,7 +241,7 @@ export function TokenGroupsSection({
                       className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => openEditForm(group)}
                       disabled={isSubmitting}
-                      aria-label={`Edit group ${group.name}`}
+                      aria-label={t("rebalance.editGroupLabel", { name: group.name })}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -248,10 +250,10 @@ export function TokenGroupsSection({
                       size="icon"
                       className="h-8 w-8 text-text-muted hover:text-status-negative"
                       onClick={() =>
-                        onConfirmDelete(group.id, `group "${group.name}"`)
+                        onConfirmDelete(group.id, group.name)
                       }
                       disabled={deletePending}
-                      aria-label={`Delete group ${group.name}`}
+                      aria-label={t("rebalance.deleteGroupLabel", { name: group.name })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -262,18 +264,18 @@ export function TokenGroupsSection({
                     {group.members.map((m) => (
                       <span
                         key={`${m.symbol}-${m.coingeckoId ?? "none"}`}
-                        className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
+                        className="inline-flex items-center gap-1 rounded-sm bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                       >
                         {m.symbol}
                         <span className="text-text-muted">
                           {m.percentInGroup.toFixed(1)}%
                         </span>
                         <span className="text-text-muted">
-                          {formatUsd(m.valueUsd)}
+                          {mask(formatUsd(m.valueUsd))}
                         </span>
                         {m.trackingStatus && (
                           <span
-                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${getMemberTrackingClass(m.trackingStatus)}`}
+                            className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${getMemberTrackingClass(m.trackingStatus)}`}
                           >
                             {getMemberTrackingLabel(m.trackingStatus)}
                           </span>

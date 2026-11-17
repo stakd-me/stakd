@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useId } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MenuButton } from "@/components/ui/menu-button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Plus,
   Trash2,
@@ -15,7 +17,7 @@ import {
   Layers,
   ArrowUpDown,
 } from "lucide-react";
-import { formatUsd } from "@/lib/utils";
+import { cn, formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import type {
@@ -25,6 +27,7 @@ import type {
   TokenGroup,
 } from "./types";
 import { TEMPLATES } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface TargetAllocationSectionProps {
   targets: TargetRow[];
@@ -50,6 +53,13 @@ interface TargetAllocationSectionProps {
 
 type DeviationSortMode = "absolute" | "signed";
 
+let rowKeySeed = 0;
+/** A React key for a target row; only ever compared, never stored. */
+function newRowKey(): number {
+  rowKeySeed += 1;
+  return rowKeySeed;
+}
+
 export function TargetAllocationSection({
   targets,
   setTargets,
@@ -71,34 +81,39 @@ export function TargetAllocationSection({
   saveErrorMessage,
   onAutoGenerate,
 }: TargetAllocationSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
-  const [showAutoGenMenu, setShowAutoGenMenu] = useState(false);
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
-  const [showSortMenu, setShowSortMenu] = useState(false);
   const [sortMode, setSortMode] = useState<DeviationSortMode>("absolute");
+  const [pendingReplace, setPendingReplace] = useState<(() => void) | null>(null);
+  const [highlighted, setHighlighted] = useState(0);
   const autocompleteRef = useRef<HTMLDivElement>(null);
-  const autoGenRef = useRef<HTMLDivElement>(null);
-  const templateRef = useRef<HTMLDivElement>(null);
-  const sortRef = useRef<HTMLDivElement>(null);
+  const listboxBaseId = useId();
+
+  // Rows have no id of their own, and keying by index made a removed row's
+  // input (focus, open suggestions) jump to its neighbour. Keep a parallel
+  // list of keys that follows adds, removes and sorts.
+  const [rowKeys, setRowKeys] = useState<number[]>(() => targets.map(newRowKey));
+  if (rowKeys.length !== targets.length) {
+    // Replaced from outside (template, auto-generate, load): new identities.
+    setRowKeys(targets.map(newRowKey));
+  }
 
   useClickOutside(
     autocompleteRef,
     useCallback(() => setActiveAutocompleteIndex(null), [setActiveAutocompleteIndex])
   );
-  useClickOutside(
-    autoGenRef,
-    useCallback(() => setShowAutoGenMenu(false), [])
-  );
-  useClickOutside(
-    templateRef,
-    useCallback(() => setShowTemplateMenu(false), [])
-  );
-  useClickOutside(
-    sortRef,
-    useCallback(() => setShowSortMenu(false), [])
-  );
+
+  /** Run a whole-list replacement, asking first if it would discard targets. */
+  const confirmReplace = (apply: () => void) => {
+    if (targets.some((row) => row.tokenSymbol.trim() || row.targetPercent > 0)) {
+      setPendingReplace(() => apply);
+    } else {
+      apply();
+    }
+  };
 
   const addRow = () => {
+    setRowKeys([...rowKeys, newRowKey()]);
     setTargets([
       ...targets,
       { tokenSymbol: "", targetPercent: 0, coingeckoId: "" },
@@ -106,6 +121,8 @@ export function TargetAllocationSection({
   };
 
   const removeRow = (index: number) => {
+    setActiveAutocompleteIndex(null);
+    setRowKeys(rowKeys.filter((_, i) => i !== index));
     setTargets(targets.filter((_, i) => i !== index));
   };
 
@@ -125,6 +142,7 @@ export function TargetAllocationSection({
     if (field === "tokenSymbol") {
       setActiveAutocompleteIndex(index);
       setAutocompleteQuery(String(value));
+      setHighlighted(0);
     }
   };
 
@@ -144,23 +162,24 @@ export function TargetAllocationSection({
   );
 
   const handleAutoGenerate = (mode: "equal" | "market-cap") => {
-    setShowAutoGenMenu(false);
-    onAutoGenerate(mode);
+    confirmReplace(() => onAutoGenerate(mode));
   };
 
   const handleApplyTemplate = (template: (typeof TEMPLATES)[number]) => {
-    setShowTemplateMenu(false);
-    if (template.allocations === "auto-equal") {
-      onAutoGenerate("equal");
-      return;
-    }
-    setTargets(
-      template.allocations.map((a) => ({
-        tokenSymbol: a.symbol,
-        targetPercent: a.percent,
-        coingeckoId: "",
-      }))
-    );
+    const { allocations } = template;
+    confirmReplace(() => {
+      if (allocations === "auto-equal") {
+        onAutoGenerate("equal");
+        return;
+      }
+      setTargets(
+        allocations.map((a) => ({
+          tokenSymbol: a.symbol,
+          targetPercent: a.percent,
+          coingeckoId: "",
+        }))
+      );
+    });
   };
 
   const sortTargetsByDeviation = (mode: DeviationSortMode) => {
@@ -189,11 +208,11 @@ export function TargetAllocationSection({
         if (scoreB !== scoreA) return scoreB - scoreA;
         return a.idx - b.idx;
       })
-      .map((item) => item.row);
+      ;
 
     setSortMode(mode);
-    setShowSortMenu(false);
-    setTargets(sorted);
+    setRowKeys(sorted.map((item) => rowKeys[item.idx]));
+    setTargets(sorted.map((item) => item.row));
   };
 
   const hasValidTargets = targets.some(
@@ -241,7 +260,7 @@ export function TargetAllocationSection({
           >
             <CardTitle>{t("rebalance.targetAllocation")}</CardTitle>
             {!expanded && targets.length > 0 && (
-              <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
+              <span className="rounded-sm bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
                 {targets.length}
               </span>
             )}
@@ -263,7 +282,7 @@ export function TargetAllocationSection({
               ` — ${t("rebalance.unallocated", { percent: (100 - totalPercent).toFixed(1) })}`}
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-muted">
+        <div className="h-1.5 w-full overflow-hidden bg-bg-muted">
           <div
             className={`h-full transition-all ${progressBarClass}`}
             style={{ width: `${clampedTotalPercent}%` }}
@@ -283,98 +302,63 @@ export function TargetAllocationSection({
               })}
             </Button>
           )}
-          <div className="relative" ref={autoGenRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAutoGenMenu(!showAutoGenMenu)}
-              aria-haspopup="true"
-              aria-expanded={showAutoGenMenu}
-            >
-              <Wand2 className="mr-2 h-4 w-4" />
-              {t("rebalance.autoGenerate")}
-            </Button>
-            {showAutoGenMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border border-border bg-bg-input shadow-lg">
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
-                  onClick={() => handleAutoGenerate("equal")}
-                >
-                  {t("rebalance.equalWeight")}
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
-                  onClick={() => handleAutoGenerate("market-cap")}
-                >
-                  {t("rebalance.currentAllocation")}
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="relative" ref={templateRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowTemplateMenu(!showTemplateMenu)}
-              aria-haspopup="true"
-              aria-expanded={showTemplateMenu}
-            >
-              <LayoutTemplate className="mr-2 h-4 w-4" />
-              {t("rebalance.templates")}
-            </Button>
-            {showTemplateMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-md border border-border bg-bg-input shadow-lg">
-                {TEMPLATES.map((tpl) => (
-                  <button
-                    key={tpl.name}
-                    type="button"
-                    className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
-                    onClick={() => handleApplyTemplate(tpl)}
-                  >
-                    {tpl.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="relative" ref={sortRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowSortMenu(!showSortMenu)}
-              disabled={targets.length < 2}
-              aria-haspopup="true"
-              aria-expanded={showSortMenu}
-            >
-              <ArrowUpDown className="mr-2 h-4 w-4" />
-              {t("rebalance.sortByDeviation")}
-              <span className="ml-1 text-caption text-text-muted">
-                {sortMode === "absolute"
-                  ? t("rebalance.sortDeviationAbsoluteShort")
-                  : t("rebalance.sortDeviationSignedShort")}
-              </span>
-            </Button>
-            {showSortMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-52 rounded-md border border-border bg-bg-input shadow-lg">
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
-                  onClick={() => sortTargetsByDeviation("absolute")}
-                >
-                  {t("rebalance.sortDeviationAbsolute")}
-                </button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
-                  onClick={() => sortTargetsByDeviation("signed")}
-                >
-                  {t("rebalance.sortDeviationSigned")}
-                </button>
-              </div>
-            )}
-          </div>
+          <MenuButton
+            label={
+              <>
+                <Wand2 className="h-4 w-4" aria-hidden="true" />
+                {t("rebalance.autoGenerate")}
+              </>
+            }
+            items={[
+              { key: "equal", label: t("rebalance.equalWeight"), onSelect: () => handleAutoGenerate("equal") },
+              {
+                key: "market-cap",
+                label: t("rebalance.currentAllocation"),
+                onSelect: () => handleAutoGenerate("market-cap"),
+              },
+            ]}
+          />
+          <MenuButton
+            label={
+              <>
+                <LayoutTemplate className="h-4 w-4" aria-hidden="true" />
+                {t("rebalance.templates")}
+              </>
+            }
+            menuClassName="min-w-52"
+            items={TEMPLATES.map((tpl) => ({
+              key: tpl.name,
+              label: tpl.labelKey ? t(tpl.labelKey) : tpl.name,
+              onSelect: () => handleApplyTemplate(tpl),
+            }))}
+          />
+          <MenuButton
+            disabled={targets.length < 2}
+            label={
+              <>
+                <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+                {t("rebalance.sortByDeviation")}
+                <span className="text-caption text-text-muted">
+                  {sortMode === "absolute"
+                    ? t("rebalance.sortDeviationAbsoluteShort")
+                    : t("rebalance.sortDeviationSignedShort")}
+                </span>
+              </>
+            }
+            menuClassName="min-w-52"
+            items={[
+              {
+                key: "absolute",
+                label: t("rebalance.sortDeviationAbsolute"),
+                onSelect: () => sortTargetsByDeviation("absolute"),
+              },
+              {
+                key: "signed",
+                label: t("rebalance.sortDeviationSigned"),
+                onSelect: () => sortTargetsByDeviation("signed"),
+              },
+            ]}
+          />
           <Button size="sm" onClick={onSave} disabled={!canSaveTargets}>
             <Save className="mr-2 h-4 w-4" />
             {savePending ? t("common.saving") : t("rebalance.saveTargets")}
@@ -422,15 +406,29 @@ export function TargetAllocationSection({
                 currentPercent === null
                   ? null
                   : currentPercent - row.targetPercent;
+              const options = autocompleteData?.suggestions ?? [];
+              const listOpen =
+                activeAutocompleteIndex === index &&
+                autocompleteQuery.length > 0 &&
+                options.length > 0;
+              const listboxId = `${listboxBaseId}-list-${index}`;
 
               return (
                 <div
-                  key={index}
-                  className="relative rounded-md border border-border-subtle p-3"
+                  key={rowKeys[index] ?? `pending-${index}`}
+                  className="relative border border-border-subtle p-3"
                 >
                   <div className="flex flex-wrap items-start gap-2 md:flex-nowrap md:items-center md:gap-3">
                     <div className="relative w-full md:w-44">
                       <Input
+                        role="combobox"
+                        aria-label={t("rebalance.tokenInputLabel", { n: index + 1 })}
+                        aria-autocomplete="list"
+                        aria-expanded={listOpen}
+                        aria-controls={listOpen ? listboxId : undefined}
+                        aria-activedescendant={
+                          listOpen ? `${listboxId}-opt-${highlighted}` : undefined
+                        }
                         placeholder={t("rebalance.tokenPlaceholder")}
                         value={row.tokenSymbol}
                         onChange={(e) =>
@@ -439,43 +437,73 @@ export function TargetAllocationSection({
                         onFocus={() => {
                           setActiveAutocompleteIndex(index);
                           setAutocompleteQuery(row.tokenSymbol);
+                          setHighlighted(0);
+                        }}
+                        onKeyDown={(e) => {
+                          if (!listOpen) return;
+                          if (e.key === "ArrowDown") {
+                            e.preventDefault();
+                            setHighlighted((h) => (h + 1) % options.length);
+                          } else if (e.key === "ArrowUp") {
+                            e.preventDefault();
+                            setHighlighted((h) => (h - 1 + options.length) % options.length);
+                          } else if (e.key === "Enter") {
+                            e.preventDefault();
+                            const choice = options[highlighted];
+                            if (choice) selectAutocomplete(index, choice);
+                          } else if (e.key === "Escape") {
+                            e.preventDefault();
+                            setActiveAutocompleteIndex(null);
+                          }
                         }}
                         className="w-full"
                         autoComplete="off"
                       />
-                      {activeAutocompleteIndex === index &&
-                        autocompleteQuery.length > 0 &&
-                        (autocompleteData?.suggestions ?? []).length > 0 && (
-                          <div className="absolute left-0 top-full z-50 mt-1 max-h-48 min-w-[18rem] w-full overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
-                            {autocompleteData!.suggestions.map((s) => (
-                              <button
-                                key={s.symbol}
-                                type="button"
-                                className="flex w-full items-center justify-between px-3 py-2 text-left text-body hover:bg-bg-hover"
-                                onClick={() => selectAutocomplete(index, s)}
-                              >
-                                <div className="flex items-center">
-                                  {s.isGroup && (
-                                    <Layers className="mr-1.5 h-3.5 w-3.5 text-status-info" />
-                                  )}
-                                  <span className="font-medium text-text-primary">
-                                    {s.symbol}
-                                  </span>
-                                  <span className="ml-2 text-text-muted">
-                                    {s.name}
-                                  </span>
-                                </div>
-                                <span className="text-caption text-text-muted">
-                                  {formatUsd(s.totalValueUsd)}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
+                      {listOpen && (
+                        <ul
+                          id={listboxId}
+                          role="listbox"
+                          aria-label={t("rebalance.tokenSuggestions")}
+                          className="absolute left-0 top-full z-50 mt-1 max-h-48 min-w-[18rem] w-full overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay"
+                        >
+                          {options.map((s, optionIndex) => (
+                            <li
+                              key={s.symbol}
+                              id={`${listboxId}-opt-${optionIndex}`}
+                              role="option"
+                              aria-selected={optionIndex === highlighted}
+                              className={cn(
+                                "flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-body hover:bg-bg-hover",
+                                optionIndex === highlighted && "bg-bg-hover"
+                              )}
+                              // mousedown, not click: keep focus in the input.
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                selectAutocomplete(index, s);
+                              }}
+                              onMouseMove={() => setHighlighted(optionIndex)}
+                            >
+                              <span className="flex items-center">
+                                {s.isGroup && (
+                                  <Layers className="mr-1.5 h-3.5 w-3.5 text-text-muted" aria-hidden="true" />
+                                )}
+                                <span className="font-medium text-text-primary">{s.symbol}</span>
+                                <span className="ml-2 text-text-muted">{s.name}</span>
+                              </span>
+                              <span className="font-mono text-caption tabular text-text-muted">
+                                {mask(formatUsd(s.totalValueUsd))}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     <Input
                       type="number"
+                      aria-label={t("rebalance.percentInputLabel", {
+                        symbol: row.tokenSymbol || t("rebalance.thisToken"),
+                      })}
                       placeholder={t("rebalance.targetPlaceholder")}
                       min={0}
                       max={100}
@@ -488,7 +516,7 @@ export function TargetAllocationSection({
                     />
 
                     <span
-                      className="w-[calc(25%-0.25rem)] text-right text-caption tabular-nums text-text-muted md:w-20 md:text-body"
+                      className="w-[calc(25%-0.25rem)] text-right font-mono text-caption tabular text-text-muted md:w-20 md:text-body"
                       title={
                         currentPercent === null
                           ? t("common.noData")
@@ -498,7 +526,7 @@ export function TargetAllocationSection({
                       {currentPercent === null ? "—" : `${currentPercent.toFixed(1)}%`}
                     </span>
                     <span
-                      className={`w-[calc(25%-0.25rem)] text-right text-caption tabular-nums md:w-24 md:text-body ${getDeviationClass(diff)}`}
+                      className={`w-[calc(25%-0.25rem)] text-right font-mono text-caption tabular md:w-24 md:text-body ${getDeviationClass(diff)}`}
                       title={
                         diff === null
                           ? t("common.noData")
@@ -513,7 +541,7 @@ export function TargetAllocationSection({
                       size="icon"
                       onClick={() => removeRow(index)}
                       className="h-8 w-8 text-text-muted hover:text-status-negative"
-                      aria-label={`Remove ${row.tokenSymbol || "token"} target`}
+                      aria-label={t("rebalance.removeTargetLabel", { symbol: row.tokenSymbol || t("rebalance.thisToken") })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -565,6 +593,17 @@ export function TargetAllocationSection({
           </div>
         </CardContent>
       )}
+      <ConfirmDialog
+        open={pendingReplace !== null}
+        title={t("rebalance.replaceTargetsTitle")}
+        description={t("rebalance.replaceTargetsBody", { count: targets.length })}
+        confirmLabel={t("rebalance.replaceTargetsConfirm")}
+        onCancel={() => setPendingReplace(null)}
+        onConfirm={() => {
+          pendingReplace?.();
+          setPendingReplace(null);
+        }}
+      />
     </Card>
   );
 }

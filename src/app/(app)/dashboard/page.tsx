@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -41,28 +41,11 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useVaultStore } from "@/lib/store";
-import {
-  getHighConcentrationThresholdPercent,
-  parseConcentrationAlertThresholdPercent,
-} from "@/lib/constants/risk";
-import { buildStablecoinSymbolSet } from "@/lib/constants/stablecoins";
-import {
-  buildStrategyContext,
-  dispatchStrategy,
-} from "@/lib/services/rebalance-strategies";
-import type { RebalanceStrategy } from "@/components/rebalance/types";
+import { useDashboardAlerts, type DashboardAlertSeverity } from "@/hooks/use-dashboard-alerts";
+import { useCategoryBreakdown } from "@/hooks/use-category-breakdown";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 type TimeRange = "24h" | "7d" | "30d" | "90d" | "1y" | "all";
-type DashboardAlertSeverity = "low" | "medium" | "high";
-type DashboardAlertType = "deviation" | "concentration_token";
-
-interface DashboardAlert {
-  tokenSymbol: string;
-  deviation: number;
-  severity: DashboardAlertSeverity;
-  type: DashboardAlertType;
-  smartHint?: string; // profit/loss-aware suggestion
-}
 
 const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "24h", value: "24h" },
@@ -70,7 +53,7 @@ const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "30d", value: "30d" },
   { label: "90d", value: "90d" },
   { label: "1y", value: "1y" },
-  { label: "All", value: "all" },
+  { label: "", value: "all" },
 ];
 
 function getTimeRangeMs(range: TimeRange): number | null {
@@ -85,6 +68,7 @@ function getTimeRangeMs(range: TimeRange): number | null {
 }
 
 export default function DashboardPage() {
+  const { mask } = usePrivacy();
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const { format: formatValue } = useCurrency();
   const { t } = useTranslation();
@@ -94,22 +78,6 @@ export default function DashboardPage() {
   const analytics = useAnalytics(holdings);
   const { data: marketSignal } = useMarketSignal();
   const vault = useVaultStore((s) => s.vault);
-  const rebalanceStrategy = (vault.settings.rebalanceStrategy || "percent-of-portfolio") as RebalanceStrategy;
-  const parsedHoldZonePercent = parseFloat(vault.settings.holdZonePercent || "5");
-  const holdZonePercent = Number.isFinite(parsedHoldZonePercent) ? parsedHoldZonePercent : 5;
-  const concentrationThresholdPercent = parseConcentrationAlertThresholdPercent(
-    vault.settings.concentrationThresholdPercent
-  );
-  const excludeStablecoinsFromConcentration =
-    vault.settings.excludeStablecoinsFromConcentration === "1";
-  const highConcentrationThresholdPercent = getHighConcentrationThresholdPercent(
-    concentrationThresholdPercent
-  );
-  const stablecoinSymbols = useMemo(
-    () => buildStablecoinSymbolSet(vault.tokenCategories),
-    [vault.tokenCategories]
-  );
-
   // Alert engine — uses data already loaded above, no duplicate hooks
   const {
     alerts: ruleAlerts,
@@ -124,159 +92,19 @@ export default function DashboardPage() {
     marketSignal: marketSignal ?? undefined,
   });
 
-  const strategyContext = useMemo(() => {
-    if (vault.rebalanceTargets.length === 0 || Object.keys(priceMap).length === 0) {
-      return null;
-    }
-    try {
-      return buildStrategyContext(vault, priceMap);
-    } catch {
-      return null;
-    }
-  }, [vault, priceMap]);
-
-  const strategyOutput = useMemo(() => {
-    if (!strategyContext) return null;
-    try {
-      return dispatchStrategy(rebalanceStrategy, strategyContext, vault.settings);
-    } catch {
-      return null;
-    }
-  }, [rebalanceStrategy, strategyContext, vault.settings]);
-
-  // Build symbol → P&L lookup for smart rebalance hints
-  const holdingPLMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const item of breakdown) {
-      map[item.symbol.toUpperCase()] = item.unrealizedPLPercent;
-    }
-    return map;
-  }, [breakdown]);
-
   const marketPhase = marketSignal?.composite.phase ?? null;
-
-  // Keep "need rebalancing" consistent with the Rebalance page execution logic.
-  // Enhanced with smart profit/loss-aware suggestions.
-  const deviationAlerts = useMemo(() => {
-    const suggestions = strategyOutput?.suggestions ?? [];
-    return suggestions
-      .filter((suggestion) => suggestion.action !== "hold")
-      .map((suggestion) => {
-        const absDeviation = Math.abs(suggestion.deviation);
-        const severity: DashboardAlertSeverity =
-          absDeviation > holdZonePercent * 3
-            ? "high"
-            : absDeviation > holdZonePercent * 2
-              ? "medium"
-              : "low";
-
-        // Smart hint based on profit/loss state
-        const plPercent = holdingPLMap[suggestion.tokenSymbol.toUpperCase()] ?? 0;
-        let smartHint: string | undefined;
-
-        if (suggestion.action === "sell" && suggestion.deviation > 0) {
-          // Overweight
-          if (plPercent >= 0) {
-            smartHint = t("dashboard.smartHintOverweightProfit", {
-              symbol: suggestion.tokenSymbol,
-              pl: plPercent.toFixed(1),
-            });
-          } else {
-            smartHint = t("dashboard.smartHintOverweightLoss", {
-              symbol: suggestion.tokenSymbol,
-              pl: Math.abs(plPercent).toFixed(1),
-            });
-          }
-        } else if (suggestion.action === "buy" && suggestion.deviation < 0) {
-          // Underweight
-          if (marketPhase === "danger") {
-            smartHint = t("dashboard.smartHintUnderweightDanger", {
-              symbol: suggestion.tokenSymbol,
-            });
-          } else {
-            smartHint = t("dashboard.smartHintUnderweightBuy", {
-              symbol: suggestion.tokenSymbol,
-            });
-          }
-        }
-
-        return {
-          tokenSymbol: suggestion.tokenSymbol,
-          deviation: suggestion.deviation,
-          severity,
-          type: "deviation" as const,
-          smartHint,
-        };
-      });
-  }, [strategyOutput, holdZonePercent, holdingPLMap, marketPhase, t]);
-
-  const concentrationAlerts = useMemo(() => {
-    const result: DashboardAlert[] = [];
-    for (const item of breakdown) {
-      const normalizedSymbol = item.symbol.toUpperCase();
-      if (
-        excludeStablecoinsFromConcentration &&
-        stablecoinSymbols.has(normalizedSymbol)
-      ) {
-        continue;
-      }
-      if (item.percent > concentrationThresholdPercent) {
-        result.push({
-          tokenSymbol: item.symbol,
-          deviation: item.percent,
-          severity:
-            item.percent > highConcentrationThresholdPercent
-              ? "high"
-              : "medium",
-          type: "concentration_token",
-        });
-      }
-    }
-    return result;
-  }, [
+  const { alerts, mergedAlertBadges } = useDashboardAlerts({
+    vault,
+    priceMap,
     breakdown,
-    excludeStablecoinsFromConcentration,
-    stablecoinSymbols,
-    concentrationThresholdPercent,
-    highConcentrationThresholdPercent,
-  ]);
-
-  const alerts = useMemo(
-    () => [...deviationAlerts, ...concentrationAlerts],
-    [deviationAlerts, concentrationAlerts]
-  );
+    marketPhase,
+    t,
+  });
 
   // ── Client-side category breakdown from vault.tokenCategories ──────
   const tokenCategories = vault.tokenCategories;
   const totalValue = totals.totalValue;
-  const categoryBreakdown = useMemo(() => {
-    const categories = tokenCategories;
-    if (categories.length === 0 || totalValue === 0) return [];
-
-    // Build symbol -> value map from breakdown
-    const symbolValueMap: Record<string, number> = {};
-    for (const item of breakdown) {
-      const sym = item.symbol.toUpperCase();
-      symbolValueMap[sym] = (symbolValueMap[sym] || 0) + item.value;
-    }
-
-    // Aggregate by category
-    const catValueMap: Record<string, number> = {};
-    for (const cat of categories) {
-      const sym = cat.tokenSymbol.toUpperCase();
-      const value = symbolValueMap[sym] ?? 0;
-      catValueMap[cat.category] = (catValueMap[cat.category] || 0) + value;
-    }
-
-    return Object.entries(catValueMap)
-      .filter(([, valueUsd]) => valueUsd > 0)
-      .map(([category, valueUsd]) => ({
-        category,
-        valueUsd,
-        percent: (valueUsd / totalValue) * 100,
-      }))
-      .sort((a, b) => b.valueUsd - a.valueUsd);
-  }, [tokenCategories, totalValue, breakdown]);
+  const categoryBreakdown = useCategoryBreakdown(tokenCategories, breakdown, totalValue);
 
   const totalPL = totals.totalPL;
   const change24hUsdt = (totals.totalValue * totals.change24h) / 100;
@@ -290,63 +118,6 @@ export default function DashboardPage() {
     if (!lastPriceUpdate) return true;
     return now - new Date(lastPriceUpdate).getTime() > 60 * 1000;
   }, [lastPriceUpdate, now]);
-  const mergedAlertBadges = useMemo(() => {
-    const severityRank: Record<DashboardAlertSeverity, number> = {
-      low: 1,
-      medium: 2,
-      high: 3,
-    };
-    const map = new Map<string, {
-      tokenSymbol: string;
-      severity: DashboardAlertSeverity;
-      deviation: number | null;
-      concentration: number | null;
-      smartHint?: string;
-    }>();
-
-    for (const alert of alerts) {
-      const symbol = alert.tokenSymbol.toUpperCase();
-      const existing = map.get(symbol);
-      if (!existing) {
-        map.set(symbol, {
-          tokenSymbol: alert.tokenSymbol,
-          severity: alert.severity,
-          deviation: alert.type === "deviation" ? alert.deviation : null,
-          concentration:
-            alert.type === "concentration_token" ? alert.deviation : null,
-          smartHint: alert.smartHint,
-        });
-        continue;
-      }
-
-      if (severityRank[alert.severity] > severityRank[existing.severity]) {
-        existing.severity = alert.severity;
-      }
-      if (alert.type === "deviation") {
-        existing.deviation = alert.deviation;
-        if (alert.smartHint) existing.smartHint = alert.smartHint;
-      }
-      if (alert.type === "concentration_token") {
-        existing.concentration = alert.deviation;
-      }
-    }
-
-    return [...map.values()]
-      .map((entry) => ({
-        tokenSymbol: entry.tokenSymbol,
-        severity: entry.severity,
-        value:
-          entry.concentration !== null
-            ? entry.concentration
-            : (entry.deviation ?? 0),
-        smartHint: entry.smartHint,
-      }))
-      .sort(
-        (a, b) =>
-          severityRank[b.severity] - severityRank[a.severity] ||
-          Math.abs(b.value) - Math.abs(a.value)
-      );
-  }, [alerts]);
   const hasAlerts = alerts.length > 0;
   const severityLabels: Record<DashboardAlertSeverity, string> = {
     high: t("common.severityHigh"),
@@ -380,9 +151,9 @@ export default function DashboardPage() {
       count: filteredHistory.length,
       start: new Date(firstPoint.date).toLocaleDateString(),
       end: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.value),
+      latest: mask(formatUsd(lastPoint.value)),
     });
-  }, [filteredHistory, t]);
+  }, [filteredHistory, t, mask]);
   const allocationChartSummary = useMemo(() => {
     if (pieData.length === 0) return "";
     const largestHolding = topHoldings[0];
@@ -412,11 +183,9 @@ export default function DashboardPage() {
         eyebrow={t("dashboard.subtitle")}
         title={t("dashboard.title")}
         actions={
-          <Link href="/portfolio/add">
-            <Button variant="accent">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t("portfolio.addTransaction")}
-            </Button>
+          <Link href="/portfolio/add" className={buttonVariants({ variant: "accent" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("portfolio.addTransaction")}
           </Link>
         }
       />
@@ -424,20 +193,20 @@ export default function DashboardPage() {
       <MetricBand>
         <Metric
           label={t("dashboard.totalValue")}
-          value={<PriceFlash value={totalValue}>{formatValue(totalValue)}</PriceFlash>}
+          value={<PriceFlash value={totalValue}>{mask(formatValue(totalValue))}</PriceFlash>}
           sub={
             lastPriceUpdate && isPriceStale
               ? t("dashboard.prices", {
                   time: formatTimeAgo(new Date(lastPriceUpdate)),
                 })
-              : `${t("dashboard.totalInvested")}: ${formatUsd(analytics.totalInvested)}`
+              : `${t("dashboard.totalInvested")}: ${mask(formatUsd(analytics.totalInvested))}`
           }
           subTone={isPriceStale ? "warning" : "muted"}
         />
         <Metric
           label={t("dashboard.totalPL")}
           value={
-            <PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}</PriceFlash>
+            <PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${mask(formatUsd(totalPL))}`}</PriceFlash>
           }
           tone={totalPL >= 0 ? "positive" : "negative"}
           sub={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
@@ -449,7 +218,7 @@ export default function DashboardPage() {
             <PriceFlash value={totals.change24h}>{`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}</PriceFlash>
           }
           tone={totals.change24h >= 0 ? "positive" : "negative"}
-          sub={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}
+          sub={`${change24hUsdt >= 0 ? "+" : ""}${mask(formatUsd(change24hUsdt))} USDT`}
           subTone={change24hUsdt >= 0 ? "positive" : "negative"}
         />
         <Metric
@@ -457,7 +226,7 @@ export default function DashboardPage() {
           value={breakdown.length}
           sub={
             totals.totalFeesPaid > 0
-              ? `${t("dashboard.totalFees")}: ${formatUsd(totals.totalFeesPaid)}`
+              ? `${t("dashboard.totalFees")}: ${mask(formatUsd(totals.totalFeesPaid))}`
               : undefined
           }
         />
@@ -509,11 +278,9 @@ export default function DashboardPage() {
             </div>
           }
           action={
-            <Link href="/rebalance">
-              <Button>
-                <Scale className="h-4 w-4" aria-hidden="true" />
-                {t("dashboard.viewDetails")}
-              </Button>
+            <Link href="/rebalance" className={buttonVariants()}>
+              <Scale className="h-4 w-4" aria-hidden="true" />
+              {t("dashboard.viewDetails")}
             </Link>
           }
         />
@@ -524,11 +291,9 @@ export default function DashboardPage() {
           icon={<CheckCircle2 className="h-5 w-5" />}
           description={t("dashboard.noRebalanceAlerts")}
           action={
-            <Link href="/rebalance">
-              <Button variant="outline" size="sm">
-                <Scale className="h-4 w-4" aria-hidden="true" />
-                {t("dashboard.viewDetails")}
-              </Button>
+            <Link href="/rebalance" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <Scale className="h-4 w-4" aria-hidden="true" />
+              {t("dashboard.viewDetails")}
             </Link>
           }
         >
@@ -554,14 +319,15 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setTimeRange(r.value)}
                     className={cn(
-                      "rounded-md px-2 py-1 text-caption font-semibold transition-colors",
+                      "h-control-sm px-2 font-mono text-caption font-semibold transition-colors duration-[120ms] ease-out max-md:min-h-control-lg max-md:px-3",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
                       timeRange === r.value
-                        ? "bg-accent text-bg-page shadow-sm"
+                        ? "bg-accent text-accent-ink"
                         : "text-text-muted hover:bg-bg-hover hover:text-text-secondary"
                     )}
                     aria-pressed={timeRange === r.value}
                   >
-                    {r.label}
+                    {r.value === "all" ? t("common.allTime") : r.label}
                   </button>
                 ))}
               </div>
@@ -580,10 +346,8 @@ export default function DashboardPage() {
                 description={t("dashboard.historyEmptyHelp")}
                 icon={<TrendingUp className="h-5 w-5" />}
                 action={
-                  <Link href="/portfolio/add">
-                    <Button size="sm">
-                      {t("portfolio.addTransaction")}
-                    </Button>
+                  <Link href="/portfolio/add" className={buttonVariants({ size: "sm" })}>
+                    {t("portfolio.addTransaction")}
                   </Link>
                 }
               />
@@ -610,10 +374,8 @@ export default function DashboardPage() {
                   description={t("dashboard.allocationEmptyHelp")}
                   icon={<Scale className="h-5 w-5" />}
                   action={
-                    <Link href="/portfolio">
-                      <Button size="sm" variant="outline">
-                        {t("portfolio.title")}
-                      </Button>
+                    <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("portfolio.title")}
                     </Link>
                   }
                   className="py-8"
@@ -657,10 +419,8 @@ export default function DashboardPage() {
             <CardSectionHeader
               title={t("dashboard.holdings")}
               actions={
-                <Link href="/portfolio">
-                  <Button size="sm" variant="outline">
-                    {t("portfolio.title")}
-                  </Button>
+                <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  {t("portfolio.title")}
                 </Link>
               }
             />
@@ -681,13 +441,13 @@ export default function DashboardPage() {
                           {item.symbol}
                         </p>
                         <p className="font-mono text-num-sm tabular text-text-muted">
-                          {formatCrypto(item.quantity)} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
+                          {mask(formatCrypto(item.quantity))} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
                         </p>
                       </div>
                     </div>
                     <div className="font-mono tabular text-left sm:text-right">
                       <p className="text-num-md text-text-primary">
-                        {formatValue(item.value)}
+                        {mask(formatValue(item.value))}
                         {item.change24h !== null && (
                           <span
                             className={cn(
@@ -714,7 +474,7 @@ export default function DashboardPage() {
                         )}
                       >
                         {item.unrealizedPL >= 0 ? "+" : ""}
-                        {formatUsd(item.unrealizedPL)} (
+                        {mask(formatUsd(item.unrealizedPL))} (
                         {item.unrealizedPLPercent >= 0 ? "+" : ""}
                         {item.unrealizedPLPercent.toFixed(1)}%)
                       </p>
@@ -728,7 +488,7 @@ export default function DashboardPage() {
                           )}
                         >
                           {t("portfolio.realizedPL")}: {item.realizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.realizedPL)}
+                          {mask(formatUsd(item.realizedPL))}
                         </p>
                       )}
                     </div>

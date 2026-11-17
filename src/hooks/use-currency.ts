@@ -1,29 +1,15 @@
 "use client";
 
-import { usePreferencesStore } from "@/lib/store";
+import { formatUsd } from "@/lib/utils";
 
 interface CurrencyConfig {
   format: (value: number) => string;
 }
 
-const LOCALE_CODE_MAP = {
-  en: "en-US",
-  vi: "vi-VN",
-  es: "es-ES",
-  de: "de-DE",
-} as const;
-
+/**
+ * Kept for existing call sites. It is now the same as `formatUsd`, which
+ * follows the UI locale on its own (see `setNumberLocale` in lib/utils).
+ */
 export function useCurrency(): CurrencyConfig {
-  const locale = usePreferencesStore((s) => s.locale);
-
-  const format = (value: number): string => {
-    return new Intl.NumberFormat(LOCALE_CODE_MAP[locale] ?? LOCALE_CODE_MAP.en, {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
-  return { format };
+  return { format: formatUsd };
 }

@@ -347,26 +347,20 @@ function usePriceStream(): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Main hook
+// Shared query definition
 // ---------------------------------------------------------------------------
 
-interface UsePricesOptions {
-  refetchInterval?: number;
-}
+type PricesData = { priceMap: PriceMap; updatedAt: string | null };
 
-export function usePrices(options?: UsePricesOptions) {
-  const queryClient = useQueryClient();
-  const sseConnected = usePriceStream();
-
-  // Disable REST polling when SSE is connected to prevent overwriting fresh data.
-  // Only poll as fallback when SSE is disconnected.
-  const refetchInterval = sseConnected
-    ? false
-    : (options?.refetchInterval ?? 10_000);
-
-  const query = useQuery<{ priceMap: PriceMap; updatedAt: string | null }>({
-    queryKey: ["prices"],
-    queryFn: async () => {
+/**
+ * One definition of the ["prices"] query so every observer — the full
+ * usePrices() and the narrow selectors below — fetches, caches and polls it
+ * identically. Changing this changes the pricing pipeline; see CLAUDE.md.
+ */
+function pricesQueryOptions(refetchInterval: number | false) {
+  return {
+    queryKey: ["prices"] as const,
+    queryFn: async (): Promise<PricesData> => {
       const res = await apiFetch("/api/prices");
       if (!res.ok) throw new Error("Failed to fetch prices");
       const data: PricesResponse = await res.json();
@@ -378,15 +372,43 @@ export function usePrices(options?: UsePricesOptions) {
     },
     staleTime: 30_000,
     refetchInterval,
-  });
+  };
+}
 
-  // Stable identities so consumers can safely list these in hook deps.
-  const refreshPrices = useCallback(async () => {
-    await apiFetch("/api/prices/refresh", { method: "POST" });
-    await queryClient.invalidateQueries({ queryKey: ["prices"] });
-  }, [queryClient]);
+function useRefetchInterval(override?: number): number | false {
+  const sseConnected = usePriceStream();
+  // Disable REST polling when SSE is connected to prevent overwriting fresh data.
+  // Only poll as fallback when SSE is disconnected.
+  return sseConnected ? false : (override ?? 10_000);
+}
 
-  const ensurePrices = useCallback(
+/**
+ * Subscribe to a value derived from the price map. The component re-renders
+ * only when `select`'s result changes, not on every tick. Pass a stable
+ * (memoised) `select`.
+ */
+export function usePriceSelector<T>(select: (data: PricesData) => T): T | undefined {
+  const refetchInterval = useRefetchInterval();
+  return useQuery({ ...pricesQueryOptions(refetchInterval), select }).data;
+}
+
+/**
+ * Whether the last price fetch failed. Reads only `isError`, so React Query's
+ * tracked properties keep this from re-rendering on each price update.
+ */
+export function usePricesError(): boolean {
+  const refetchInterval = useRefetchInterval();
+  return useQuery({ ...pricesQueryOptions(refetchInterval), select: selectNothing }).isError;
+}
+
+function selectNothing(): null {
+  return null;
+}
+
+/** Register tokens for pricing. Does not subscribe to price updates. */
+export function useEnsurePrices() {
+  const queryClient = useQueryClient();
+  return useCallback(
     async (tokens: { coingeckoId: string; symbol: string }[]) => {
       await apiFetch("/api/prices/ensure", {
         method: "POST",
@@ -397,6 +419,34 @@ export function usePrices(options?: UsePricesOptions) {
     },
     [queryClient]
   );
+}
+
+/** Force a server-side refresh. Does not subscribe to price updates. */
+export function useRefreshPrices() {
+  const queryClient = useQueryClient();
+  return useCallback(async () => {
+    await apiFetch("/api/prices/refresh", { method: "POST" });
+    await queryClient.invalidateQueries({ queryKey: ["prices"] });
+  }, [queryClient]);
+}
+
+// ---------------------------------------------------------------------------
+// Main hook
+// ---------------------------------------------------------------------------
+
+interface UsePricesOptions {
+  refetchInterval?: number;
+}
+
+export function usePrices(options?: UsePricesOptions) {
+  const refetchInterval = useRefetchInterval(options?.refetchInterval);
+
+  const query = useQuery<PricesData>(pricesQueryOptions(refetchInterval));
+
+  // Stable identities so consumers can safely list these in hook deps.
+  const refreshPrices = useRefreshPrices();
+
+  const ensurePrices = useEnsurePrices();
 
   return {
     priceMap: query.data?.priceMap ?? {},

@@ -347,7 +347,15 @@ export default function RebalancePage() {
         open={rb.confirmState !== null}
         onConfirm={rb.handleConfirmDelete}
         onCancel={() => rb.setConfirmState(null)}
-        title={`${t("rebalance.delete")} ${rb.confirmState?.label ?? t("rebalance.item")}?`}
+        title={
+          rb.confirmState?.type === "session"
+            ? t("rebalance.deleteSessionTitle", { date: rb.confirmState.label })
+            : rb.confirmState?.type === "group"
+              ? t("rebalance.deleteGroupTitle", { name: rb.confirmState.label })
+              : rb.confirmState?.type === "category"
+                ? t("rebalance.deleteCategoryTitle", { symbol: rb.confirmState.label })
+                : t("rebalance.deleteItemTitle")
+        }
         description={t("rebalance.cannotBeUndone")}
         confirmLabel={t("rebalance.delete")}
         variant="danger"

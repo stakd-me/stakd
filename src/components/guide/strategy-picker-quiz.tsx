@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -121,9 +121,7 @@ export function StrategyPickerQuiz() {
             >
               {t("dashboard.viewDetails")}
             </a>
-            <Link href="/settings">
-              <Button variant="accent" size="sm">{t("guide.quizApply")}</Button>
-            </Link>
+            <Link href="/settings" className={buttonVariants({ variant: "accent", size: "sm" })}>{t("guide.quizApply")}</Link>
             <Button size="sm" variant="outline" onClick={reset}>
               {t("guide.quizRetake")}
             </Button>

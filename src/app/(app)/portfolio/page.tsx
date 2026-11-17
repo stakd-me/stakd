@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { HoldingsSection } from "@/components/portfolio/holdings-section";
 import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
 import { ImportReviewModal } from "@/components/portfolio/import-review-modal";
@@ -9,7 +9,7 @@ import { ManualEntriesPanel } from "@/components/portfolio/manual-entries-panel"
 import { TransactionsSection } from "@/components/portfolio/transactions-section";
 import { HoldingInlineForm } from "@/components/portfolio/holding-inline-form";
 import { TransactionEditForm } from "@/components/portfolio/transaction-edit-form";
-import { getTransactionTypeBadgeClass } from "@/components/portfolio/tx-type-styles";
+import { getTransactionTypeBadgeClass, TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 import type {
   BreakdownItem,
   PortfolioCoinListItem as CoinListItem,
@@ -23,10 +23,9 @@ import { cn, formatTimeAgo } from "@/lib/utils";
 import { Plus, Search, Download, Upload } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
-import { usePrices } from "@/hooks/use-prices";
+import { useEnsurePrices } from "@/hooks/use-prices";
 import { useCsvImport } from "@/hooks/use-csv-import";
 import { useCsvExport } from "@/hooks/use-csv-export";
 import { useManualEntries } from "@/hooks/use-manual-entries";
@@ -69,7 +68,7 @@ function getHeldDurationBadge(firstBuyDate: string | null) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2 py-0.5 text-caption font-semibold",
+        "inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold",
         heldDuration.days >= 365
           ? "bg-status-positive-soft text-status-positive"
           : "bg-status-warning-soft text-status-warning"
@@ -83,7 +82,7 @@ function getHeldDurationBadge(firstBuyDate: string | null) {
 export default function PortfolioPage() {
   const sectionsBaseId = "portfolio-sections";
   const { t } = useTranslation();
-  const { ensurePrices } = usePrices();
+  const ensurePrices = useEnsurePrices();
   const { holdings, breakdown: rawBreakdown, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
   const now = useNow(30_000);
   const { data: coinList } = useQuery<CoinListItem[]>({
@@ -140,11 +139,6 @@ export default function PortfolioPage() {
     parseCsvFile,
     submitImport,
   } = useCsvImport({ ensurePrices });
-
-  const importDialogRef = useFocusTrap<HTMLDivElement>(
-    showImportModal,
-    closeImportModal
-  );
 
   // --- Enrich breakdown with tokenName, coingeckoId, totalFees, firstBuyDate ---
   const breakdown: BreakdownItem[] = useMemo(
@@ -311,6 +305,16 @@ export default function PortfolioPage() {
     setTransactionsPage(1);
   }, []);
 
+  const goToPreviousTransactionsPage = useCallback(
+    () => setTransactionsPage((prev) => Math.max(1, prev - 1)),
+    []
+  );
+  const goToNextTransactionsPage = useCallback(
+    () => setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1)),
+    [totalTransactionPages]
+  );
+  const openImportModalFromList = useCallback(() => openImportModal(true), [openImportModal]);
+
   const handleTransactionsPerPageChange = useCallback((value: number) => {
     setTransactionsPerPage(value);
     setTransactionsPage(1);
@@ -469,11 +473,9 @@ export default function PortfolioPage() {
           </p>
         }
         actions={
-          <Link href="/portfolio/add">
-            <Button variant="accent">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t("portfolio.addTransaction")}
-            </Button>
+          <Link href="/portfolio/add" className={buttonVariants({ variant: "accent" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("portfolio.addTransaction")}
           </Link>
         }
       />
@@ -577,13 +579,9 @@ export default function PortfolioPage() {
           onToggleEdit={toggleEditForm}
           onDelete={setDeleteTarget}
           onSetTransactionsPerPage={handleTransactionsPerPageChange}
-          onPreviousPage={() =>
-            setTransactionsPage((prev) => Math.max(1, prev - 1))
-          }
-          onNextPage={() =>
-            setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1))
-          }
-          onOpenImportModal={() => openImportModal(true)}
+          onPreviousPage={goToPreviousTransactionsPage}
+          onNextPage={goToNextTransactionsPage}
+          onOpenImportModal={openImportModalFromList}
           pageSizeOptions={TRANSACTION_PAGE_SIZE_OPTIONS}
         />
       )}
@@ -595,7 +593,7 @@ export default function PortfolioPage() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
         title={t("portfolio.deleteTransactionTitle")}
-        description={t("portfolio.deleteTransactionDesc", { type: deleteTarget?.type ?? "", symbol: deleteTarget?.tokenSymbol ?? "" })}
+        description={t("portfolio.deleteTransactionDesc", { type: deleteTarget ? t(TX_TYPE_LABEL_KEYS[deleteTarget.type]) : "", symbol: deleteTarget?.tokenSymbol ?? "" })}
         confirmLabel={t("common.delete")}
         variant="danger"
       />
@@ -623,7 +621,6 @@ export default function PortfolioPage() {
 
       <ImportReviewModal
         open={showImportModal}
-        dialogRef={importDialogRef}
         importing={importing}
         importFileName={importFileName}
         importHasReviewState={importHasReviewState}

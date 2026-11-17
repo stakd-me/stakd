@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
@@ -9,7 +9,8 @@ import {
   calculateFeeAmountFromPercent,
   rebuildTradeSettlement,
 } from "@/lib/transactions";
-import { getTxTypeToggleClass } from "@/components/portfolio/tx-type-styles";
+import { FormField } from "@/components/ui/form-field";
+import { TxTypePicker } from "@/components/portfolio/tx-type-picker";
 import type {
   PortfolioTransaction,
   PortfolioTxType,
@@ -59,6 +60,7 @@ export const TransactionEditForm = memo(function TransactionEditForm({
   onSubmit,
 }: TransactionEditFormProps) {
   const { t } = useTranslation();
+  const id = useId();
 
   const editTotalCost =
     Number.parseFloat(quantity || "0") * Number.parseFloat(price || "0");
@@ -84,85 +86,67 @@ export const TransactionEditForm = memo(function TransactionEditForm({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
-        {(["buy", "sell", "receive", "send"] as const).map((typ) => (
-          <button
-            key={typ}
-            type="button"
-            onClick={() => onTypeChange(typ)}
-            className={`rounded-md px-3 py-1 text-caption font-semibold transition-colors ${getTxTypeToggleClass(
-              typ,
-              type === typ
-            )}`}
-          >
-            {typ.charAt(0).toUpperCase() + typ.slice(1)}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <TxTypePicker
+          value={type}
+          onChange={onTypeChange}
+          label={t("portfolioAdd.stepType")}
+        />
         <span className="ml-1 self-center text-body font-semibold text-text-muted">
           {tx.tokenSymbol}
         </span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("portfolio.quantity")} *
-          </label>
+        <FormField label={<>{t("portfolio.quantity")} *</>} htmlFor={`${id}-f1`} className="space-y-1">
           <Input
+            id={`${id}-f1`}
             type="number"
             step="any"
             min="0"
             value={quantity}
             onChange={(e) => onQuantityChange(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("portfolio.pricePerUnit")}
-          </label>
+        </FormField>
+        <FormField label={t("portfolio.pricePerUnit")} htmlFor={`${id}-f2`} className="space-y-1">
           <Input
+            id={`${id}-f2`}
             type="number"
             step="any"
             min="0"
             value={price}
             onChange={(e) => onPriceChange(e.target.value)}
           />
-        </div>
+        </FormField>
         {type === "buy" || type === "sell" ? (
-          <div>
-            <label className="mb-1 block text-caption text-text-muted">
-              {t("portfolio.feePercent")}
-            </label>
+          <FormField label={t("portfolio.feePercent")} htmlFor={`${id}-f3`} className="space-y-1">
             <Input
+              id={`${id}-f3`}
               type="number"
               step="any"
               min="0"
               value={feePercent}
               onChange={(e) => onFeePercentChange(e.target.value)}
             />
-          </div>
+          </FormField>
         ) : (
           <div />
         )}
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("common.date")}
-          </label>
+        <FormField label={t("common.date")} htmlFor={`${id}-f4`} className="space-y-1">
           <Input
+            id={`${id}-f4`}
             type="datetime-local"
             value={date}
             onChange={(e) => onDateChange(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("common.note") + " (" + t("common.optional") + ")"}
-          </label>
+        </FormField>
+        <FormField label={t("common.note") + " (" + t("common.optional") + ")"} htmlFor={`${id}-f5`} className="space-y-1">
           <Input
+            id={`${id}-f5`}
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
             placeholder={t("common.note") + "..."}
           />
-        </div>
+        </FormField>
       </div>
       {quantity && price && (
         <div className="space-y-1 text-caption text-text-muted">
