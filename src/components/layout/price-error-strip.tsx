@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePrices } from "@/hooks/use-prices";
+import { usePricesError, useRefreshPrices } from "@/hooks/use-prices";
 import { useTranslation } from "@/hooks/use-translation";
 
 /**
@@ -12,7 +12,8 @@ import { useTranslation } from "@/hooks/use-translation";
  * with a retry, instead of letting each page guess.
  */
 export function PriceErrorStrip() {
-  const { isError, refreshPrices } = usePrices();
+  const isError = usePricesError();
+  const refreshPrices = useRefreshPrices();
   const { t } = useTranslation();
   const [retrying, setRetrying] = useState(false);
 

@@ -25,7 +25,7 @@ import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
 import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
-import { usePrices } from "@/hooks/use-prices";
+import { useEnsurePrices } from "@/hooks/use-prices";
 import { useCsvImport } from "@/hooks/use-csv-import";
 import { useCsvExport } from "@/hooks/use-csv-export";
 import { useManualEntries } from "@/hooks/use-manual-entries";
@@ -82,7 +82,7 @@ function getHeldDurationBadge(firstBuyDate: string | null) {
 export default function PortfolioPage() {
   const sectionsBaseId = "portfolio-sections";
   const { t } = useTranslation();
-  const { ensurePrices } = usePrices();
+  const ensurePrices = useEnsurePrices();
   const { holdings, breakdown: rawBreakdown, lastPriceUpdate, isLoading: portfolioLoading } = usePortfolio();
   const now = useNow(30_000);
   const { data: coinList } = useQuery<CoinListItem[]>({
@@ -304,6 +304,16 @@ export default function PortfolioPage() {
     setSearch(value);
     setTransactionsPage(1);
   }, []);
+
+  const goToPreviousTransactionsPage = useCallback(
+    () => setTransactionsPage((prev) => Math.max(1, prev - 1)),
+    []
+  );
+  const goToNextTransactionsPage = useCallback(
+    () => setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1)),
+    [totalTransactionPages]
+  );
+  const openImportModalFromList = useCallback(() => openImportModal(true), [openImportModal]);
 
   const handleTransactionsPerPageChange = useCallback((value: number) => {
     setTransactionsPerPage(value);
@@ -569,13 +579,9 @@ export default function PortfolioPage() {
           onToggleEdit={toggleEditForm}
           onDelete={setDeleteTarget}
           onSetTransactionsPerPage={handleTransactionsPerPageChange}
-          onPreviousPage={() =>
-            setTransactionsPage((prev) => Math.max(1, prev - 1))
-          }
-          onNextPage={() =>
-            setTransactionsPage((prev) => Math.min(totalTransactionPages, prev + 1))
-          }
-          onOpenImportModal={() => openImportModal(true)}
+          onPreviousPage={goToPreviousTransactionsPage}
+          onNextPage={goToNextTransactionsPage}
+          onOpenImportModal={openImportModalFromList}
           pageSizeOptions={TRANSACTION_PAGE_SIZE_OPTIONS}
         />
       )}

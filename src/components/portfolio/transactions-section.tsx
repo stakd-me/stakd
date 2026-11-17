@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import { Fragment, memo, type ReactNode } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,7 +39,11 @@ interface TransactionsSectionProps {
   pageSizeOptions: readonly number[];
 }
 
-export function TransactionsSection({
+/**
+ * Memoised: transactions do not depend on live prices, so a price tick that
+ * re-renders the portfolio page must not re-render this list.
+ */
+export const TransactionsSection = memo(function TransactionsSection({
   transactions,
   filteredTransactions,
   paginatedTransactions,
@@ -378,4 +382,4 @@ export function TransactionsSection({
       </CardContent>
     </Card>
   );
-}
+});

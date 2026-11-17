@@ -20,7 +20,7 @@ import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { apiFetch } from "@/lib/api-client";
 import { useVaultStore } from "@/lib/store";
-import { usePrices } from "@/hooks/use-prices";
+import { useEnsurePrices } from "@/hooks/use-prices";
 import { rankTokenSearchResults } from "@/lib/search/token-search";
 import {
   buildStablecoinSymbolSet,
@@ -55,7 +55,7 @@ export default function AddTransactionPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useTranslation();
-  const { ensurePrices } = usePrices();
+  const ensurePrices = useEnsurePrices();
   const vault = useVaultStore((state) => state.vault);
 
   const [searchQuery, setSearchQuery] = useState("");
