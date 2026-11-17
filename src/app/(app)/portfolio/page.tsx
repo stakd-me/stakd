@@ -23,7 +23,6 @@ import { cn, formatTimeAgo } from "@/lib/utils";
 import { Plus, Search, Download, Upload } from "lucide-react";
 import { TokenListSkeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "@/hooks/use-translation";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useNow } from "@/hooks/use-now";
 import { usePortfolio } from "@/hooks/use-portfolio";
 import { usePrices } from "@/hooks/use-prices";
@@ -140,11 +139,6 @@ export default function PortfolioPage() {
     parseCsvFile,
     submitImport,
   } = useCsvImport({ ensurePrices });
-
-  const importDialogRef = useFocusTrap<HTMLDivElement>(
-    showImportModal,
-    closeImportModal
-  );
 
   // --- Enrich breakdown with tokenName, coingeckoId, totalFees, firstBuyDate ---
   const breakdown: BreakdownItem[] = useMemo(
@@ -621,7 +615,6 @@ export default function PortfolioPage() {
 
       <ImportReviewModal
         open={showImportModal}
-        dialogRef={importDialogRef}
         importing={importing}
         importFileName={importFileName}
         importHasReviewState={importHasReviewState}

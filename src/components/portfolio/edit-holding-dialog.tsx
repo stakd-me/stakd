@@ -3,7 +3,8 @@
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useFocusTrap } from "@/hooks/use-focus-trap";
+import { Dialog } from "@/components/ui/dialog";
+import { FormField } from "@/components/ui/form-field";
 import { useTranslation } from "@/hooks/use-translation";
 import { toLocalDatetimeString } from "@/lib/utils";
 import { BINANCE_SYMBOL_TO_COINGECKO_ID } from "@/lib/pricing/binance-symbol-resolver";
@@ -32,8 +33,7 @@ export function EditHoldingDialog({
   onCancel,
 }: EditHoldingDialogProps) {
   const { t } = useTranslation();
-  const dialogRef = useFocusTrap<HTMLDivElement>(open, onCancel);
-  const titleId = useId();
+  const fieldId = useId();
   const suggestedId = BINANCE_SYMBOL_TO_COINGECKO_ID[item.symbol.trim().toUpperCase()] ?? null;
   const effectiveId = item.coingeckoId ?? suggestedId ?? "";
   const [coingeckoId, setCoingeckoId] = useState(effectiveId);
@@ -81,104 +81,98 @@ export function EditHoldingDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-overlay-scrim backdrop-blur-sm"
-        onClick={onCancel}
-        aria-hidden="true"
-      />
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        className="relative mx-4 w-full max-w-md rounded-lg border border-border bg-bg-sidebar p-6 shadow-xl animate-fade-in-scale"
-      >
-        <h3 id={titleId} className="text-heading text-text-primary">
-          {t("portfolio.editHoldingTitle")}
-        </h3>
-        <p className="mt-1 text-body text-text-muted">
-          {t("portfolio.editHoldingDesc", { symbol: item.symbol })}
-        </p>
-
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="mb-1 block text-caption font-semibold text-text-muted">
-              {t("portfolio.editFirstBuyDate")}
-            </label>
-            <Input
-              type="datetime-local"
-              value={firstBuyDate}
-              onChange={(e) => setFirstBuyDate(e.target.value)}
-            />
-            <p className="mt-1 text-caption text-text-muted">
-              {t("portfolio.editFirstBuyDateHint")}
-            </p>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-caption font-semibold text-text-muted">
-              {t("portfolio.editAvgCost")}
-            </label>
-            <Input
-              type="number"
-              min="0"
-              step="any"
-              value={avgCost}
-              onChange={(event) => {
-                setAvgCost(event.target.value);
-                setError(null);
-              }}
-              placeholder={item.avgCost > 0 ? item.avgCost.toString() : "0.00"}
-            />
-            <p className="mt-1 text-caption text-text-muted">
-              {t("portfolio.editAvgCostHint")}
-            </p>
-          </div>
-
-          <div>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-caption text-text-muted hover:text-text-primary"
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {t("portfolio.editCoingeckoId")}
-              {coingeckoId && (
-                <span className="ml-1 text-text-muted">({coingeckoId})</span>
-              )}
-            </button>
-            {showAdvanced && (
-              <div className="mt-2">
-                <Input
-                  value={coingeckoId}
-                  onChange={(e) => setCoingeckoId(e.target.value)}
-                  placeholder="e.g. bitcoin, ethereum"
-                />
-                <p className="mt-1 text-caption text-text-muted">
-                  {t("portfolio.editCoingeckoIdHint")}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {error ? (
-          <p className="mt-3 text-caption text-status-negative" role="alert">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="mt-6 flex justify-end gap-3">
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      title={t("portfolio.editHoldingTitle")}
+      description={t("portfolio.editHoldingDesc", { symbol: item.symbol })}
+      footer={
+        <>
           <Button variant="outline" size="sm" onClick={onCancel}>
             {t("common.cancel")}
           </Button>
           <Button size="sm" onClick={handleSave}>
             {t("common.save")}
           </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <FormField
+          label={t("portfolio.editFirstBuyDate")}
+          htmlFor={`${fieldId}-date`}
+          hint={t("portfolio.editFirstBuyDateHint")}
+          className="space-y-1"
+        >
+          <Input
+            id={`${fieldId}-date`}
+            type="datetime-local"
+            value={firstBuyDate}
+            onChange={(e) => setFirstBuyDate(e.target.value)}
+          />
+        </FormField>
+
+        <FormField
+          label={t("portfolio.editAvgCost")}
+          htmlFor={`${fieldId}-avg`}
+          hint={t("portfolio.editAvgCostHint")}
+          className="space-y-1"
+        >
+          <Input
+            id={`${fieldId}-avg`}
+            type="number"
+            min="0"
+            step="any"
+            value={avgCost}
+            onChange={(event) => {
+              setAvgCost(event.target.value);
+              setError(null);
+            }}
+            placeholder={item.avgCost > 0 ? item.avgCost.toString() : "0.00"}
+          />
+        </FormField>
+
+        <div>
+          <button
+            type="button"
+            aria-expanded={showAdvanced}
+            aria-controls={`${fieldId}-advanced`}
+            className="flex items-center gap-1 text-caption text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page"
+            onClick={() => setShowAdvanced((v) => !v)}
+          >
+            {showAdvanced ? (
+              <ChevronUp className="h-3 w-3" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-3 w-3" aria-hidden="true" />
+            )}
+            {t("portfolio.editCoingeckoId")}
+            {coingeckoId && <span className="ml-1 text-text-muted">({coingeckoId})</span>}
+          </button>
+          {showAdvanced && (
+            <div id={`${fieldId}-advanced`} className="mt-2">
+              <FormField
+                label={t("portfolio.editCoingeckoId")}
+                htmlFor={`${fieldId}-cg`}
+                hint={t("portfolio.editCoingeckoIdHint")}
+                className="space-y-1"
+              >
+                <Input
+                  id={`${fieldId}-cg`}
+                  value={coingeckoId}
+                  onChange={(e) => setCoingeckoId(e.target.value)}
+                  placeholder="bitcoin, ethereum"
+                />
+              </FormField>
+            </div>
+          )}
         </div>
+
+        {error ? (
+          <p className="text-caption text-status-negative" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
-    </div>
+    </Dialog>
   );
 }
