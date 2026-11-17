@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { Plus } from "lucide-react";
@@ -22,6 +23,52 @@ export function UntargetedTokensSection({
   const { mask } = usePrivacy();
   const { t } = useTranslation();
 
+  const columns: DataTableColumn<Suggestion>[] = [
+    {
+      key: "token",
+      header: t("rebalance.token"),
+      align: "left",
+      mobile: "identity",
+      cell: (suggestion) => (
+        <>
+          {suggestion.tokenSymbol}
+          <span className="ml-2 rounded-sm bg-bg-muted px-1.5 py-0.5 text-caption font-normal text-text-muted">
+            {t("rebalance.untargeted")}
+          </span>
+        </>
+      ),
+    },
+    {
+      key: "percent",
+      header: t("rebalance.currentPercent"),
+      mobile: "meta",
+      cell: (suggestion) => `${suggestion.currentPercent.toFixed(1)}%`,
+    },
+    {
+      key: "value",
+      header: t("rebalance.currentValue"),
+      mobile: "primary",
+      cell: (suggestion) => mask(formatUsd(suggestion.currentValue)),
+    },
+    {
+      key: "action",
+      header: <span className="sr-only">{t("rebalance.addTarget")}</span>,
+      mobile: "note",
+      cell: (suggestion) => (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onAddTarget(suggestion)}
+          disabled={isTargeted(suggestion.tokenSymbol)}
+          aria-label={`${t("rebalance.addTarget")}: ${suggestion.tokenSymbol}`}
+        >
+          <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          {t("rebalance.addTarget")}
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -34,110 +81,12 @@ export function UntargetedTokensSection({
           {t("rebalance.untargetedDescription")}
         </p>
 
-        <div className="space-y-3 md:hidden">
-          {suggestions.map((suggestion) => {
-            const alreadyTargeted = isTargeted(suggestion.tokenSymbol);
-
-            return (
-              <div
-                key={suggestion.tokenSymbol}
-                className="rounded-lg border border-border-subtle bg-bg-card p-4"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-medium text-text-primary">
-                      {suggestion.tokenSymbol}
-                    </p>
-                    <span className="mt-1 inline-flex rounded-md bg-bg-muted px-1.5 py-0.5 text-caption text-text-muted">
-                      {t("rebalance.untargeted")}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onAddTarget(suggestion)}
-                    disabled={alreadyTargeted}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t("rebalance.addTarget")}
-                  </Button>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 text-body">
-                  <div>
-                    <p className="text-caption text-text-muted">
-                      {t("rebalance.currentPercent")}
-                    </p>
-                    <p className="text-text-primary">
-                      {suggestion.currentPercent.toFixed(1)}%
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-caption text-text-muted">
-                      {t("rebalance.currentValue")}
-                    </p>
-                    <p className="text-text-primary">
-                      {mask(formatUsd(suggestion.currentValue))}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full text-body">
-            <caption className="sr-only">{t("rebalance.untargetedTokens")}</caption>
-            <thead>
-              <tr className="border-b border-border text-left text-text-muted">
-                <th scope="col" className="pb-3 pr-4">
-                  {t("rebalance.token")}
-                </th>
-                <th scope="col" className="pb-3 pr-4 text-right">
-                  {t("rebalance.currentPercent")}
-                </th>
-                <th scope="col" className="pb-3 pr-4 text-right">
-                  {t("rebalance.currentValue")}
-                </th>
-                <th scope="col" className="pb-3 text-right"></th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-num-md tabular">
-              {suggestions.map((suggestion) => (
-                <tr
-                  key={suggestion.tokenSymbol}
-                  className="border-b border-border-subtle"
-                >
-                  <th scope="row" className="py-2.5 pr-4 text-left font-sans text-body font-semibold text-text-primary">
-                    {suggestion.tokenSymbol}
-                    <span className="ml-2 rounded-md bg-bg-muted px-1.5 py-0.5 text-caption text-text-muted">
-                      {t("rebalance.untargeted")}
-                    </span>
-                  </th>
-                  <td className="py-3 pr-4 text-right text-text-muted">
-                    {suggestion.currentPercent.toFixed(1)}%
-                  </td>
-                  <td className="py-3 pr-4 text-right text-text-muted">
-                    {mask(formatUsd(suggestion.currentValue))}
-                  </td>
-                  <td className="py-3 text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onAddTarget(suggestion)}
-                      disabled={isTargeted(suggestion.tokenSymbol)}
-                      className="text-caption"
-                    >
-                      <Plus className="mr-1 h-3 w-3" />
-                      {t("rebalance.addTarget")}
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption={t("rebalance.untargetedTokens")}
+          columns={columns}
+          rows={suggestions}
+          rowKey={(suggestion) => suggestion.tokenSymbol}
+        />
       </CardContent>
     </Card>
   );

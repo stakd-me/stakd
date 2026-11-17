@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable } from "@/components/ui/data-table";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
@@ -44,6 +45,10 @@ type ReportsSection = "overview" | "activity" | "risk" | "holdings";
 
 function getSignedPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+function plTone(value: number): string {
+  return value >= 0 ? "text-status-positive" : "text-status-negative";
 }
 
 function getSignedCurrency(value: number): string {
@@ -620,140 +625,68 @@ export default function ReportsPage() {
                 className="py-8"
               />
             ) : (
-              <>
-                <div className="space-y-3 md:hidden">
-                  {report.topHoldings.map((holding) => (
-                    <div
-                      key={holding.symbol}
-                      className="rounded-md border border-border-subtle bg-bg-card p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-body font-semibold text-text-primary">
-                            {holding.symbol}
-                          </p>
-                          <p className="font-mono text-num-sm tabular text-text-muted">
-                            {t("reports.held")}: {holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-mono text-num-md tabular text-text-primary">
-                            {mask(formatUsd(holding.valueUsd))}
-                          </p>
-                          <p className="font-mono text-num-sm tabular text-text-muted">
-                            {holding.percent.toFixed(2)}%
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3 font-mono text-num-sm tabular">
-                        <div>
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.unrealizedPL")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPLUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {mask(getSignedCurrency(holding.unrealizedPLUsd))}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.return")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPLPercent >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedPercent(holding.unrealizedPLPercent)}
-                          </p>
-                        </div>
-                        <div className="col-span-2">
-                          <p className="text-meta uppercase text-text-muted">
-                            {t("reports.unrealizedPLPerDay")}
-                          </p>
-                          <p
-                            className={cn(
-                              holding.unrealizedPnlPerHeldDayUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="min-w-full text-left text-body">
-                    <caption className="sr-only">{t("reports.topHoldings")}</caption>
-                    <thead>
-                      <tr className="border-b border-border text-text-muted">
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.token")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.value")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.weight")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.held")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.unrealizedPL")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.unrealizedPLPerDay")}</th>
-                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.return")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {report.topHoldings.map((holding) => (
-                        <tr
-                          key={holding.symbol}
-                          className="border-b border-border-faint font-mono text-num-md tabular text-text-secondary"
-                        >
-                          <th scope="row" className="px-2 py-2 text-left font-sans text-body font-semibold text-text-primary">{holding.symbol}</th>
-                          <td className="px-2 py-2 text-right">{mask(formatUsd(holding.valueUsd))}</td>
-                          <td className="px-2 py-2 text-right">{holding.percent.toFixed(2)}%</td>
-                          <td className="px-2 py-2 text-right">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
-                          <td
-                            className={cn(
-                              "px-2 py-2 text-right",
-                              holding.unrealizedPLUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {mask(getSignedCurrency(holding.unrealizedPLUsd))}
-                          </td>
-                          <td
-                            className={cn(
-                              "px-2 py-2 text-right",
-                              holding.unrealizedPnlPerHeldDayUsd >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
-                          </td>
-                          <td
-                            className={cn(
-                              "px-2 py-2 text-right",
-                              holding.unrealizedPLPercent >= 0
-                                ? "text-status-positive"
-                                : "text-status-negative"
-                            )}
-                          >
-                            {getSignedPercent(holding.unrealizedPLPercent)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
+                <DataTable
+                  caption={t("reports.topHoldings")}
+                  rows={report.topHoldings}
+                  rowKey={(holding) => holding.symbol}
+                  columns={[
+                    {
+                      key: "token",
+                      header: t("reports.token"),
+                      align: "left",
+                      mobile: "identity",
+                      cell: (holding) => holding.symbol,
+                    },
+                    {
+                      key: "value",
+                      header: t("reports.value"),
+                      mobile: "primary",
+                      cell: (holding) => mask(formatUsd(holding.valueUsd)),
+                    },
+                    {
+                      key: "weight",
+                      header: t("reports.weight"),
+                      mobile: "meta",
+                      cell: (holding) => `${holding.percent.toFixed(2)}%`,
+                    },
+                    {
+                      key: "held",
+                      header: t("reports.held"),
+                      mobile: "hidden",
+                      cell: (holding) => (holding.heldDays > 0 ? `${holding.heldDays}d` : "-"),
+                    },
+                    {
+                      key: "pl",
+                      header: t("reports.unrealizedPL"),
+                      mobile: "meta",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPLUsd)}>
+                          {mask(getSignedCurrency(holding.unrealizedPLUsd))}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "plPerDay",
+                      header: t("reports.unrealizedPLPerDay"),
+                      mobile: "hidden",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPnlPerHeldDayUsd)}>
+                          {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
+                        </span>
+                      ),
+                    },
+                    {
+                      key: "return",
+                      header: t("reports.return"),
+                      mobile: "meta",
+                      cell: (holding) => (
+                        <span className={plTone(holding.unrealizedPLPercent)}>
+                          {getSignedPercent(holding.unrealizedPLPercent)}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
             )}
           </CardContent>
         </Card>

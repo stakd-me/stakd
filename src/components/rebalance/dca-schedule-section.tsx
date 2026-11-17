@@ -1,11 +1,14 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { Clock } from "lucide-react";
 import type { SuggestionsData } from "@/components/rebalance/types";
 import { usePrivacy } from "@/hooks/use-privacy";
+
+type Chunk = NonNullable<SuggestionsData["dcaChunks"]>[number];
 
 interface DcaScheduleSectionProps {
   chunks: NonNullable<SuggestionsData["dcaChunks"]>;
@@ -25,11 +28,51 @@ export function DcaScheduleSection({
     return null;
   }
 
+  const columns: DataTableColumn<Chunk>[] = [
+    {
+      key: "chunk",
+      header: t("rebalance.chunk"),
+      align: "left",
+      mobile: "identity",
+      cell: (chunk) => <span className="font-mono tabular">#{chunk.chunkIndex}</span>,
+    },
+    {
+      key: "date",
+      header: t("rebalance.date"),
+      align: "left",
+      mobile: "primary",
+      cell: (chunk) => chunk.scheduledDate,
+    },
+    {
+      key: "trades",
+      header: t("rebalance.tradesLabel"),
+      align: "left",
+      mobile: "note",
+      cell: (chunk) => (
+        <span className="flex flex-wrap gap-2">
+          {chunk.trades.map((trade) => (
+            <span
+              key={trade.tokenSymbol}
+              className="inline-flex items-center gap-1 rounded-sm border border-border-subtle px-2 py-0.5 font-mono text-caption text-text-secondary"
+            >
+              <span className="font-sans font-semibold text-text-primary">
+                {trade.action === "buy" || trade.action === "sell"
+                  ? t(`rebalance.action.${trade.action}`)
+                  : trade.action}
+              </span>
+              {trade.tokenSymbol} {mask(formatUsd(trade.amount))}
+            </span>
+          ))}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-status-info" />
+          <Clock className="h-5 w-5 text-text-muted" aria-hidden="true" />
           {t("rebalance.dcaSchedule")} ({totalChunks} {t("rebalance.chunks")}, {t("rebalance.every")} {intervalDays} {t("rebalance.days")})
         </CardTitle>
       </CardHeader>
@@ -37,42 +80,12 @@ export function DcaScheduleSection({
         <p className="mb-3 text-body text-text-muted">
           {t("rebalance.dcaDescription", { chunks: totalChunks })}
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-body">
-            <caption className="sr-only">{t("rebalance.dcaSchedule")}</caption>
-            <thead>
-              <tr className="border-b border-border text-left text-text-muted">
-                <th scope="col" className="pb-2 pr-4">{t("rebalance.chunk")}</th>
-                <th scope="col" className="pb-2 pr-4">{t("rebalance.date")}</th>
-                <th scope="col" className="pb-2">{t("rebalance.tradesLabel")}</th>
-              </tr>
-            </thead>
-            <tbody className="font-mono text-num-md tabular">
-              {chunks.map((chunk) => (
-                <tr key={chunk.chunkIndex} className="border-b border-border-subtle">
-                  <th scope="row" className="py-2 pr-4 text-left text-num-sm font-normal text-text-muted">#{chunk.chunkIndex}</th>
-                  <td className="py-2 pr-4 text-text-primary">{chunk.scheduledDate}</td>
-                  <td className="py-2">
-                    <div className="flex flex-wrap gap-2">
-                      {chunk.trades.map((trade) => (
-                        <span
-                          key={trade.tokenSymbol}
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-caption font-semibold ${
-                            trade.action === "buy"
-                              ? "bg-status-positive-soft text-status-positive"
-                              : "bg-status-negative-soft text-status-negative"
-                          }`}
-                        >
-                          {trade.action.toUpperCase()} {trade.tokenSymbol} {mask(formatUsd(trade.amount))}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption={t("rebalance.dcaSchedule")}
+          columns={columns}
+          rows={chunks}
+          rowKey={(chunk) => String(chunk.chunkIndex)}
+        />
       </CardContent>
     </Card>
   );

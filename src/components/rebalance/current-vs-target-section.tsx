@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useTranslation } from "@/hooks/use-translation";
 import { PriceFlash } from "@/components/ui/price-flash";
 import { formatUsd } from "@/lib/utils";
@@ -49,6 +50,108 @@ export function CurrentVsTargetSection({
 
   const hasConcentrationAlerts = concentrationAlerts.length > 0;
 
+  const columns: DataTableColumn<Suggestion>[] = [
+    {
+      key: "token",
+      header: t("rebalance.token"),
+      align: "left",
+      mobile: "identity",
+      cell: (suggestion) => {
+        const concAlert = concentrationBySymbol.get(suggestion.tokenSymbol);
+        return (
+          <span className="flex items-center gap-2">
+            {suggestion.tokenSymbol}
+            {concAlert && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none ${getSeverityBadge(concAlert.severity)}`}
+                title={`${t("rebalance.concentrationRisk")}: ${concAlert.currentPercent.toFixed(1)}%`}
+              >
+                <AlertTriangle className="h-2.5 w-2.5" aria-hidden="true" />
+                {severityLabels[concAlert.severity]}
+              </span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "target",
+      header: t("rebalance.targetPercent"),
+      mobile: "meta",
+      cell: (suggestion) => `${suggestion.targetPercent.toFixed(1)}%`,
+    },
+    {
+      key: "current",
+      header: t("rebalance.currentPercent"),
+      mobile: "meta",
+      cell: (suggestion) => `${suggestion.currentPercent.toFixed(1)}%`,
+    },
+    {
+      key: "deviation",
+      header: t("rebalance.deviation"),
+      mobile: "meta",
+      cell: (suggestion) => (
+        <span className={`font-medium ${getDeviationColor(suggestion.deviation)}`}>
+          {suggestion.deviation >= 0 ? "+" : ""}
+          {suggestion.deviation.toFixed(1)}%
+        </span>
+      ),
+    },
+    {
+      key: "value",
+      header: t("rebalance.currentValue"),
+      mobile: "hidden",
+      cell: (suggestion) => (
+        <PriceFlash value={suggestion.currentValue}>
+          {mask(formatUsd(suggestion.currentValue))}
+        </PriceFlash>
+      ),
+    },
+    {
+      key: "action",
+      header: t("rebalance.action"),
+      align: "left",
+      mobile: "note",
+      cell: (suggestion) => (
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <span
+            className={`inline-block rounded-sm border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
+          >
+            {t(`rebalance.action.${suggestion.action}`)}
+          </span>
+          <span className="font-mono tabular md:hidden">
+            {mask(formatSuggestionTradeQuantity(suggestion))}
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "quantity",
+      header: t("rebalance.quantity"),
+      mobile: "hidden",
+      cell: (suggestion) => mask(formatSuggestionTradeQuantity(suggestion)),
+    },
+    {
+      key: "amount",
+      header: t("rebalance.amount"),
+      mobile: "primary",
+      cell: (suggestion) =>
+        suggestion.action !== "hold" ? (
+          <>
+            {mask(formatUsd(suggestion.amount))}
+            {suggestion.estimatedSlippage > 0 || suggestion.estimatedFee > 0 ? (
+              <span className="mt-0.5 block text-caption text-text-muted">
+                {t("rebalance.fees")}: {mask(formatUsd(suggestion.estimatedFee))} | {t("rebalance.slip")}:{" "}
+                {mask(formatUsd(suggestion.estimatedSlippage))}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          "-"
+        ),
+    },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -85,81 +188,13 @@ export function CurrentVsTargetSection({
             ))}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-body">
-              <caption className="sr-only">{t("rebalance.currentVsTarget")}</caption>
-              <thead>
-                <tr className="border-b border-border text-left text-text-muted">
-                  <th scope="col" className="pb-3 pr-4">{t("rebalance.token")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.targetPercent")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.currentPercent")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.deviation")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.currentValue")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-center">{t("rebalance.action")}</th>
-                  <th scope="col" className="pb-3 pr-4 text-right">{t("rebalance.quantity")}</th>
-                  <th scope="col" className="pb-3 text-right">{t("rebalance.amount")}</th>
-                </tr>
-              </thead>
-              <tbody className="font-mono text-num-md tabular">
-                {suggestions.map((suggestion) => {
-                  const concAlert = concentrationBySymbol.get(suggestion.tokenSymbol);
-                  return (
-                    <tr
-                      key={suggestion.tokenSymbol}
-                      className={`border-b border-border-subtle ${getDeviationBg(suggestion.deviation)}`}
-                    >
-                      <th scope="row" className="py-2.5 pr-4 text-left font-sans text-body font-semibold text-text-primary">
-                        <div className="flex items-center gap-2">
-                          {suggestion.tokenSymbol}
-                          {concAlert && (
-                            <span
-                              className={`inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none ${getSeverityBadge(concAlert.severity)}`}
-                              title={`${t("rebalance.concentrationRisk")}: ${concAlert.currentPercent.toFixed(1)}%`}
-                            >
-                              <AlertTriangle className="h-2.5 w-2.5" />
-                              {severityLabels[concAlert.severity]}
-                            </span>
-                          )}
-                        </div>
-                      </th>
-                      <td className="py-3 pr-4 text-right">
-                        {suggestion.targetPercent.toFixed(1)}%
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        {suggestion.currentPercent.toFixed(1)}%
-                      </td>
-                      <td className={`py-3 pr-4 text-right font-medium ${getDeviationColor(suggestion.deviation)}`}>
-                        {suggestion.deviation >= 0 ? "+" : ""}
-                        {suggestion.deviation.toFixed(1)}%
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        <PriceFlash value={suggestion.currentValue}>{mask(formatUsd(suggestion.currentValue))}</PriceFlash>
-                      </td>
-                      <td className="py-3 pr-4 text-center">
-                        <span
-                          className={`inline-block rounded-sm border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
-                        >
-                          {t(`rebalance.action.${suggestion.action}`)}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        {formatSuggestionTradeQuantity(suggestion)}
-                      </td>
-                      <td className="py-3 text-right">
-                        {suggestion.action !== "hold" ? mask(formatUsd(suggestion.amount)) : "-"}
-                        {suggestion.action !== "hold" &&
-                        (suggestion.estimatedSlippage > 0 || suggestion.estimatedFee > 0) ? (
-                          <div className="mt-0.5 text-caption text-text-muted">
-                            {t("rebalance.fees")}: {mask(formatUsd(suggestion.estimatedFee))} | {t("rebalance.slip")}: {mask(formatUsd(suggestion.estimatedSlippage))}
-                          </div>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            caption={t("rebalance.currentVsTarget")}
+            columns={columns}
+            rows={suggestions}
+            rowKey={(suggestion) => suggestion.tokenSymbol}
+            rowClassName={(suggestion) => getDeviationBg(suggestion.deviation)}
+          />
         )}
       </CardContent>
     </Card>
