@@ -68,9 +68,12 @@ export function DangerZoneSection() {
     dangerCountdown === 0 &&
     !dangerRunning;
 
-  useEffect(() => {
+  // Choosing a different action restarts the confirmation delay.
+  const [countdownAction, setCountdownAction] = useState(dangerAction);
+  if (countdownAction !== dangerAction) {
+    setCountdownAction(dangerAction);
     setDangerCountdown(DANGER_CONFIRM_DELAY_SECONDS);
-  }, [dangerAction]);
+  }
 
   useEffect(() => {
     if (dangerCountdown <= 0) return;

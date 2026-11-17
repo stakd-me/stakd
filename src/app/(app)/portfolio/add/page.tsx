@@ -72,7 +72,8 @@ export default function AddTransactionPage() {
   const [feePercent, setFeePercent] = useState("0.1");
   const [coingeckoId, setCoingeckoId] = useState("");
   const [note, setNote] = useState("");
-  const [settlementEnabled, setSettlementEnabled] = useState(false);
+  // Starts enabled to match the initial "buy" type (see the adjustment below).
+  const [settlementEnabled, setSettlementEnabled] = useState(true);
   const [settlementSymbol, setSettlementSymbol] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,24 +232,23 @@ export default function AddTransactionPage() {
 
   const defaultSettlementSymbol = stablecoinOptions[0]?.symbol ?? "USDT";
 
-  useEffect(() => {
-    if (
-      settlementSymbol &&
-      stablecoinOptions.some((option) => option.symbol === settlementSymbol)
-    ) {
-      return;
-    }
+  // Adjusted during render, not in effects: an unknown or empty settlement
+  // symbol falls back to the default stablecoin...
+  if (
+    settlementSymbol !== defaultSettlementSymbol &&
+    !(settlementSymbol && stablecoinOptions.some((option) => option.symbol === settlementSymbol))
+  ) {
     setSettlementSymbol(defaultSettlementSymbol);
-  }, [defaultSettlementSymbol, settlementSymbol, stablecoinOptions]);
+  }
 
-  useEffect(() => {
-    if (type === "receive" || type === "send") {
-      setSettlementEnabled(false);
-      return;
-    }
-
-    setSettlementEnabled(true);
-  }, [settlementSymbol, type]);
+  // ...and settlement re-enables for trades (off for transfers) whenever the
+  // type or the settlement token changes.
+  const settlementKey = `${type}|${settlementSymbol}`;
+  const [prevSettlementKey, setPrevSettlementKey] = useState(settlementKey);
+  if (settlementKey !== prevSettlementKey) {
+    setPrevSettlementKey(settlementKey);
+    setSettlementEnabled(type !== "receive" && type !== "send");
+  }
 
   const selectedSettlementOption = useMemo(
     () =>

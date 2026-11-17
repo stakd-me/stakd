@@ -1,16 +1,15 @@
 import { signAccessToken, verifyAccessToken } from "@/lib/auth/jwt";
 
 describe("jwt auth", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
   const originalJwtSecret = process.env.JWT_SECRET;
 
   beforeEach(() => {
-    process.env.NODE_ENV = "test";
+    vi.stubEnv("NODE_ENV", "test");
     process.env.JWT_SECRET = "0123456789abcdef0123456789abcdef";
   });
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv;
+    vi.unstubAllEnvs();
     process.env.JWT_SECRET = originalJwtSecret;
   });
 
@@ -27,7 +26,7 @@ describe("jwt auth", () => {
   });
 
   it("requires a long secret in production mode", async () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     process.env.JWT_SECRET = "short";
     await expect(signAccessToken("user-123")).rejects.toThrow(/JWT_SECRET/);
   });

@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const authenticateRequestMock = vi.fn();
-const authErrorMock = vi.fn(() =>
+const authErrorMock = vi.fn((..._args: unknown[]) =>
   NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 );
 
 const selectLimitMock = vi.fn();
-const selectWhereMock = vi.fn(() => ({ limit: selectLimitMock }));
-const selectFromMock = vi.fn(() => ({ where: selectWhereMock }));
-const selectMock = vi.fn(() => ({ select: undefined, from: selectFromMock }));
+const selectWhereMock = vi.fn((..._args: unknown[]) => ({ limit: selectLimitMock }));
+const selectFromMock = vi.fn((..._args: unknown[]) => ({ where: selectWhereMock }));
+const selectMock = vi.fn((..._args: unknown[]) => ({ select: undefined, from: selectFromMock }));
 
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
@@ -200,12 +200,11 @@ export function useRebalanceSettingsForm() {
     (key) => vaultSettings[key] !== undefined
   );
 
-  // Load settings from vault on mount / when vault changes
-  useEffect(() => {
-    if (loaded || !hasHydratableSettings) return;
-    setForm((prev) => hydrateRebalanceSettingsForm(prev, vaultSettings));
+  // Hydrate once, as soon as the vault has settings to hydrate from.
+  if (!loaded && hasHydratableSettings) {
     setLoaded(true);
-  }, [vaultSettings, loaded, hasHydratableSettings]);
+    setForm((prev) => hydrateRebalanceSettingsForm(prev, vaultSettings));
+  }
 
   const setField: SetRebalanceField = useCallback((key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));

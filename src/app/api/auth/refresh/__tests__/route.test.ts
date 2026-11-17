@@ -3,9 +3,9 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const signAccessTokenMock = vi.fn();
 const updateReturningMock = vi.fn();
-const updateWhereMock = vi.fn(() => ({ returning: updateReturningMock }));
-const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
-const updateMock = vi.fn(() => ({ set: updateSetMock }));
+const updateWhereMock = vi.fn((..._args: unknown[]) => ({ returning: updateReturningMock }));
+const updateSetMock = vi.fn((..._args: unknown[]) => ({ where: updateWhereMock }));
+const updateMock = vi.fn((..._args: unknown[]) => ({ set: updateSetMock }));
 
 vi.mock("drizzle-orm", () => ({
   and: vi.fn(() => ({})),
