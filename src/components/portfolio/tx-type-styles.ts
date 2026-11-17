@@ -8,11 +8,3 @@ export const TX_TYPE_LABEL_KEYS = {
   receive: "portfolio.receive",
   send: "portfolio.send",
 } as const satisfies Record<PortfolioTxType, TranslationKeys>;
-
-/**
- * A transaction type is a category, not a gain or a loss, so its chip is
- * neutral: pos/neg are reserved for money going up and down.
- */
-export function getTransactionTypeBadgeClass(): string {
-  return "border border-border-subtle text-text-secondary";
-}
