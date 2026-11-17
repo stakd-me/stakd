@@ -60,6 +60,7 @@ export default function AddTransactionPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
+  const [coinHighlight, setCoinHighlight] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const [type, setType] = useState<TxType>("buy");
@@ -89,6 +90,8 @@ export default function AddTransactionPage() {
     },
     staleTime: Infinity,
   });
+
+  const coinListOpen = showDropdown && searchQuery.length >= 1;
 
   // Client-side search — relevance ranking with canonical asset preference.
   const filteredCoins = useMemo(() => {
@@ -487,33 +490,74 @@ export default function AddTransactionPage() {
                   />
                   <Input
                     id="coin-search"
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded={coinListOpen}
+                    aria-controls={coinListOpen ? "coin-search-results" : undefined}
+                    aria-activedescendant={
+                      coinListOpen && filteredCoins.length > 0
+                        ? `coin-option-${coinHighlight}`
+                        : undefined
+                    }
+                    autoComplete="off"
                     placeholder={t("portfolioAdd.searchPlaceholder")}
                     value={searchQuery}
-                    aria-expanded={showDropdown && searchQuery.length >= 1}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
                       setShowDropdown(true);
+                      setCoinHighlight(0);
                     }}
                     onFocus={() => {
                       if (searchQuery.length >= 1) setShowDropdown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setShowDropdown(false);
+                        return;
+                      }
+                      if (!coinListOpen || filteredCoins.length === 0) return;
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setCoinHighlight((h) => (h + 1) % filteredCoins.length);
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setCoinHighlight(
+                          (h) => (h - 1 + filteredCoins.length) % filteredCoins.length
+                        );
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        const coin = filteredCoins[coinHighlight];
+                        if (coin) void selectCoin(coin);
+                      }
                     }}
                     className="pl-9"
                   />
                 </div>
               </FormField>
-              {showDropdown && searchQuery.length >= 1 && (
+              {coinListOpen && (
                 <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-overlay border border-border bg-bg-card shadow-overlay">
                   {filteredCoins.length === 0 ? (
-                    <p className="px-4 py-3 text-body text-text-muted">
+                    <p className="px-4 py-3 text-body text-text-muted" role="status">
                       {t("portfolioAdd.noResults")}
                     </p>
                   ) : (
-                    filteredCoins.map((coin) => (
-                      <button
+                    <ul id="coin-search-results" role="listbox" aria-label={t("portfolioAdd.searchCoinGecko")}>
+                    {filteredCoins.map((coin, coinIndex) => (
+                      <li
                         key={coin.id}
-                        type="button"
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-body hover:bg-bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-inset"
-                        onClick={() => selectCoin(coin)}
+                        id={`coin-option-${coinIndex}`}
+                        role="option"
+                        aria-selected={coinIndex === coinHighlight}
+                        className={cn(
+                          "flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-body hover:bg-bg-hover max-md:min-h-control-lg",
+                          coinIndex === coinHighlight && "bg-bg-hover"
+                        )}
+                        onMouseDown={(e) => {
+                          // Keep focus in the input; select on press.
+                          e.preventDefault();
+                          void selectCoin(coin);
+                        }}
+                        onMouseEnter={() => setCoinHighlight(coinIndex)}
                       >
                         <span className="font-semibold text-text-primary">
                           {coin.symbol.toUpperCase()}
@@ -526,8 +570,9 @@ export default function AddTransactionPage() {
                             Binance
                           </StatusPill>
                         )}
-                      </button>
-                    ))
+                      </li>
+                    ))}
+                    </ul>
                   )}
                 </div>
               )}
