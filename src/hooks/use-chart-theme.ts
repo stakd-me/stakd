@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 
 /**
@@ -80,22 +80,45 @@ function readTheme(isDark: boolean): ChartTheme {
   };
 }
 
+// The theme lives in <html>'s class/style, which next-themes changes after
+// React renders. Treat those attributes as an external store so the canvas
+// re-reads the tokens exactly when they change, instead of setting state
+// from an effect.
+function subscribeToRootAttributes(onChange: () => void): () => void {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class", "style", "data-theme"],
+  });
+  return () => observer.disconnect();
+}
+
+function rootThemeSnapshot(): string {
+  const root = document.documentElement;
+  return `${root.className}|${root.getAttribute("data-theme") ?? ""}|${root.getAttribute("style") ?? ""}`;
+}
+
+function serverThemeSnapshot(): string {
+  return "";
+}
+
 export function useChartTheme(): ChartTheme {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme !== "light";
-  const [theme, setTheme] = useState<ChartTheme>(() => ({
-    ...FALLBACK,
-    isDark,
-    series: [...FALLBACK.series],
-  }));
+  const snapshot = useSyncExternalStore(
+    subscribeToRootAttributes,
+    rootThemeSnapshot,
+    serverThemeSnapshot
+  );
 
-  useEffect(() => {
-    // Runs after next-themes has swapped the class on <html>, so the
-    // computed values are the ones the page is actually painted with.
-    setTheme(readTheme(isDark));
-  }, [isDark]);
-
-  return theme;
+  // `snapshot` is the trigger: new class/style on <html> means new token values.
+  return useMemo(
+    () =>
+      snapshot === ""
+        ? { ...FALLBACK, isDark, series: [...FALLBACK.series] }
+        : readTheme(isDark),
+    [snapshot, isDark]
+  );
 }
 
 /** Just the categorical scale, for callers that need nothing else. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useVaultStore } from "@/lib/store";
@@ -17,6 +17,16 @@ const TARGET_EXPANDED_STORAGE_KEY = "rebalance:target-allocation-expanded";
  * persistence (handleSave), auto-generation, quick-add helpers, the
  * collapsible-section preference, and the target-row autocomplete.
  */
+function readExpandedPref(): boolean | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(TARGET_EXPANDED_STORAGE_KEY);
+    return raw === "1" ? true : raw === "0" ? false : null;
+  } catch {
+    return null;
+  }
+}
+
 export function useRebalanceTargets(
   core: RebalanceCore,
   strategyContext: StrategyContext | null,
@@ -43,8 +53,10 @@ export function useRebalanceTargets(
   const [autocompleteQuery, setAutocompleteQuery] = useState("");
 
   // Collapsible sections
-  const [targetExpanded, setTargetExpanded] = useState(false);
-  const [targetExpandedPref, setTargetExpandedPref] = useState<boolean | null>(null);
+  // The stored preference is read once, lazily. These hooks only run inside
+  // the authenticated shell, which renders on the client.
+  const [targetExpandedPref, setTargetExpandedPref] = useState<boolean | null>(readExpandedPref);
+  const [targetExpanded, setTargetExpanded] = useState(() => targetExpandedPref ?? false);
 
   // Mutation pending states
   const [savePending, setSavePending] = useState(false);
@@ -58,32 +70,24 @@ export function useRebalanceTargets(
     }));
   }, [vault.rebalanceTargets]);
 
-  useEffect(() => {
-    if (savedTargets.length > 0 && !isSeeded) {
-      setTargets(savedTargets);
-      setIsSeeded(true);
-    }
-  }, [savedTargets, isSeeded]);
+  // Seed the editor from the vault once, when saved targets first appear.
+  if (savedTargets.length > 0 && !isSeeded) {
+    setIsSeeded(true);
+    setTargets(savedTargets);
+  }
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = window.localStorage.getItem(TARGET_EXPANDED_STORAGE_KEY);
-    const pref = raw === "1" ? true : raw === "0" ? false : null;
-    setTargetExpandedPref(pref);
-    if (pref !== null) {
-      setTargetExpanded(pref);
-    }
-  }, []);
-
-  useEffect(() => {
+  // An empty editor is always open; otherwise follow the stored preference.
+  // Re-applied when either input changes, as the old effect was.
+  const expandKey = `${targets.length === 0}|${targetExpandedPref}`;
+  const [prevExpandKey, setPrevExpandKey] = useState<string | null>(null);
+  if (expandKey !== prevExpandKey) {
+    setPrevExpandKey(expandKey);
     if (targets.length === 0) {
       setTargetExpanded(true);
-      return;
-    }
-    if (targetExpandedPref !== null) {
+    } else if (targetExpandedPref !== null) {
       setTargetExpanded(targetExpandedPref);
     }
-  }, [targets.length, targetExpandedPref]);
+  }
 
   const handleToggleTargetExpanded = useCallback(() => {
     setTargetExpanded((prev) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/ui/form-field";
@@ -30,14 +30,18 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
   const { toast } = useToast();
   const vault = useVaultStore((s) => s.vault);
 
-  const [rules, setRules] = useState<AlertRule[]>([]);
+  const [rules, setRules] = useState<AlertRule[]>(() =>
+    parseAlertRules(vault.settings.alertRules)
+  );
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
-  // Load from vault
-  useEffect(() => {
+  // Re-read when the vault's copy changes (load, save, another tab).
+  const [loadedRulesJson, setLoadedRulesJson] = useState(vault.settings.alertRules);
+  if (vault.settings.alertRules !== loadedRulesJson) {
+    setLoadedRulesJson(vault.settings.alertRules);
     setRules(parseAlertRules(vault.settings.alertRules));
-  }, [vault.settings.alertRules]);
+  }
 
   const updateRule = useCallback((id: string, patch: Partial<AlertRule>) => {
     setRules((prev) =>

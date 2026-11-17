@@ -4,27 +4,27 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const authenticateRequestMock = vi.fn();
 const rateLimitMock = vi.fn();
-const authErrorMock = vi.fn(() =>
+const authErrorMock = vi.fn((..._args: unknown[]) =>
   NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 );
 
 const selectLimitMock = vi.fn();
-const selectWhereMock = vi.fn(() => ({ limit: selectLimitMock }));
-const selectFromMock = vi.fn(() => ({ where: selectWhereMock }));
-const selectMock = vi.fn(() => ({ from: selectFromMock }));
+const selectWhereMock = vi.fn((..._args: unknown[]) => ({ limit: selectLimitMock }));
+const selectFromMock = vi.fn((..._args: unknown[]) => ({ where: selectWhereMock }));
+const selectMock = vi.fn((..._args: unknown[]) => ({ from: selectFromMock }));
 
 const insertReturningMock = vi.fn();
-const insertConflictMock = vi.fn(() => ({ returning: insertReturningMock }));
-const insertValuesMock = vi.fn(() => ({ onConflictDoNothing: insertConflictMock }));
-const insertMock = vi.fn(() => ({ values: insertValuesMock }));
+const insertConflictMock = vi.fn((..._args: unknown[]) => ({ returning: insertReturningMock }));
+const insertValuesMock = vi.fn((..._args: unknown[]) => ({ onConflictDoNothing: insertConflictMock }));
+const insertMock = vi.fn((..._args: unknown[]) => ({ values: insertValuesMock }));
 
 const updateReturningMock = vi.fn();
-const updateWhereMock = vi.fn(() => ({ returning: updateReturningMock }));
-const updateSetMock = vi.fn(() => ({ where: updateWhereMock }));
-const updateMock = vi.fn(() => ({ set: updateSetMock }));
+const updateWhereMock = vi.fn((..._args: unknown[]) => ({ returning: updateReturningMock }));
+const updateSetMock = vi.fn((..._args: unknown[]) => ({ where: updateWhereMock }));
+const updateMock = vi.fn((..._args: unknown[]) => ({ set: updateSetMock }));
 
 const deleteWhereMock = vi.fn();
-const deleteMock = vi.fn(() => ({ where: deleteWhereMock }));
+const deleteMock = vi.fn((..._args: unknown[]) => ({ where: deleteWhereMock }));
 
 vi.mock("@/lib/redis", () => ({
   rateLimit: (...args: unknown[]) => rateLimitMock(...args),
