@@ -797,7 +797,7 @@ const de: Record<TranslationKeys, string> = {
   "privacy.hideValues": "Werte ausblenden",
   "privacy.showValues": "Werte anzeigen",
   "rebalance.replaceTargetsTitle": "Aktuelle Ziele ersetzen?",
-  "rebalance.replaceTargetsBody": "Dies überschreibt deine {count} aktuellen Ziele. Gespeichert wird erst mit „Ziele speichern“.",
+  "rebalance.replaceTargetsBody": "Dies überschreibt deine aktuellen Ziele ({count}). Gespeichert wird erst mit „Ziele speichern“.",
   "rebalance.replaceTargetsConfirm": "Ersetzen",
   "rebalance.tokenInputLabel": "Token für Ziel {n}",
   "rebalance.percentInputLabel": "Ziel-% für {symbol}",

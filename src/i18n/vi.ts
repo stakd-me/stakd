@@ -821,7 +821,7 @@ const vi: Record<TranslationKeys, string> = {
   "privacy.hideValues": "Ẩn giá trị",
   "privacy.showValues": "Hiện giá trị",
   "rebalance.replaceTargetsTitle": "Thay thế mục tiêu hiện tại?",
-  "rebalance.replaceTargetsBody": "Thao tác này ghi đè {count} mục tiêu hiện có. Chỉ được lưu khi bạn bấm Lưu mục tiêu.",
+  "rebalance.replaceTargetsBody": "Thao tác này ghi đè các mục tiêu hiện có ({count}). Chưa có gì được lưu cho đến khi bạn bấm Lưu mục tiêu.",
   "rebalance.replaceTargetsConfirm": "Thay thế",
   "rebalance.tokenInputLabel": "Token cho mục tiêu {n}",
   "rebalance.percentInputLabel": "% mục tiêu cho {symbol}",

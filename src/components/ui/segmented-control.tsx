@@ -122,7 +122,7 @@ export function SegmentedControl<T extends string>({
             onKeyDown={(event) => handleKeyDown(event, index)}
             onClick={() => onChange(option.value)}
             className={cn(
-              "-mb-px flex shrink-0 items-center gap-2 border-b-2 pb-2.5 text-body font-semibold",
+              "-mb-px flex shrink-0 items-center gap-2 border-b-2 pb-2.5 text-body font-semibold max-md:min-h-control-lg",
               "transition-colors duration-[120ms] ease-out",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
               isActive

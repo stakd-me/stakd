@@ -557,7 +557,7 @@ export default function AddTransactionPage() {
                           e.preventDefault();
                           void selectCoin(coin);
                         }}
-                        onMouseEnter={() => setCoinHighlight(coinIndex)}
+                        onMouseMove={() => setCoinHighlight(coinIndex)}
                       >
                         <span className="font-semibold text-text-primary">
                           {coin.symbol.toUpperCase()}

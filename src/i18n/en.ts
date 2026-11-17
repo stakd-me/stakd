@@ -819,7 +819,7 @@ const en = {
   "privacy.hideValues": "Hide values",
   "privacy.showValues": "Show values",
   "rebalance.replaceTargetsTitle": "Replace your current targets?",
-  "rebalance.replaceTargetsBody": "This overwrites the {count} targets you have now. They are only saved when you press Save targets.",
+  "rebalance.replaceTargetsBody": "This overwrites your current targets ({count}). Nothing is saved until you press Save targets.",
   "rebalance.replaceTargetsConfirm": "Replace",
   "rebalance.tokenInputLabel": "Token for target {n}",
   "rebalance.percentInputLabel": "Target % for {symbol}",

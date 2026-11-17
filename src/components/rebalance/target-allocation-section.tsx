@@ -481,7 +481,7 @@ export function TargetAllocationSection({
                                 e.preventDefault();
                                 selectAutocomplete(index, s);
                               }}
-                              onMouseEnter={() => setHighlighted(optionIndex)}
+                              onMouseMove={() => setHighlighted(optionIndex)}
                             >
                               <span className="flex items-center">
                                 {s.isGroup && (

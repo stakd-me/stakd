@@ -797,7 +797,7 @@ const es: Record<TranslationKeys, string> = {
   "privacy.hideValues": "Ocultar valores",
   "privacy.showValues": "Mostrar valores",
   "rebalance.replaceTargetsTitle": "¿Reemplazar tus objetivos actuales?",
-  "rebalance.replaceTargetsBody": "Esto sobrescribe los {count} objetivos actuales. Solo se guardan al pulsar Guardar objetivos.",
+  "rebalance.replaceTargetsBody": "Esto sobrescribe tus objetivos actuales ({count}). No se guarda nada hasta que pulses Guardar objetivos.",
   "rebalance.replaceTargetsConfirm": "Reemplazar",
   "rebalance.tokenInputLabel": "Token del objetivo {n}",
   "rebalance.percentInputLabel": "% objetivo de {symbol}",
