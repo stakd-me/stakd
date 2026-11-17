@@ -499,13 +499,11 @@ export default function ReportsPage() {
                       key: "buy",
                       label: t("reports.buyVolume"),
                       value: mask(formatUsd(report.activity.buyVolumeUsd)),
-                      tone: "positive",
                     },
                     {
                       key: "sell",
                       label: t("reports.sellVolume"),
                       value: mask(formatUsd(report.activity.sellVolumeUsd)),
-                      tone: "negative",
                     },
                     {
                       key: "receive",

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn, formatUsd, toLocalDatetimeString } from "@/lib/utils";
+import { TxTypePicker } from "@/components/portfolio/tx-type-picker";
 import { FormField } from "@/components/ui/form-field";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusPill } from "@/components/ui/status-pill";
@@ -49,24 +50,6 @@ interface StablecoinOption {
 }
 
 type TxType = "buy" | "sell" | "receive" | "send";
-
-function getTxTypeToggleClass(type: TxType, isActive: boolean): string {
-  if (!isActive) {
-    return "border-border-subtle bg-transparent text-text-muted hover:bg-bg-hover hover:text-text-primary";
-  }
-  // The selected type is stated in its own semantic colour: money in,
-  // money out, and the two transfers that move neither.
-  if (type === "buy") {
-    return "border-status-positive bg-status-positive-soft text-status-positive";
-  }
-  if (type === "sell") {
-    return "border-status-negative bg-status-negative-soft text-status-negative";
-  }
-  if (type === "receive") {
-    return "border-accent bg-accent-soft text-accent";
-  }
-  return "border-status-caution bg-status-caution-soft text-status-caution";
-}
 
 export default function AddTransactionPage() {
   const router = useRouter();
@@ -467,34 +450,12 @@ export default function AddTransactionPage() {
             </h2>
           </div>
           <div className="space-y-3 p-5">
-            <div
-              role="group"
-              aria-label={t("portfolioAdd.stepType")}
-              className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-            >
-              {(["buy", "sell", "receive", "send"] as const).map((txType) => (
-                <button
-                  key={txType}
-                  type="button"
-                  onClick={() => setType(txType)}
-                  aria-pressed={type === txType}
-                  className={cn(
-                    "h-control-lg border text-body font-semibold",
-                    "transition-colors duration-[120ms] ease-out",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
-                    getTxTypeToggleClass(txType, type === txType)
-                  )}
-                >
-                  {txType === "buy"
-                    ? t("portfolio.buy")
-                    : txType === "sell"
-                      ? t("portfolio.sell")
-                      : txType === "receive"
-                        ? t("portfolio.receive")
-                        : t("portfolio.send")}
-                </button>
-              ))}
-            </div>
+            <TxTypePicker
+              size="lg"
+              value={type}
+              onChange={setType}
+              label={t("portfolioAdd.stepType")}
+            />
             {(type === "receive" || type === "send") && (
               <p className="text-caption text-text-muted">
                 {t("portfolioAdd.receiveSendHint", {

@@ -1,14 +1,13 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
-import {
-  getTxTypeActionButtonClass,
-  getTxTypeToggleClass,
-} from "@/components/portfolio/tx-type-styles";
+import { FormField } from "@/components/ui/form-field";
+import { TxTypePicker } from "@/components/portfolio/tx-type-picker";
+import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 import type {
   BreakdownItem,
   PortfolioTxType,
@@ -54,33 +53,24 @@ export const HoldingInlineForm = memo(function HoldingInlineForm({
   onSubmit,
 }: HoldingInlineFormProps) {
   const { t } = useTranslation();
+  const id = useId();
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        {(["buy", "sell", "receive", "send"] as const).map((typ) => (
-          <button
-            key={typ}
-            type="button"
-            onClick={() => onTxTypeChange(typ)}
-            className={`rounded-md px-2.5 py-0.5 text-caption font-semibold transition-colors ${getTxTypeToggleClass(
-              typ,
-              txType === typ
-            )}`}
-          >
-            {typ.charAt(0).toUpperCase() + typ.slice(1)}
-          </button>
-        ))}
+        <TxTypePicker
+          value={txType}
+          onChange={onTxTypeChange}
+          label={t("portfolioAdd.stepType")}
+        />
         <span className="text-body font-semibold text-text-muted">
           {item.symbol}
         </span>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("portfolio.quantity")} *
-          </label>
+        <FormField label={<>{t("portfolio.quantity")} *</>} htmlFor={`${id}-f1`} className="space-y-1">
           <Input
+            id={`${id}-f1`}
             type="number"
             step="any"
             min="0"
@@ -88,12 +78,10 @@ export const HoldingInlineForm = memo(function HoldingInlineForm({
             value={quantity}
             onChange={(e) => onQuantityChange(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("portfolio.pricePerUnit")}
-          </label>
+        </FormField>
+        <FormField label={t("portfolio.pricePerUnit")} htmlFor={`${id}-f2`} className="space-y-1">
           <Input
+            id={`${id}-f2`}
             type="number"
             step="any"
             min="0"
@@ -101,27 +89,23 @@ export const HoldingInlineForm = memo(function HoldingInlineForm({
             value={price}
             onChange={(e) => onPriceChange(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("common.date")}
-          </label>
+        </FormField>
+        <FormField label={t("common.date")} htmlFor={`${id}-f3`} className="space-y-1">
           <Input
+            id={`${id}-f3`}
             type="datetime-local"
             value={date}
             onChange={(e) => onDateChange(e.target.value)}
           />
-        </div>
-        <div>
-          <label className="mb-1 block text-caption text-text-muted">
-            {t("common.note") + " (" + t("common.optional") + ")"}
-          </label>
+        </FormField>
+        <FormField label={t("common.note") + " (" + t("common.optional") + ")"} htmlFor={`${id}-f4`} className="space-y-1">
           <Input
+            id={`${id}-f4`}
             placeholder={t("common.note") + "..."}
             value={note}
             onChange={(e) => onNoteChange(e.target.value)}
           />
-        </div>
+        </FormField>
       </div>
       {quantity && price && (
         <div className="text-caption text-text-muted">
@@ -144,13 +128,13 @@ export const HoldingInlineForm = memo(function HoldingInlineForm({
         </Button>
         <Button
           size="sm"
+          variant="accent"
           onClick={() => onSubmit(item)}
           disabled={submitting}
-          className={getTxTypeActionButtonClass(txType)}
         >
           {submitting
             ? t("common.saving")
-            : `${txType.charAt(0).toUpperCase() + txType.slice(1)} ${item.symbol}`}
+            : `${t(TX_TYPE_LABEL_KEYS[txType])} ${item.symbol}`}
         </Button>
       </div>
     </div>

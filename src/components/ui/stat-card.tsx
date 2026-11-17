@@ -17,7 +17,8 @@ interface StatCardProps extends HTMLAttributes<HTMLDivElement> {
 
 const toneClass: Record<StatCardTone, string> = {
   default: "text-text-primary",
-  info: "text-accent",
+  // accent means "interactive"; an informational figure is plain ink.
+  info: "text-text-primary",
   positive: "text-status-positive",
   warning: "text-status-warning",
   negative: "text-status-negative",

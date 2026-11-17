@@ -168,7 +168,7 @@ export function HoldingsSection({
                       </div>
                       <div>
                         <p className="text-meta uppercase text-text-muted">{t("portfolio.fees")}</p>
-                        <p className="text-status-caution">
+                        <p className="text-text-primary">
                           {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                         </p>
                       </div>
@@ -183,7 +183,6 @@ export function HoldingsSection({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-status-positive hover:bg-status-positive-soft hover:text-status-positive"
                         onClick={() =>
                           isExpanded && txType === "buy"
                             ? onCloseInlineForm()
@@ -196,7 +195,6 @@ export function HoldingsSection({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-status-negative hover:bg-status-negative-soft hover:text-status-negative"
                         onClick={() =>
                           isExpanded && txType === "sell"
                             ? onCloseInlineForm()
@@ -324,7 +322,7 @@ export function HoldingsSection({
                             {item.realizedPL >= 0 ? "+" : ""}
                             {mask(formatUsd(item.realizedPL))}
                           </td>
-                          <td className="py-3 pr-4 text-right text-status-caution">
+                          <td className="py-3 pr-4 text-right">
                             {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                           </td>
                           <td className="py-3 pr-4 text-center">
@@ -335,7 +333,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-status-positive hover:bg-status-positive-soft hover:text-status-positive"
+                                className="h-8 w-8"
                                 onClick={() =>
                                   isExpanded && txType === "buy"
                                     ? onCloseInlineForm()
@@ -349,7 +347,7 @@ export function HoldingsSection({
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-status-negative hover:bg-status-negative-soft hover:text-status-negative"
+                                className="h-8 w-8"
                                 onClick={() =>
                                   isExpanded && txType === "sell"
                                     ? onCloseInlineForm()
