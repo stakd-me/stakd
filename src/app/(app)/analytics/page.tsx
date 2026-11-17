@@ -700,12 +700,12 @@ export default function ReportsPage() {
                     <thead>
                       <tr className="border-b border-border text-text-muted">
                         <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.token")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.value")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.weight")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.held")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPL")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.unrealizedPLPerDay")}</th>
-                        <th scope="col" className="px-2 pb-2 font-mono text-meta font-normal uppercase">{t("reports.return")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.value")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.weight")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.held")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.unrealizedPL")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.unrealizedPLPerDay")}</th>
+                        <th scope="col" className="px-2 pb-2 text-right font-mono text-meta font-normal uppercase">{t("reports.return")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -715,12 +715,12 @@ export default function ReportsPage() {
                           className="border-b border-border-faint font-mono text-num-md tabular text-text-secondary"
                         >
                           <th scope="row" className="px-2 py-2 text-left font-sans text-body font-semibold text-text-primary">{holding.symbol}</th>
-                          <td className="px-2 py-2">{mask(formatUsd(holding.valueUsd))}</td>
-                          <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
-                          <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
+                          <td className="px-2 py-2 text-right">{mask(formatUsd(holding.valueUsd))}</td>
+                          <td className="px-2 py-2 text-right">{holding.percent.toFixed(2)}%</td>
+                          <td className="px-2 py-2 text-right">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
                           <td
                             className={cn(
-                              "px-2 py-2",
+                              "px-2 py-2 text-right",
                               holding.unrealizedPLUsd >= 0
                                 ? "text-status-positive"
                                 : "text-status-negative"
@@ -730,7 +730,7 @@ export default function ReportsPage() {
                           </td>
                           <td
                             className={cn(
-                              "px-2 py-2",
+                              "px-2 py-2 text-right",
                               holding.unrealizedPnlPerHeldDayUsd >= 0
                                 ? "text-status-positive"
                                 : "text-status-negative"
@@ -740,7 +740,7 @@ export default function ReportsPage() {
                           </td>
                           <td
                             className={cn(
-                              "px-2 py-2",
+                              "px-2 py-2 text-right",
                               holding.unrealizedPLPercent >= 0
                                 ? "text-status-positive"
                                 : "text-status-negative"

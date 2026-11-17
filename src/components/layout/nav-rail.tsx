@@ -59,6 +59,7 @@ export function NavRail() {
               <span className="grow truncate">{t(labelKey)}</span>
               {href === "/rebalance" && alertCount > 0 ? (
                 <span
+                  aria-hidden="true"
                   className={cn(
                     "shrink-0 rounded-sm border px-1.5 font-mono text-[11px] leading-4",
                     active
@@ -68,6 +69,9 @@ export function NavRail() {
                 >
                   {alertCount}
                 </span>
+              ) : null}
+              {href === "/rebalance" && alertCount > 0 ? (
+                <span className="sr-only">{t("nav.alertCount", { count: alertCount })}</span>
               ) : null}
             </Link>
           );

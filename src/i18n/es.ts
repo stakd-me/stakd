@@ -796,6 +796,7 @@ const es: Record<TranslationKeys, string> = {
   "language.toggle": "Toggle idioma",
   "privacy.hideValues": "Ocultar valores",
   "privacy.showValues": "Mostrar valores",
+  "nav.alertCount": "{count} alertas de rebalanceo",
   "common.allTime": "Todo",
   "rebalance.action.buy": "Comprar",
   "rebalance.action.sell": "Vender",

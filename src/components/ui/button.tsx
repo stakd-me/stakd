@@ -12,7 +12,9 @@ const buttonVariants = cva(
     "transition-colors duration-[120ms] ease-out",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring",
     "focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
-    "disabled:pointer-events-none disabled:border-border-subtle disabled:bg-bg-input disabled:text-text-dim"
+    "disabled:pointer-events-none disabled:border-border-subtle disabled:bg-bg-input disabled:text-text-dim",
+    // Touch targets reach control-lg (44px) on phones, whatever the size.
+    "max-md:min-h-control-lg"
   ),
   {
     variants: {
@@ -28,7 +30,7 @@ const buttonVariants = cva(
         default: "h-control-md px-3.5 text-body",
         sm: "h-control-sm px-2.5 text-caption",
         lg: "h-control-lg px-4.5 text-body",
-        icon: "h-control-md w-control-md px-0",
+        icon: "h-control-md w-control-md px-0 max-md:min-w-control-lg",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

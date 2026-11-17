@@ -820,6 +820,7 @@ const vi: Record<TranslationKeys, string> = {
   "language.toggle": "Chuyển đổi ngôn ngữ",
   "privacy.hideValues": "Ẩn giá trị",
   "privacy.showValues": "Hiện giá trị",
+  "nav.alertCount": "{count} cảnh báo tái cân bằng",
   "common.allTime": "Tất cả",
   "rebalance.action.buy": "Mua",
   "rebalance.action.sell": "Bán",

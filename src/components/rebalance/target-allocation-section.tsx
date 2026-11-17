@@ -467,7 +467,7 @@ export function TargetAllocationSection({
                                     {s.name}
                                   </span>
                                 </div>
-                                <span className="text-caption text-text-muted">
+                                <span className="font-mono text-caption tabular text-text-muted">
                                   {mask(formatUsd(s.totalValueUsd))}
                                 </span>
                               </button>
@@ -490,7 +490,7 @@ export function TargetAllocationSection({
                     />
 
                     <span
-                      className="w-[calc(25%-0.25rem)] text-right text-caption tabular-nums text-text-muted md:w-20 md:text-body"
+                      className="w-[calc(25%-0.25rem)] text-right font-mono text-caption tabular text-text-muted md:w-20 md:text-body"
                       title={
                         currentPercent === null
                           ? t("common.noData")
@@ -500,7 +500,7 @@ export function TargetAllocationSection({
                       {currentPercent === null ? "—" : `${currentPercent.toFixed(1)}%`}
                     </span>
                     <span
-                      className={`w-[calc(25%-0.25rem)] text-right text-caption tabular-nums md:w-24 md:text-body ${getDeviationClass(diff)}`}
+                      className={`w-[calc(25%-0.25rem)] text-right font-mono text-caption tabular md:w-24 md:text-body ${getDeviationClass(diff)}`}
                       title={
                         diff === null
                           ? t("common.noData")

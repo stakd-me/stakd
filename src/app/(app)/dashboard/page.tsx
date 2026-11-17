@@ -550,9 +550,10 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => setTimeRange(r.value)}
                     className={cn(
-                      "rounded-md px-2 py-1 text-caption font-semibold transition-colors",
+                      "h-control-sm px-2 font-mono text-caption font-semibold transition-colors duration-[120ms] ease-out max-md:min-h-control-lg max-md:px-3",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
                       timeRange === r.value
-                        ? "bg-accent text-bg-page shadow-sm"
+                        ? "bg-accent text-accent-ink"
                         : "text-text-muted hover:bg-bg-hover hover:text-text-secondary"
                     )}
                     aria-pressed={timeRange === r.value}

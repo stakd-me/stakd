@@ -818,6 +818,7 @@ const en = {
   "language.toggle": "Toggle language",
   "privacy.hideValues": "Hide values",
   "privacy.showValues": "Show values",
+  "nav.alertCount": "{count} rebalance alerts",
   "common.allTime": "All",
   "rebalance.action.buy": "Buy",
   "rebalance.action.sell": "Sell",

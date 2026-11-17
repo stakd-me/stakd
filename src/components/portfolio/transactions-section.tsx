@@ -115,7 +115,7 @@ export function TransactionsSection({
                         >
                           {t(TX_TYPE_LABEL_KEYS[tx.type])}
                         </span>
-                        <p className="mt-2 font-semibold text-text-primary">
+                        <p className="mt-2 font-mono font-semibold tabular text-text-primary">
                           {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                         </p>
                       </div>
@@ -124,13 +124,13 @@ export function TransactionsSection({
                     <div className="mt-4 grid grid-cols-2 gap-3 text-body">
                       <div>
                         <p className="text-caption text-text-muted">{t("portfolio.qty")}</p>
-                        <p className="font-mono text-text-primary">
+                        <p className="font-mono tabular text-text-primary">
                           {mask(formatCrypto(tx.quantity))}
                         </p>
                       </div>
                       <div>
                         <p className="text-caption text-text-muted">{t("portfolio.price")}</p>
-                        <p className="text-text-primary">
+                        <p className="font-mono tabular text-text-primary">
                           {formatUsdPrice(Number.parseFloat(tx.pricePerUnit))}
                         </p>
                       </div>
