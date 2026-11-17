@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
 import { SectionNavigator, SectionPanel } from "@/components/ui/section-navigator";
 import { StatusPill } from "@/components/ui/status-pill";
-import { SummaryStrip } from "@/components/ui/summary-strip";
+import { Metric, MetricBand } from "@/components/ui/metric";
 import { CardSectionHeader } from "@/components/ui/card-section-header";
 import dynamic from "next/dynamic";
 
@@ -45,6 +45,14 @@ type ReportsSection = "overview" | "activity" | "risk" | "holdings";
 
 function getSignedPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+interface SummaryItem {
+  key: string;
+  label: ReactNode;
+  value: ReactNode;
+  hint?: ReactNode;
+  tone?: "positive" | "negative";
 }
 
 function plTone(value: number): string {
@@ -338,8 +346,9 @@ export default function ReportsPage() {
               }
             />
             <CardContent className="space-y-4">
-              <SummaryStrip
-                items={[
+              <MetricBand columns={4}>
+                {(
+                  [
                   {
                     key: "end-value",
                     label: t("reports.endValue"),
@@ -376,13 +385,22 @@ export default function ReportsPage() {
                     hint: `${t("reports.volatility")}: ${report.summary.annualizedVolatilityPercent.toFixed(2)}%`,
                     tone: "negative",
                   },
-                ]}
-                size="lg"
-                columnsClassName="md:grid-cols-4"
-              />
+                ] as SummaryItem[]
+                ).map((item) => (
+                  <Metric
+                    key={item.key}
+                    label={item.label}
+                    value={item.value}
+                    sub={item.hint}
+                    tone={item.tone}
+                    size="lg"
+                  />
+                ))}
+              </MetricBand>
 
-              <SummaryStrip
-                items={[
+              <MetricBand columns={4}>
+                {(
+                  [
                   {
                     key: "capital-flow",
                     label: t("reports.capitalNetFlow"),
@@ -403,9 +421,18 @@ export default function ReportsPage() {
                     label: t("reports.totalFees"),
                     value: mask(formatUsd(report.activity.totalFeesUsd)),
                   },
-                ]}
-                columnsClassName="md:grid-cols-4"
-              />
+                ] as SummaryItem[]
+                ).map((item) => (
+                  <Metric
+                    key={item.key}
+                    label={item.label}
+                    value={item.value}
+                    sub={item.hint}
+                    tone={item.tone}
+                    size="md"
+                  />
+                ))}
+              </MetricBand>
 
               <div className={`rounded-md border px-4 py-3 text-body ${reconciliationClass}`}>
                 <p className="font-medium">{t("reports.reconciliation")}</p>
@@ -476,8 +503,9 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.activity")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <SummaryStrip
-                  items={[
+                <MetricBand columns={2}>
+                  {(
+                    [
                     {
                       key: "transactions",
                       label: t("reports.transactions"),
@@ -518,10 +546,18 @@ export default function ReportsPage() {
                       label: t("reports.sendVolume"),
                       value: mask(formatUsd(report.activity.sendVolumeUsd)),
                     },
-                  ]}
-                  columnsClassName="sm:grid-cols-2"
-                  className="gap-3"
-                />
+                  ] as SummaryItem[]
+                  ).map((item) => (
+                    <Metric
+                      key={item.key}
+                      label={item.label}
+                      value={item.value}
+                      sub={item.hint}
+                      tone={item.tone}
+                      size="md"
+                    />
+                  ))}
+                </MetricBand>
               </CardContent>
             </Card>
           )}
@@ -532,8 +568,9 @@ export default function ReportsPage() {
                 <CardTitle>{t("reports.riskSnapshot")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <SummaryStrip
-                  items={[
+                <MetricBand columns={2}>
+                  {(
+                    [
                     {
                       key: "active-assets",
                       label: t("reports.activeAssets"),
@@ -556,10 +593,18 @@ export default function ReportsPage() {
                       label: t("reports.diversificationScore"),
                       value: report.risk.diversificationScore.toFixed(2),
                     },
-                  ]}
-                  columnsClassName="sm:grid-cols-2"
-                  className="gap-3"
-                />
+                  ] as SummaryItem[]
+                  ).map((item) => (
+                    <Metric
+                      key={item.key}
+                      label={item.label}
+                      value={item.value}
+                      sub={item.hint}
+                      tone={item.tone}
+                      size="md"
+                    />
+                  ))}
+                </MetricBand>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="rounded-md border border-border-subtle bg-bg-card px-3 py-2">
                     <p className="text-text-muted">{t("reports.bestPerformer")}</p>
