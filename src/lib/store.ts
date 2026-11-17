@@ -37,6 +37,11 @@ interface VaultState {
   vault: VaultData;
   vaultVersion: number;
   isDirty: boolean;
+  /**
+   * Bumped on every local edit. A save records the revision it encrypted and
+   * only marks the vault clean if nothing changed while it was in flight.
+   */
+  revision: number;
   setVault: (vault: VaultData, version: number) => void;
   updateVault: (fn: (prev: VaultData) => VaultData) => void;
   markClean: () => void;
@@ -47,13 +52,19 @@ export const useVaultStore = create<VaultState>((set) => ({
   vault: createEmptyVault(),
   vaultVersion: 0,
   isDirty: false,
+  revision: 0,
   setVault: (vault, vaultVersion) =>
-    set({ vault, vaultVersion, isDirty: false }),
+    set((state) => ({ vault, vaultVersion, isDirty: false, revision: state.revision + 1 })),
   updateVault: (fn) =>
-    set((state) => ({ vault: fn(state.vault), isDirty: true })),
+    set((state) => ({ vault: fn(state.vault), isDirty: true, revision: state.revision + 1 })),
   markClean: () => set({ isDirty: false }),
   clearVault: () =>
-    set({ vault: createEmptyVault(), vaultVersion: 0, isDirty: false }),
+    set((state) => ({
+      vault: createEmptyVault(),
+      vaultVersion: 0,
+      isDirty: false,
+      revision: state.revision + 1,
+    })),
 }));
 
 // ── Preferences Store ────────────────────────────────────────────────

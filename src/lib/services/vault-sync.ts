@@ -90,25 +90,68 @@ function patchMissingCoingeckoIds(vault: VaultData): { vault: VaultData; changed
   };
 }
 
+// Fetch with `keepalive` survives the page unloading, but browsers cap
+// its body at 64 KiB; larger vaults go as a normal request and rely on the
+// unload prompt instead.
+const KEEPALIVE_BODY_LIMIT = 60 * 1024;
+
+interface SaveOptions {
+  /** Best-effort delivery while the page is being hidden or unloaded. */
+  keepalive?: boolean;
+}
+
+// Saves run one at a time. Two overlapping PUTs carry the same base
+// version, so the second used to 409 and reload the vault from the server,
+// throwing away whatever had been edited locally in between.
+let saveChain: Promise<void> = Promise.resolve();
+let inFlight = 0;
+
+/** True while a save is queued or running. */
+export function isVaultSaveInFlight(): boolean {
+  return inFlight > 0;
+}
+
 /**
- * Encrypt and save the vault to the server.
+ * Encrypt and save the vault to the server. Calls are serialised; the
+ * returned promise settles when *this* save has been acknowledged.
  */
-export async function saveVaultToServer(): Promise<void> {
+export function saveVaultToServer(options: SaveOptions = {}): Promise<void> {
+  inFlight += 1;
+  const run = saveChain.then(() => saveNow(options));
+  saveChain = run.catch(() => {});
+  return run.finally(() => {
+    inFlight -= 1;
+  });
+}
+
+/**
+ * Save only if there are unsaved local edits. What autosave and the
+ * page-hide handlers call; explicit "Save" buttons call saveVaultToServer.
+ */
+export function flushVault(options: SaveOptions = {}): Promise<void> {
+  if (!useVaultStore.getState().isDirty) return saveChain;
+  return saveVaultToServer(options);
+}
+
+async function saveNow({ keepalive = false }: SaveOptions): Promise<void> {
   const encKey = await loadEncKey();
   if (!encKey) throw new Error("No encryption key available");
 
-  const { vault, vaultVersion } = useVaultStore.getState();
+  const { vault, vaultVersion, revision } = useVaultStore.getState();
 
   const { ciphertext, iv } = await encryptVault(vault, encKey);
+
+  const body = JSON.stringify({
+    encryptedData: ciphertext,
+    iv,
+    version: vaultVersion,
+  });
 
   const res = await apiFetch("/api/vault", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      encryptedData: ciphertext,
-      iv,
-      version: vaultVersion,
-    }),
+    body,
+    keepalive: keepalive && body.length <= KEEPALIVE_BODY_LIMIT,
   });
 
   if (res.status === 409) {
@@ -122,8 +165,10 @@ export async function saveVaultToServer(): Promise<void> {
   }
 
   const data = await res.json();
-  useVaultStore.setState({
+  useVaultStore.setState((state) => ({
     vaultVersion: data.version,
-    isDirty: false,
-  });
+    // Edits made while this request was in flight are not in it, so the
+    // vault stays dirty and autosave picks them up next.
+    isDirty: state.revision === revision ? false : state.isDirty,
+  }));
 }
