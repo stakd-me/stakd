@@ -94,7 +94,7 @@ export function AssetCategoriesSection({
               autoComplete="off"
             />
             {showSymbolSuggestions && filteredSymbolOptions.length > 0 && (
-              <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-36 overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
+              <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-36 overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay">
                 {filteredSymbolOptions.map((symbol) => (
                   <button
                     key={symbol}
@@ -185,7 +185,7 @@ export function AssetCategoriesSection({
               {categories.map((cat) => (
                 <span
                   key={cat.id}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
+                  className="inline-flex items-center gap-1.5 rounded-sm bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                 >
                   {cat.tokenSymbol}: {cat.category}
                   <button

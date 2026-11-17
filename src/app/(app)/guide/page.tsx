@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { GuideSection } from "@/components/guide/guide-section";
 import { GuideTOC, GuideTocChips } from "@/components/guide/guide-toc";
@@ -78,11 +78,9 @@ export default function AppGuidePage() {
                 <p>{t("appGuide.reportsStep6")}</p>
                 <p>{t("appGuide.reportsStep7")}</p>
                 <div className="pt-1">
-                  <Link href="/analytics">
-                    <Button variant="outline" size="sm">
-                      {t("appGuide.openReports")}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
+                  <Link href="/analytics" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("appGuide.openReports")}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </div>
               </CardContent>

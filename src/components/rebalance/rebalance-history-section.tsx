@@ -35,7 +35,7 @@ export function RebalanceHistorySection({
           <Clock className="h-5 w-5" />
           <CardTitle>{t("rebalance.history")}</CardTitle>
           <span className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
+            <span className="rounded-sm bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
               {logs.length}
             </span>
             {historyExpanded ? (
@@ -66,7 +66,7 @@ export function RebalanceHistorySection({
                   {log.deviationsSnapshot.map((deviation) => (
                     <span
                       key={deviation.tokenSymbol}
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-semibold ${
+                      className={`inline-flex items-center rounded-sm px-2 py-0.5 text-caption font-semibold ${
                         Math.abs(deviation.deviation) > 5
                           ? "bg-status-negative-soft text-status-negative"
                           : Math.abs(deviation.deviation) > 1

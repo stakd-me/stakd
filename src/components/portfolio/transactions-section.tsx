@@ -2,7 +2,7 @@
 
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { useTranslation } from "@/hooks/use-translation";
@@ -72,11 +72,9 @@ export function TransactionsSection({
           <div className="space-y-4 py-6 text-center">
             <p className="text-text-muted">{t("portfolio.noTransactions")}</p>
             <div className="flex flex-wrap justify-center gap-2">
-              <Link href="/portfolio/add">
-                <Button size="sm">
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("portfolio.addTransaction")}
-                </Button>
+              <Link href="/portfolio/add" className={buttonVariants({ size: "sm" })}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t("portfolio.addTransaction")}
               </Link>
               <Button size="sm" variant="outline" onClick={onOpenImportModal}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -111,7 +109,7 @@ export function TransactionsSection({
                       </div>
                       <div className="text-right">
                         <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
+                          className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                             tx.type
                           )}`}
                         >
@@ -234,7 +232,7 @@ export function TransactionsSection({
                           </td>
                           <td className="py-3 pr-4">
                             <span
-                              className={`inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
+                              className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
                                 tx.type
                               )}`}
                             >

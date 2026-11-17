@@ -243,7 +243,7 @@ export function TargetAllocationSection({
           >
             <CardTitle>{t("rebalance.targetAllocation")}</CardTitle>
             {!expanded && targets.length > 0 && (
-              <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
+              <span className="rounded-sm bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
                 {targets.length}
               </span>
             )}
@@ -265,7 +265,7 @@ export function TargetAllocationSection({
               ` — ${t("rebalance.unallocated", { percent: (100 - totalPercent).toFixed(1) })}`}
           </span>
         </div>
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-muted">
+        <div className="h-1.5 w-full overflow-hidden bg-bg-muted">
           <div
             className={`h-full transition-all ${progressBarClass}`}
             style={{ width: `${clampedTotalPercent}%` }}
@@ -297,7 +297,7 @@ export function TargetAllocationSection({
               {t("rebalance.autoGenerate")}
             </Button>
             {showAutoGenMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-md border border-border bg-bg-input shadow-lg">
+              <div className="absolute left-0 top-full z-50 mt-1 w-44 rounded-overlay border border-border bg-bg-input shadow-overlay">
                 <button
                   type="button"
                   className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
@@ -327,7 +327,7 @@ export function TargetAllocationSection({
               {t("rebalance.templates")}
             </Button>
             {showTemplateMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-md border border-border bg-bg-input shadow-lg">
+              <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-overlay border border-border bg-bg-input shadow-overlay">
                 {TEMPLATES.map((tpl) => (
                   <button
                     key={tpl.name}
@@ -359,7 +359,7 @@ export function TargetAllocationSection({
               </span>
             </Button>
             {showSortMenu && (
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-52 rounded-md border border-border bg-bg-input shadow-lg">
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-52 rounded-overlay border border-border bg-bg-input shadow-overlay">
                 <button
                   type="button"
                   className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
@@ -448,7 +448,7 @@ export function TargetAllocationSection({
                       {activeAutocompleteIndex === index &&
                         autocompleteQuery.length > 0 &&
                         (autocompleteData?.suggestions ?? []).length > 0 && (
-                          <div className="absolute left-0 top-full z-50 mt-1 max-h-48 min-w-[18rem] w-full overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
+                          <div className="absolute left-0 top-full z-50 mt-1 max-h-48 min-w-[18rem] w-full overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay">
                             {autocompleteData!.suggestions.map((s) => (
                               <button
                                 key={s.symbol}

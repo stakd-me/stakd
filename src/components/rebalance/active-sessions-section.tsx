@@ -89,9 +89,9 @@ export function ActiveSessionsSection({
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 h-2 w-full rounded-full bg-bg-muted">
+              <div className="mb-4 h-2 w-full bg-bg-muted">
                 <div
-                  className="h-2 rounded-full bg-status-info transition-all"
+                  className="h-2 bg-status-info transition-all"
                   style={{ width: `${progress}%` }}
                 />
               </div>

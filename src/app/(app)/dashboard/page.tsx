@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
@@ -414,11 +414,9 @@ export default function DashboardPage() {
         eyebrow={t("dashboard.subtitle")}
         title={t("dashboard.title")}
         actions={
-          <Link href="/portfolio/add">
-            <Button variant="accent">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t("portfolio.addTransaction")}
-            </Button>
+          <Link href="/portfolio/add" className={buttonVariants({ variant: "accent" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("portfolio.addTransaction")}
           </Link>
         }
       />
@@ -511,11 +509,9 @@ export default function DashboardPage() {
             </div>
           }
           action={
-            <Link href="/rebalance">
-              <Button>
-                <Scale className="h-4 w-4" aria-hidden="true" />
-                {t("dashboard.viewDetails")}
-              </Button>
+            <Link href="/rebalance" className={buttonVariants()}>
+              <Scale className="h-4 w-4" aria-hidden="true" />
+              {t("dashboard.viewDetails")}
             </Link>
           }
         />
@@ -526,11 +522,9 @@ export default function DashboardPage() {
           icon={<CheckCircle2 className="h-5 w-5" />}
           description={t("dashboard.noRebalanceAlerts")}
           action={
-            <Link href="/rebalance">
-              <Button variant="outline" size="sm">
-                <Scale className="h-4 w-4" aria-hidden="true" />
-                {t("dashboard.viewDetails")}
-              </Button>
+            <Link href="/rebalance" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <Scale className="h-4 w-4" aria-hidden="true" />
+              {t("dashboard.viewDetails")}
             </Link>
           }
         >
@@ -582,10 +576,8 @@ export default function DashboardPage() {
                 description={t("dashboard.historyEmptyHelp")}
                 icon={<TrendingUp className="h-5 w-5" />}
                 action={
-                  <Link href="/portfolio/add">
-                    <Button size="sm">
-                      {t("portfolio.addTransaction")}
-                    </Button>
+                  <Link href="/portfolio/add" className={buttonVariants({ size: "sm" })}>
+                    {t("portfolio.addTransaction")}
                   </Link>
                 }
               />
@@ -612,10 +604,8 @@ export default function DashboardPage() {
                   description={t("dashboard.allocationEmptyHelp")}
                   icon={<Scale className="h-5 w-5" />}
                   action={
-                    <Link href="/portfolio">
-                      <Button size="sm" variant="outline">
-                        {t("portfolio.title")}
-                      </Button>
+                    <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("portfolio.title")}
                     </Link>
                   }
                   className="py-8"
@@ -659,10 +649,8 @@ export default function DashboardPage() {
             <CardSectionHeader
               title={t("dashboard.holdings")}
               actions={
-                <Link href="/portfolio">
-                  <Button size="sm" variant="outline">
-                    {t("portfolio.title")}
-                  </Button>
+                <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  {t("portfolio.title")}
                 </Link>
               }
             />

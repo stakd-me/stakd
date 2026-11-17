@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn, formatUsd, toLocalDatetimeString } from "@/lib/utils";
@@ -428,10 +428,8 @@ export default function AddTransactionPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-center gap-3">
-        <Link href="/portfolio" aria-label={t("portfolioAdd.back")}>
-          <Button variant="ghost" size="icon">
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          </Button>
+        <Link href="/portfolio" aria-label={t("portfolioAdd.back")} className={buttonVariants({ variant: "ghost", size: "icon" })}>
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         </Link>
         <PageHeader
           eyebrow={t("portfolioAdd.subtitle")}
@@ -504,7 +502,7 @@ export default function AddTransactionPage() {
                 </div>
               </FormField>
               {showDropdown && searchQuery.length >= 1 && (
-                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-border bg-bg-card shadow-overlay">
+                <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-overlay border border-border bg-bg-card shadow-overlay">
                   {filteredCoins.length === 0 ? (
                     <p className="px-4 py-3 text-body text-text-muted">
                       {t("portfolioAdd.noResults")}
@@ -759,10 +757,8 @@ export default function AddTransactionPage() {
         )}
 
         <div className="sticky bottom-0 flex gap-2 border-t border-border bg-bg-page py-3">
-          <Link href="/portfolio" className="grow sm:grow-0">
-            <Button type="button" variant="outline" size="lg" className="w-full">
-              {t("portfolioAdd.back")}
-            </Button>
+          <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "lg", className: "grow sm:grow-0" })}>
+            {t("portfolioAdd.back")}
           </Link>
           <Button
             type="submit"

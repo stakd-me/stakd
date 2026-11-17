@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Metric, MetricBand } from "@/components/ui/metric";
@@ -149,10 +149,8 @@ export default function AllocationHistoryPage() {
               title={t("allocationHistory.emptyTitle")}
               description={t("allocationHistory.emptyDescription")}
               action={
-                <Link href="/portfolio">
-                  <Button size="sm" variant="outline">
-                    {t("nav.portfolio")}
-                  </Button>
+                <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                  {t("nav.portfolio")}
                 </Link>
               }
               className="py-8"

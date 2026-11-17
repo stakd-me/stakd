@@ -161,7 +161,7 @@ export function ManualEntriesSection({
                   autoComplete="off"
                 />
                 {showManualSymbolSuggestions && manualSymbolSuggestions.length > 0 ? (
-                  <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-72 overflow-y-auto rounded-md border border-border bg-bg-input shadow-lg">
+                  <div className="absolute left-0 top-full z-20 mt-1 max-h-52 w-72 overflow-y-auto rounded-overlay border border-border bg-bg-input shadow-overlay">
                     {manualSymbolSuggestions.map((coin) => (
                       <button
                         key={coin.id}
@@ -313,7 +313,7 @@ export function ManualEntriesSection({
                             {entry.note}
                           </span>
                         ) : null}
-                        <span className="inline-flex rounded-full bg-status-info-soft px-2 py-0.5 text-caption text-status-info">
+                        <span className="inline-flex rounded-sm bg-status-info-soft px-2 py-0.5 text-caption text-status-info">
                           {t("portfolio.manual")}
                         </span>
                       </div>

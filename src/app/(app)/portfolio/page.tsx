@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { HoldingsSection } from "@/components/portfolio/holdings-section";
 import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
 import { ImportReviewModal } from "@/components/portfolio/import-review-modal";
@@ -69,7 +69,7 @@ function getHeldDurationBadge(firstBuyDate: string | null) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-full px-2 py-0.5 text-caption font-semibold",
+        "inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold",
         heldDuration.days >= 365
           ? "bg-status-positive-soft text-status-positive"
           : "bg-status-warning-soft text-status-warning"
@@ -469,11 +469,9 @@ export default function PortfolioPage() {
           </p>
         }
         actions={
-          <Link href="/portfolio/add">
-            <Button variant="accent">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t("portfolio.addTransaction")}
-            </Button>
+          <Link href="/portfolio/add" className={buttonVariants({ variant: "accent" })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("portfolio.addTransaction")}
           </Link>
         }
       />

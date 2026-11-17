@@ -37,7 +37,7 @@ export function LanguageToggle() {
         {locale.toUpperCase()}
       </button>
       {open && (
-        <div className="absolute bottom-full right-0 z-50 mb-1 min-w-[64px] rounded-md border border-border bg-bg-input py-1 shadow-lg">
+        <div className="absolute bottom-full right-0 z-50 mb-1 min-w-[64px] rounded-overlay border border-border bg-bg-input py-1 shadow-overlay">
           {LANGUAGE_OPTIONS.map((option) => (
             <button
               key={option.code}

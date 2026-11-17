@@ -56,7 +56,7 @@ export function CurrentVsTargetSection({
           <div className="flex items-center gap-3">
             <CardTitle>{t("rebalance.currentVsTarget")}</CardTitle>
             {hasConcentrationAlerts && (
-              <span className="flex items-center gap-1.5 rounded-full border border-status-negative-border bg-status-negative-soft px-2.5 py-0.5 text-caption font-semibold text-status-negative">
+              <span className="flex items-center gap-1.5 rounded-sm border border-status-negative-border bg-status-negative-soft px-2.5 py-0.5 text-caption font-semibold text-status-negative">
                 <ShieldAlert className="h-3 w-3" />
                 {t("rebalance.concentrationRisk")} ({concentrationThresholdLabel}%)
               </span>
@@ -113,7 +113,7 @@ export function CurrentVsTargetSection({
                           {suggestion.tokenSymbol}
                           {concAlert && (
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none ${getSeverityBadge(concAlert.severity)}`}
+                              className={`inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 text-[10px] font-medium uppercase leading-none ${getSeverityBadge(concAlert.severity)}`}
                               title={`${t("rebalance.concentrationRisk")}: ${concAlert.currentPercent.toFixed(1)}%`}
                             >
                               <AlertTriangle className="h-2.5 w-2.5" />
@@ -137,7 +137,7 @@ export function CurrentVsTargetSection({
                       </td>
                       <td className="py-3 pr-4 text-center">
                         <span
-                          className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
+                          className={`inline-block rounded-sm border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
                         >
                           {t(`rebalance.action.${suggestion.action}`)}
                         </span>

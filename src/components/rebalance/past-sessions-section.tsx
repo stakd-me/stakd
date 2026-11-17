@@ -62,7 +62,7 @@ export function PastSessionsSection({
           <History className="h-5 w-5 text-text-muted" />
           <CardTitle>{t("rebalance.pastSessions")}</CardTitle>
           <span className="ml-auto flex items-center gap-2">
-            <span className="rounded-full bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
+            <span className="rounded-sm bg-bg-muted px-2 py-0.5 text-caption text-text-muted">
               {pastSessions.length}
             </span>
             {showPastSessions ? (
@@ -107,7 +107,7 @@ export function PastSessionsSection({
                       {mask(formatUsd(session.totalValueUsd))}
                     </span>
                     <span
-                      className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold ${
+                      className={`inline-block rounded-sm border px-2 py-0.5 text-caption font-semibold ${
                         session.status === "completed"
                           ? "border-status-positive-border bg-status-positive-soft text-status-positive"
                           : "border-border/30 bg-bg-muted/20 text-text-muted"
@@ -145,7 +145,7 @@ export function PastSessionsSection({
                         >
                           <div className="flex items-center gap-2">
                             <span
-                              className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(trade.action)}`}
+                              className={`inline-block rounded-sm border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(trade.action)}`}
                             >
                               {trade.action}
                             </span>

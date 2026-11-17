@@ -208,7 +208,7 @@ export function TokenGroupsSection({
                     {group.tracking && (
                       <>
                         <span
-                          className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-caption font-semibold ${getGroupTrackingClass(group.tracking.status)}`}
+                          className={`ml-2 inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getGroupTrackingClass(group.tracking.status)}`}
                         >
                           {getGroupTrackingLabel(group.tracking.status)}
                         </span>
@@ -264,7 +264,7 @@ export function TokenGroupsSection({
                     {group.members.map((m) => (
                       <span
                         key={`${m.symbol}-${m.coingeckoId ?? "none"}`}
-                        className="inline-flex items-center gap-1 rounded-full bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
+                        className="inline-flex items-center gap-1 rounded-sm bg-bg-muted px-2.5 py-1 text-caption font-semibold text-text-secondary"
                       >
                         {m.symbol}
                         <span className="text-text-muted">
@@ -275,7 +275,7 @@ export function TokenGroupsSection({
                         </span>
                         {m.trackingStatus && (
                           <span
-                            className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${getMemberTrackingClass(m.trackingStatus)}`}
+                            className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${getMemberTrackingClass(m.trackingStatus)}`}
                           >
                             {getMemberTrackingLabel(m.trackingStatus)}
                           </span>

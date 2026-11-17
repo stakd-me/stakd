@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AccessibleChartFrame } from "@/components/ui/accessible-chart-frame";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page-header";
 import { AnalyticsNavigation } from "@/components/analytics/analytics-navigation";
@@ -446,10 +446,8 @@ export default function ReportsPage() {
                   title={t("reports.timelineEmpty")}
                   description={t("reports.timelineEmptyDesc")}
                   action={
-                    <Link href="/portfolio">
-                      <Button size="sm" variant="outline">
-                        {t("portfolio.title")}
-                      </Button>
+                    <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                      {t("portfolio.title")}
                     </Link>
                   }
                   className="py-8"
@@ -604,10 +602,8 @@ export default function ReportsPage() {
           <CardSectionHeader
             title={t("reports.topHoldings")}
             actions={
-              <Link href="/portfolio">
-                <Button size="sm" variant="outline">
-                  {t("portfolio.title")}
-                </Button>
+              <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                {t("portfolio.title")}
               </Link>
             }
           />
@@ -617,10 +613,8 @@ export default function ReportsPage() {
                 title={t("reports.noActiveHoldings")}
                 description={t("reports.noActiveHoldingsDesc")}
                 action={
-                  <Link href="/portfolio">
-                    <Button size="sm" variant="outline">
-                      {t("portfolio.title")}
-                    </Button>
+                  <Link href="/portfolio" className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    {t("portfolio.title")}
                   </Link>
                 }
                 className="py-8"
