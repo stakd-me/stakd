@@ -6,10 +6,10 @@ import { HoldingsSection } from "@/components/portfolio/holdings-section";
 import { EditHoldingDialog } from "@/components/portfolio/edit-holding-dialog";
 import { ImportReviewModal } from "@/components/portfolio/import-review-modal";
 import { ManualEntriesPanel } from "@/components/portfolio/manual-entries-panel";
-import { TransactionsSection } from "@/components/portfolio/transactions-section";
+import { TransactionsSection, type TxTypeFilter } from "@/components/portfolio/transactions-section";
 import { HoldingInlineForm } from "@/components/portfolio/holding-inline-form";
 import { TransactionEditForm } from "@/components/portfolio/transaction-edit-form";
-import { getTransactionTypeBadgeClass, TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
+import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 import type {
   BreakdownItem,
   PortfolioCoinListItem as CoinListItem,
@@ -115,6 +115,7 @@ export default function PortfolioPage() {
   }, [holdings, stablecoinSymbols]);
 
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TxTypeFilter>("all");
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [transactionsPerPage, setTransactionsPerPage] = useState<number>(
@@ -254,7 +255,9 @@ export default function PortfolioPage() {
     );
   }, [breakdown, search]);
 
-  const filteredTransactions = useMemo(() => {
+  // Search first, then type: the type chips count the search result, so
+  // each count is exactly what clicking that chip will show.
+  const searchedTransactions = useMemo(() => {
     if (!search.trim()) return transactions;
     const q = search.toLowerCase();
     return transactions.filter(
@@ -266,6 +269,32 @@ export default function PortfolioPage() {
         new Date(t.transactedAt).toLocaleDateString().toLowerCase().includes(q)
     );
   }, [transactions, search]);
+
+  const typeCounts = useMemo(() => {
+    const counts: Record<TxTypeFilter, number> = {
+      all: searchedTransactions.length,
+      buy: 0,
+      sell: 0,
+      receive: 0,
+      send: 0,
+    };
+    for (const tx of searchedTransactions) counts[tx.type] += 1;
+    return counts;
+  }, [searchedTransactions]);
+
+  const filteredTransactions = useMemo(
+    () =>
+      typeFilter === "all"
+        ? searchedTransactions
+        : searchedTransactions.filter((t) => t.type === typeFilter),
+    [searchedTransactions, typeFilter]
+  );
+
+  // A type filter whose last transaction was deleted would leave an empty
+  // list (and, with no transactions left, a hidden filter still applied).
+  if (typeFilter !== "all" && !transactions.some((t) => t.type === typeFilter)) {
+    setTypeFilter("all");
+  }
 
   const activeInlineItem = useMemo(() => {
     if (!expandedHoldingKey) return null;
@@ -302,6 +331,17 @@ export default function PortfolioPage() {
   // (previously an effect; done in the event handlers to avoid extra renders).
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value);
+    setTransactionsPage(1);
+  }, []);
+
+  const handleTypeFilterChange = useCallback((filter: TxTypeFilter) => {
+    setTypeFilter(filter);
+    setTransactionsPage(1);
+  }, []);
+
+  const clearTransactionFilters = useCallback(() => {
+    setTypeFilter("all");
+    setSearch("");
     setTransactionsPage(1);
   }, []);
 
@@ -575,7 +615,11 @@ export default function PortfolioPage() {
           totalTransactionPages={totalTransactionPages}
           transactionRange={transactionRange}
           renderTransactionEditForm={renderTransactionEditForm}
-          getTransactionTypeBadgeClass={getTransactionTypeBadgeClass}
+          typeFilter={typeFilter}
+          typeCounts={typeCounts}
+          searchActive={search.trim().length > 0}
+          onClearFilters={clearTransactionFilters}
+          onTypeFilterChange={handleTypeFilterChange}
           onToggleEdit={toggleEditForm}
           onDelete={setDeleteTarget}
           onSetTransactionsPerPage={handleTransactionsPerPageChange}

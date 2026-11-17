@@ -2,6 +2,7 @@
 
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
+import { toggleChipVariants } from "@/components/ui/toggle-chip";
 import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 import type { PortfolioTxType } from "@/components/portfolio/types";
 
@@ -47,16 +48,7 @@ export function TxTypePicker({
             type="button"
             onClick={() => onChange(type)}
             aria-pressed={active}
-            className={cn(
-              "border font-semibold transition-colors duration-[120ms] ease-out",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page",
-              size === "lg"
-                ? "h-control-lg text-body"
-                : "h-control-lg px-3 text-caption md:h-control-sm",
-              active
-                ? "border-accent bg-accent-soft text-text-primary"
-                : "border-border-subtle bg-transparent text-text-muted hover:bg-bg-hover hover:text-text-primary"
-            )}
+            className={toggleChipVariants({ active, size })}
           >
             {t(TX_TYPE_LABEL_KEYS[type])}
           </button>

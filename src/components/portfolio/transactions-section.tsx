@@ -11,6 +11,13 @@ import { Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import type { PortfolioTransaction } from "@/components/portfolio/types";
 import { usePrivacy } from "@/hooks/use-privacy";
 import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
+import { TxTypeChip } from "@/components/portfolio/tx-type-chip";
+import { cn } from "@/lib/utils";
+import { toggleChipVariants } from "@/components/ui/toggle-chip";
+
+export type TxTypeFilter = "all" | PortfolioTransaction["type"];
+
+const TX_TYPE_FILTERS: readonly TxTypeFilter[] = ["all", "buy", "sell", "receive", "send"];
 
 interface TransactionRange {
   from: number;
@@ -29,7 +36,12 @@ interface TransactionsSectionProps {
   totalTransactionPages: number;
   transactionRange: TransactionRange;
   renderTransactionEditForm: (tx: PortfolioTransaction) => ReactNode;
-  getTransactionTypeBadgeClass: (type: string) => string;
+  typeFilter: TxTypeFilter;
+  /** Rows each chip would show, given the current text search. */
+  typeCounts: Record<TxTypeFilter, number>;
+  searchActive: boolean;
+  onTypeFilterChange: (filter: TxTypeFilter) => void;
+  onClearFilters: () => void;
   onToggleEdit: (tx: PortfolioTransaction) => void;
   onDelete: (tx: PortfolioTransaction) => void;
   onSetTransactionsPerPage: (value: number) => void;
@@ -54,7 +66,11 @@ export const TransactionsSection = memo(function TransactionsSection({
   totalTransactionPages,
   transactionRange,
   renderTransactionEditForm,
-  getTransactionTypeBadgeClass,
+  typeFilter,
+  typeCounts,
+  searchActive,
+  onTypeFilterChange,
+  onClearFilters,
   onToggleEdit,
   onDelete,
   onSetTransactionsPerPage,
@@ -69,7 +85,40 @@ export const TransactionsSection = memo(function TransactionsSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{t("portfolio.transactionHistory")}</CardTitle>
+        <div className="flex flex-col gap-3">
+          <CardTitle>{t("portfolio.transactionHistory")}</CardTitle>
+          {transactions.length > 0 ? (
+            <div
+              role="group"
+              aria-label={t("portfolio.filterByType")}
+              className="flex flex-wrap gap-1.5"
+            >
+              {TX_TYPE_FILTERS.map((filter) => {
+                const active = typeFilter === filter;
+                const count = typeCounts[filter];
+                return (
+                  <button
+                    key={filter}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onTypeFilterChange(filter)}
+                    className={toggleChipVariants({ active, size: "compact" })}
+                  >
+                    {filter === "all" ? t("portfolio.typeAll") : t(TX_TYPE_LABEL_KEYS[filter])}
+                    {/* Read as "Buy, 3 transactions", not "Buy3". */}
+                    <span className="sr-only">, {t("portfolio.typeFilterCount", { count })}</span>
+                    <span
+                      aria-hidden="true"
+                      className={cn("font-mono tabular", count === 0 ? "text-text-dim" : "text-text-muted")}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
         {transactions.length === 0 ? (
@@ -87,9 +136,19 @@ export const TransactionsSection = memo(function TransactionsSection({
             </div>
           </div>
         ) : filteredTransactions.length === 0 ? (
-          <p className="py-6 text-center text-text-muted">
-            {t("portfolio.noTransactionsMatch")}
-          </p>
+          <div className="space-y-3 py-6 text-center">
+            <p className="text-text-muted" role="status">
+              {typeFilter === "all"
+                ? t("portfolio.noTransactionsMatch")
+                : t(searchActive ? "portfolio.noTransactionsMatchFilters" : "portfolio.noTransactionsOfType", {
+                    type: t(TX_TYPE_LABEL_KEYS[typeFilter]),
+                  })}
+            </p>
+            <Button size="sm" variant="outline" onClick={onClearFilters}>
+              <X className="h-4 w-4" aria-hidden="true" />
+              {t("portfolio.clearFilters")}
+            </Button>
+          </div>
         ) : (
           <>
             <div className="space-y-3 md:hidden">
@@ -112,13 +171,7 @@ export const TransactionsSection = memo(function TransactionsSection({
                         </p>
                       </div>
                       <div className="text-right">
-                        <span
-                          className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
-                            tx.type
-                          )}`}
-                        >
-                          {t(TX_TYPE_LABEL_KEYS[tx.type])}
-                        </span>
+                        <TxTypeChip type={tx.type} />
                         <p className="mt-2 font-mono font-semibold tabular text-text-primary">
                           {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                         </p>
@@ -235,13 +288,7 @@ export const TransactionsSection = memo(function TransactionsSection({
                             {new Date(tx.transactedAt).toLocaleDateString()}
                           </td>
                           <td className="py-3 pr-4">
-                            <span
-                              className={`inline-flex rounded-sm px-2 py-0.5 text-caption font-semibold ${getTransactionTypeBadgeClass(
-                                tx.type
-                              )}`}
-                            >
-                              {t(TX_TYPE_LABEL_KEYS[tx.type])}
-                            </span>
+                            <TxTypeChip type={tx.type} />
                           </td>
                           <th scope="row" className="py-3 pr-4 text-left font-sans text-body">
                             <p className="font-medium">{tx.tokenSymbol}</p>
