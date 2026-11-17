@@ -169,7 +169,7 @@ export function WhatIfCalculatorSection({
                 />
                 <Input
                   type="number"
-                  placeholder="Amount USD"
+                  placeholder={t("rebalance.amountUsdPlaceholder")}
                   value={trade.amountUsd}
                   onChange={(e) => {
                     const updated = [...whatIfTrades];

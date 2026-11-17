@@ -9,7 +9,7 @@ import { ManualEntriesPanel } from "@/components/portfolio/manual-entries-panel"
 import { TransactionsSection } from "@/components/portfolio/transactions-section";
 import { HoldingInlineForm } from "@/components/portfolio/holding-inline-form";
 import { TransactionEditForm } from "@/components/portfolio/transaction-edit-form";
-import { getTransactionTypeBadgeClass } from "@/components/portfolio/tx-type-styles";
+import { getTransactionTypeBadgeClass, TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 import type {
   BreakdownItem,
   PortfolioCoinListItem as CoinListItem,
@@ -595,7 +595,7 @@ export default function PortfolioPage() {
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
         title={t("portfolio.deleteTransactionTitle")}
-        description={t("portfolio.deleteTransactionDesc", { type: deleteTarget?.type ?? "", symbol: deleteTarget?.tokenSymbol ?? "" })}
+        description={t("portfolio.deleteTransactionDesc", { type: deleteTarget ? t(TX_TYPE_LABEL_KEYS[deleteTarget.type]) : "", symbol: deleteTarget?.tokenSymbol ?? "" })}
         confirmLabel={t("common.delete")}
         variant="danger"
       />

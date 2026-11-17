@@ -10,6 +10,7 @@ import { formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import type { PortfolioTransaction } from "@/components/portfolio/types";
 import { usePrivacy } from "@/hooks/use-privacy";
+import { TX_TYPE_LABEL_KEYS } from "@/components/portfolio/tx-type-styles";
 
 interface TransactionRange {
   from: number;
@@ -114,7 +115,7 @@ export function TransactionsSection({
                             tx.type
                           )}`}
                         >
-                          {tx.type.toUpperCase()}
+                          {t(TX_TYPE_LABEL_KEYS[tx.type])}
                         </span>
                         <p className="mt-2 font-semibold text-text-primary">
                           {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
@@ -237,7 +238,7 @@ export function TransactionsSection({
                                 tx.type
                               )}`}
                             >
-                              {tx.type.toUpperCase()}
+                              {t(TX_TYPE_LABEL_KEYS[tx.type])}
                             </span>
                           </td>
                           <th scope="row" className="py-3 pr-4 text-left font-sans text-body">

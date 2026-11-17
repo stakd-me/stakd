@@ -71,7 +71,7 @@ const TIME_RANGES: { label: string; value: TimeRange }[] = [
   { label: "30d", value: "30d" },
   { label: "90d", value: "90d" },
   { label: "1y", value: "1y" },
-  { label: "All", value: "all" },
+  { label: "", value: "all" },
 ];
 
 function getTimeRangeMs(range: TimeRange): number | null {
@@ -563,7 +563,7 @@ export default function DashboardPage() {
                     )}
                     aria-pressed={timeRange === r.value}
                   >
-                    {r.label}
+                    {r.value === "all" ? t("common.allTime") : r.label}
                   </button>
                 ))}
               </div>

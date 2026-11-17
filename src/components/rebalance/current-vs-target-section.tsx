@@ -139,7 +139,7 @@ export function CurrentVsTargetSection({
                         <span
                           className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold uppercase ${getActionBadge(suggestion.action)}`}
                         >
-                          {suggestion.action}
+                          {t(`rebalance.action.${suggestion.action}`)}
                         </span>
                       </td>
                       <td className="py-3 pr-4 text-right">

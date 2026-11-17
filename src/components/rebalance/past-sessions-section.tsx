@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import type { TranslationKeys } from "@/i18n";
 import type { RebalanceSession } from "./types";
 import { getActionBadge } from "./helpers";
 import { usePrivacy } from "@/hooks/use-privacy";
@@ -19,6 +20,20 @@ interface PastSessionsSectionProps {
   pastSessions: RebalanceSession[];
   onConfirmDelete: (id: string | number, label: string) => void;
   deletePending: boolean;
+}
+
+const SESSION_STATUS_KEYS = {
+  completed: "rebalance.sessionStatus.completed",
+  in_progress: "rebalance.sessionStatus.in_progress",
+  cancelled: "rebalance.sessionStatus.cancelled",
+} as const satisfies Record<string, TranslationKeys>;
+
+function sessionStatusLabel(
+  status: string,
+  t: (key: TranslationKeys) => string
+): string {
+  const key = SESSION_STATUS_KEYS[status as keyof typeof SESSION_STATUS_KEYS];
+  return key ? t(key) : status;
 }
 
 export function PastSessionsSection({
@@ -78,7 +93,7 @@ export function PastSessionsSection({
                       )
                     }
                     aria-expanded={expandedPastSession === session.id}
-                    aria-label={`Toggle session from ${new Date(session.createdAt).toLocaleDateString()}`}
+                    aria-label={t("rebalance.toggleSessionLabel", { date: new Date(session.createdAt).toLocaleDateString() })}
                   >
                     {expandedPastSession === session.id ? (
                       <ChevronUp className="h-4 w-4 shrink-0 text-text-muted" />
@@ -98,11 +113,10 @@ export function PastSessionsSection({
                           : "border-border/30 bg-bg-muted/20 text-text-muted"
                       }`}
                     >
-                      {session.status}
+                      {sessionStatusLabel(session.status, t)}
                     </span>
                     <span className="text-caption text-text-muted">
-                      {session.trades.length} trade
-                      {session.trades.length !== 1 ? "s" : ""}
+                      {t("rebalance.trades", { count: session.trades.length })}
                     </span>
                   </button>
                   <Button
@@ -112,11 +126,11 @@ export function PastSessionsSection({
                     onClick={() =>
                       onConfirmDelete(
                         session.id,
-                        `session from ${new Date(session.createdAt).toLocaleDateString()}`
+                        new Date(session.createdAt).toLocaleDateString()
                       )
                     }
                     disabled={deletePending}
-                    aria-label={`Delete session from ${new Date(session.createdAt).toLocaleDateString()}`}
+                    aria-label={t("rebalance.deleteSessionLabel", { date: new Date(session.createdAt).toLocaleDateString() })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

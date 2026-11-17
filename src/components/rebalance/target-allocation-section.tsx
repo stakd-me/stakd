@@ -335,7 +335,7 @@ export function TargetAllocationSection({
                     className="w-full px-4 py-2 text-left text-body text-text-secondary hover:bg-bg-hover"
                     onClick={() => handleApplyTemplate(tpl)}
                   >
-                    {tpl.name}
+                    {tpl.labelKey ? t(tpl.labelKey) : tpl.name}
                   </button>
                 ))}
               </div>
@@ -515,7 +515,7 @@ export function TargetAllocationSection({
                       size="icon"
                       onClick={() => removeRow(index)}
                       className="h-8 w-8 text-text-muted hover:text-status-negative"
-                      aria-label={`Remove ${row.tokenSymbol || "token"} target`}
+                      aria-label={t("rebalance.removeTargetLabel", { symbol: row.tokenSymbol || t("rebalance.thisToken") })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

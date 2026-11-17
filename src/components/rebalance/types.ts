@@ -1,3 +1,5 @@
+import type { TranslationKeys } from "@/i18n";
+
 export type RebalanceStrategy = "threshold" | "calendar" | "percent-of-portfolio" | "risk-parity" | "dca-weighted";
 
 export interface TargetRow {
@@ -198,7 +200,11 @@ export const VALID_CATEGORIES = [
   "other",
 ];
 
-export const TEMPLATES = [
+export const TEMPLATES: {
+  name: string;
+  labelKey?: TranslationKeys;
+  allocations: { symbol: string; percent: number }[] | "auto-equal";
+}[] = [
   {
     name: "60/40 BTC/ETH",
     allocations: [
@@ -208,6 +214,7 @@ export const TEMPLATES = [
   },
   {
     name: "BTC Heavy",
+    labelKey: "rebalance.template.btcHeavy",
     allocations: [
       { symbol: "BTC", percent: 70 },
       { symbol: "ETH", percent: 20 },
@@ -216,6 +223,7 @@ export const TEMPLATES = [
   },
   {
     name: "Blue Chip Mix",
+    labelKey: "rebalance.template.blueChip",
     allocations: [
       { symbol: "BTC", percent: 40 },
       { symbol: "ETH", percent: 30 },
@@ -225,6 +233,7 @@ export const TEMPLATES = [
   },
   {
     name: "Equal Weight Top 5",
+    labelKey: "rebalance.template.equalTop5",
     allocations: "auto-equal" as const,
   },
 ];

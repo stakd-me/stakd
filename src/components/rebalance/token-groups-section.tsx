@@ -228,7 +228,7 @@ export function TokenGroupsSection({
                       className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => onTrackGroup(group.id)}
                       disabled={trackingPending || isSubmitting}
-                      aria-label={`Track group ${group.name}`}
+                      aria-label={t("rebalance.trackGroupLabel", { name: group.name })}
                       title={t("rebalance.trackGroup")}
                     >
                       <RefreshCw
@@ -241,7 +241,7 @@ export function TokenGroupsSection({
                       className="h-8 w-8 text-text-muted hover:text-status-info"
                       onClick={() => openEditForm(group)}
                       disabled={isSubmitting}
-                      aria-label={`Edit group ${group.name}`}
+                      aria-label={t("rebalance.editGroupLabel", { name: group.name })}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -250,10 +250,10 @@ export function TokenGroupsSection({
                       size="icon"
                       className="h-8 w-8 text-text-muted hover:text-status-negative"
                       onClick={() =>
-                        onConfirmDelete(group.id, `group "${group.name}"`)
+                        onConfirmDelete(group.id, group.name)
                       }
                       disabled={deletePending}
-                      aria-label={`Delete group ${group.name}`}
+                      aria-label={t("rebalance.deleteGroupLabel", { name: group.name })}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

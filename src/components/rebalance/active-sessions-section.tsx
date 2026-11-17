@@ -104,7 +104,7 @@ export function ActiveSessionsSection({
                         type="button"
                         onClick={() => onToggleTrade(session.id, trade.id)}
                         className="text-text-muted hover:text-text-primary"
-                        aria-label={`Toggle ${trade.tokenSymbol} trade as ${trade.status === "completed" ? "pending" : "completed"}`}
+                        aria-label={t(trade.status === "completed" ? "rebalance.markTradePending" : "rebalance.markTradeCompleted", { symbol: trade.tokenSymbol })}
                       >
                         {trade.status === "completed" ? (
                           <CheckCircle2 className="h-5 w-5 text-status-positive" />

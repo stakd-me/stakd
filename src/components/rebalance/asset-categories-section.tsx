@@ -194,11 +194,11 @@ export function AssetCategoriesSection({
                     onClick={() =>
                       onConfirmDelete(
                         cat.tokenSymbol,
-                        `category for ${cat.tokenSymbol}`
+                        cat.tokenSymbol
                       )
                     }
                     disabled={deletePending}
-                    aria-label={`Remove category for ${cat.tokenSymbol}`}
+                    aria-label={t("rebalance.removeCategoryLabel", { symbol: cat.tokenSymbol })}
                   >
                     x
                   </button>

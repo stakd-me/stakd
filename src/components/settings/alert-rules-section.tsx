@@ -153,13 +153,20 @@ export function AlertRulesSection({ holdingSymbols = [] }: AlertRulesSectionProp
                     />
                     {t("alertRules.enabled")}
                   </label>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => removeRule(rule.id)}
-                    className="rounded-md p-1 text-text-muted hover:bg-bg-hover hover:text-status-negative"
+                    aria-label={t("alertRules.removeRule", {
+                      rule: t(`alertRules.type.${rule.type}`),
+                    })}
+                    title={t("alertRules.removeRule", {
+                      rule: t(`alertRules.type.${rule.type}`),
+                    })}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
 
