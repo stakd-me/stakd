@@ -9,6 +9,7 @@ import { cn, formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Copy, Minus, Package, Pencil, Plus } from "lucide-react";
 import { PriceFlash } from "@/components/ui/price-flash";
 import type { BreakdownItem } from "@/components/portfolio/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 type HoldingActionType = "buy" | "sell";
 
@@ -56,6 +57,7 @@ export function HoldingsSection({
   onEditHolding,
   onOpenManualSection,
 }: HoldingsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -107,10 +109,10 @@ export function HoldingsSection({
                       </div>
                       <div className="text-right">
                         <p className="font-mono text-num-md tabular text-text-primary">
-                          <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
+                          <PriceFlash value={item.value}>{mask(formatUsd(item.value))}</PriceFlash>
                         </p>
                         <p className="font-mono text-num-sm tabular text-text-muted">
-                          {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
+                          {mask(formatCrypto(item.quantity))} · {item.percent.toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -142,7 +144,7 @@ export function HoldingsSection({
                           )}
                         >
                           {item.unrealizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.unrealizedPL)}
+                          {mask(formatUsd(item.unrealizedPL))}
                           <span className="ml-1 text-caption">
                             ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                             {item.unrealizedPLPercent.toFixed(1)}%)
@@ -161,13 +163,13 @@ export function HoldingsSection({
                           )}
                         >
                           {item.realizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.realizedPL)}
+                          {mask(formatUsd(item.realizedPL))}
                         </p>
                       </div>
                       <div>
                         <p className="text-meta uppercase text-text-muted">{t("portfolio.fees")}</p>
                         <p className="text-status-caution">
-                          {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
+                          {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                         </p>
                       </div>
                       <div>
@@ -287,10 +289,10 @@ export function HoldingsSection({
                           {/* Holdings: value + amount + allocation */}
                           <td className="py-3 pr-4 text-right">
                             <div className="text-text-primary">
-                              <PriceFlash value={item.value}>{formatUsd(item.value)}</PriceFlash>
+                              <PriceFlash value={item.value}>{mask(formatUsd(item.value))}</PriceFlash>
                             </div>
                             <div className="text-num-sm text-text-muted">
-                              {formatCrypto(item.quantity)} · {item.percent.toFixed(1)}%
+                              {mask(formatCrypto(item.quantity))} · {item.percent.toFixed(1)}%
                             </div>
                           </td>
                           <td className="py-3 pr-4 text-right">
@@ -305,7 +307,7 @@ export function HoldingsSection({
                             )}
                           >
                             {item.unrealizedPL >= 0 ? "+" : ""}
-                            {formatUsd(item.unrealizedPL)}
+                            {mask(formatUsd(item.unrealizedPL))}
                             <span className="ml-1 text-caption">
                               ({item.unrealizedPLPercent >= 0 ? "+" : ""}
                               {item.unrealizedPLPercent.toFixed(1)}%)
@@ -320,10 +322,10 @@ export function HoldingsSection({
                             )}
                           >
                             {item.realizedPL >= 0 ? "+" : ""}
-                            {formatUsd(item.realizedPL)}
+                            {mask(formatUsd(item.realizedPL))}
                           </td>
                           <td className="py-3 pr-4 text-right text-status-caution">
-                            {item.totalFees > 0 ? formatUsd(item.totalFees) : "-"}
+                            {item.totalFees > 0 ? mask(formatUsd(item.totalFees)) : "-"}
                           </td>
                           <td className="py-3 pr-4 text-center">
                             {getHeldDurationBadge(item.firstBuyDate)}

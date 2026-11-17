@@ -816,6 +816,8 @@ const en = {
   "theme.light": "Light",
   "theme.dark": "Dark",
   "language.toggle": "Toggle language",
+  "privacy.hideValues": "Hide values",
+  "privacy.showValues": "Show values",
 
   // Chart tooltips
 

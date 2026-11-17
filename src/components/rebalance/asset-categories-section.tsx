@@ -11,6 +11,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { isKnownStablecoinSymbol } from "@/lib/constants/stablecoins";
 import type { TokenCategory, CategoryBreakdown } from "./types";
 import { VALID_CATEGORIES } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface AssetCategoriesSectionProps {
   categories: TokenCategory[];
@@ -31,6 +32,7 @@ export function AssetCategoriesSection({
   onConfirmDelete,
   deletePending,
 }: AssetCategoriesSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [categorySymbol, setCategorySymbol] = useState("");
   const [categoryValue, setCategoryValue] = useState("");
@@ -166,7 +168,7 @@ export function AssetCategoriesSection({
                     {cb.percent.toFixed(1)}%
                   </p>
                   <p className="text-caption text-text-muted">
-                    {formatUsd(cb.valueUsd)}
+                    {mask(formatUsd(cb.valueUsd))}
                   </p>
                 </div>
               ))}

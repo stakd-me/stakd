@@ -14,6 +14,7 @@ import {
 } from "@/components/rebalance/helpers";
 import type { Alert, Suggestion } from "@/components/rebalance/types";
 import { AlertTriangle, Download, FileText, ShieldAlert } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface CurrentVsTargetSectionProps {
   totalValue: number;
@@ -38,6 +39,7 @@ export function CurrentVsTargetSection({
   onExportCsv,
   formatSuggestionTradeQuantity,
 }: CurrentVsTargetSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   // Build concentration lookup by symbol
@@ -70,7 +72,7 @@ export function CurrentVsTargetSection({
               {t("rebalance.exportCsv")}
             </Button>
             <span className="text-body text-text-muted">
-              {t("rebalance.totalPortfolio")}: {formatUsd(totalValue)}
+              {t("rebalance.totalPortfolio")}: {mask(formatUsd(totalValue))}
             </span>
           </div>
         </div>
@@ -131,7 +133,7 @@ export function CurrentVsTargetSection({
                         {suggestion.deviation.toFixed(1)}%
                       </td>
                       <td className="py-3 pr-4 text-right">
-                        <PriceFlash value={suggestion.currentValue}>{formatUsd(suggestion.currentValue)}</PriceFlash>
+                        <PriceFlash value={suggestion.currentValue}>{mask(formatUsd(suggestion.currentValue))}</PriceFlash>
                       </td>
                       <td className="py-3 pr-4 text-center">
                         <span
@@ -144,11 +146,11 @@ export function CurrentVsTargetSection({
                         {formatSuggestionTradeQuantity(suggestion)}
                       </td>
                       <td className="py-3 text-right">
-                        {suggestion.action !== "hold" ? formatUsd(suggestion.amount) : "-"}
+                        {suggestion.action !== "hold" ? mask(formatUsd(suggestion.amount)) : "-"}
                         {suggestion.action !== "hold" &&
                         (suggestion.estimatedSlippage > 0 || suggestion.estimatedFee > 0) ? (
                           <div className="mt-0.5 text-caption text-text-muted">
-                            {t("rebalance.fees")}: {formatUsd(suggestion.estimatedFee)} | {t("rebalance.slip")}: {formatUsd(suggestion.estimatedSlippage)}
+                            {t("rebalance.fees")}: {mask(formatUsd(suggestion.estimatedFee))} | {t("rebalance.slip")}: {mask(formatUsd(suggestion.estimatedSlippage))}
                           </div>
                         ) : null}
                       </td>

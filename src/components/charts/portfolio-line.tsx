@@ -14,6 +14,7 @@ import { Line } from "react-chartjs-2";
 import { formatUsd, formatCompactUsd } from "@/lib/utils";
 import { useChartTheme, withAlpha } from "@/hooks/use-chart-theme";
 import { useTranslation } from "@/hooks/use-translation";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Filler);
 
@@ -23,6 +24,7 @@ interface HistoryData {
 }
 
 export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { data: HistoryData[] }) {
+  const { mask } = usePrivacy();
   const chartTheme = useChartTheme();
   const { t, formatDate } = useTranslation();
   const chartRef = useRef<ChartJS<"line">>(null);
@@ -119,7 +121,7 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
                   });
                 },
                 label: (item) =>
-                  `${t("charts.value")}: ${formatUsd(item.raw as number)}`,
+                  `${t("charts.value")}: ${mask(formatUsd(item.raw as number))}`,
               },
             },
           },
@@ -133,7 +135,7 @@ export const PortfolioLineChart = memo(function PortfolioLineChart({ data }: { d
               ticks: {
                 color: chartTheme.tickColor,
                 font: { size: 12 },
-                callback: (value) => formatCompactUsd(value as number),
+                callback: (value) => mask(formatCompactUsd(value as number)),
               },
             },
           },

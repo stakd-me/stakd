@@ -7,8 +7,10 @@ import { usePortfolio } from "@/hooks/use-portfolio";
 import { useNow } from "@/hooks/use-now";
 import { useTranslation } from "@/hooks/use-translation";
 import { useCurrency } from "@/hooks/use-currency";
+import { usePrivacy } from "@/hooks/use-privacy";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { LanguageToggle } from "@/components/layout/language-toggle";
+import { PrivacyToggle } from "@/components/layout/privacy-toggle";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { isNavigationPathActive } from "@/lib/navigation";
 import { clearEncKey } from "@/lib/crypto/key-store";
@@ -34,6 +36,7 @@ export function AppBar() {
   const pathname = usePathname();
   const { t } = useTranslation();
   const { format: formatCurrency } = useCurrency();
+  const { mask } = usePrivacy();
   const { totals, lastPriceUpdate } = usePortfolio();
   const now = useNow(15_000);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -76,8 +79,9 @@ export function AppBar() {
       <span className="hidden h-4 w-px bg-border-subtle sm:block" />
 
       <span className="font-mono text-num-lg tabular text-text-primary">
-        {formatCurrency(totals.totalValue)}
+        {mask(formatCurrency(totals.totalValue))}
       </span>
+      <PrivacyToggle />
       {typeof change === "number" && change !== 0 ? (
         <span
           className={cn(

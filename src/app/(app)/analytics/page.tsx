@@ -30,6 +30,7 @@ import { cn, formatUsd } from "@/lib/utils";
 import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { Download } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 const PERIOD_OPTIONS: ReportPeriod[] = [
   "weekly",
@@ -150,6 +151,7 @@ function toCsv(report: PortfolioPeriodReport): string {
 }
 
 export default function ReportsPage() {
+  const { mask } = usePrivacy();
   const sectionsBaseId = "reports-sections";
   const [period, setPeriod] = useState<ReportPeriod>("monthly");
   const [activeSection, setActiveSection] = useState<ReportsSection>("overview");
@@ -243,9 +245,9 @@ export default function ReportsPage() {
       count: reportTimeline.length,
       start: new Date(firstPoint.date).toLocaleDateString(),
       end: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.value),
+      latest: mask(formatUsd(lastPoint.value)),
     });
-  }, [reportTimeline, t]);
+  }, [reportTimeline, t, mask]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -336,15 +338,15 @@ export default function ReportsPage() {
                   {
                     key: "end-value",
                     label: t("reports.endValue"),
-                    value: formatValue(report.summary.endValueUsd),
-                    hint: `${t("reports.startValue")}: ${formatValue(report.summary.startValueUsd)}`,
+                    value: mask(formatValue(report.summary.endValueUsd)),
+                    hint: `${t("reports.startValue")}: ${mask(formatValue(report.summary.startValueUsd))}`,
                   },
                   {
                     key: "period-pl",
                     label: t("reports.periodPL"),
-                    value: getSignedCurrency(report.summary.pnlUsd),
+                    value: mask(getSignedCurrency(report.summary.pnlUsd)),
                     hint: showPreviousComparison
-                      ? `${t("reports.previousPnlDelta")}: ${getSignedCurrency(pnlDelta)}`
+                      ? `${t("reports.previousPnlDelta")}: ${mask(getSignedCurrency(pnlDelta))}`
                       : undefined,
                     tone: report.summary.pnlUsd >= 0 ? "positive" : "negative",
                   },
@@ -379,22 +381,22 @@ export default function ReportsPage() {
                   {
                     key: "capital-flow",
                     label: t("reports.capitalNetFlow"),
-                    value: getSignedCurrency(report.summary.capitalNetFlowUsd),
+                    value: mask(getSignedCurrency(report.summary.capitalNetFlowUsd)),
                   },
                   {
                     key: "external-flow",
                     label: t("reports.externalNetFlow"),
-                    value: getSignedCurrency(report.summary.externalNetFlowUsd),
+                    value: mask(getSignedCurrency(report.summary.externalNetFlowUsd)),
                   },
                   {
                     key: "turnover",
                     label: t("reports.tradingTurnover"),
-                    value: formatValue(report.summary.tradingTurnoverUsd),
+                    value: mask(formatValue(report.summary.tradingTurnoverUsd)),
                   },
                   {
                     key: "fees",
                     label: t("reports.totalFees"),
-                    value: formatUsd(report.activity.totalFeesUsd),
+                    value: mask(formatUsd(report.activity.totalFeesUsd)),
                   },
                 ]}
                 columnsClassName="md:grid-cols-4"
@@ -403,12 +405,12 @@ export default function ReportsPage() {
               <div className={`rounded-md border px-4 py-3 text-body ${reconciliationClass}`}>
                 <p className="font-medium">{t("reports.reconciliation")}</p>
                 <p className="mt-1">
-                  {formatValue(report.summary.startValueUsd)} + {getSignedCurrency(report.summary.capitalNetFlowUsd)} +{" "}
-                  {getSignedCurrency(report.summary.pnlUsd)} = {formatValue(reconciledEnd)}
+                  {mask(formatValue(report.summary.startValueUsd))} + {mask(getSignedCurrency(report.summary.capitalNetFlowUsd))} +{" "}
+                  {mask(getSignedCurrency(report.summary.pnlUsd))} = {mask(formatValue(reconciledEnd))}
                 </p>
                 <p className="mt-1 text-caption">
-                  {t("reports.reportedEnd")}: {formatValue(report.summary.endValueUsd)} · {t("reports.gap")}:{" "}
-                  {getSignedCurrency(report.summary.reconciliationGapUsd)}
+                  {t("reports.reportedEnd")}: {mask(formatValue(report.summary.endValueUsd))} · {t("reports.gap")}:{" "}
+                  {mask(getSignedCurrency(report.summary.reconciliationGapUsd))}
                 </p>
               </div>
 
@@ -481,7 +483,7 @@ export default function ReportsPage() {
                     {
                       key: "fees",
                       label: t("reports.totalFees"),
-                      value: formatUsd(report.activity.totalFeesUsd),
+                      value: mask(formatUsd(report.activity.totalFeesUsd)),
                     },
                     {
                       key: "estimated",
@@ -496,24 +498,24 @@ export default function ReportsPage() {
                     {
                       key: "buy",
                       label: t("reports.buyVolume"),
-                      value: formatUsd(report.activity.buyVolumeUsd),
+                      value: mask(formatUsd(report.activity.buyVolumeUsd)),
                       tone: "positive",
                     },
                     {
                       key: "sell",
                       label: t("reports.sellVolume"),
-                      value: formatUsd(report.activity.sellVolumeUsd),
+                      value: mask(formatUsd(report.activity.sellVolumeUsd)),
                       tone: "negative",
                     },
                     {
                       key: "receive",
                       label: t("reports.receiveVolume"),
-                      value: formatUsd(report.activity.receiveVolumeUsd),
+                      value: mask(formatUsd(report.activity.receiveVolumeUsd)),
                     },
                     {
                       key: "send",
                       label: t("reports.sendVolume"),
-                      value: formatUsd(report.activity.sendVolumeUsd),
+                      value: mask(formatUsd(report.activity.sendVolumeUsd)),
                     },
                   ]}
                   columnsClassName="sm:grid-cols-2"
@@ -564,13 +566,13 @@ export default function ReportsPage() {
                       {report.bestPerformer
                         ? `${report.bestPerformer.symbol} ${getSignedPercent(
                             report.bestPerformer.returnPercent
-                          )} (${getSignedCurrency(report.bestPerformer.pnlUsd)})`
+                          )} (${mask(getSignedCurrency(report.bestPerformer.pnlUsd))})`
                         : t("reports.notAvailable")}
                     </p>
                     {report.bestPerformer ? (
                       <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.bestPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
-                        {getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
+                        {mask(getSignedCurrency(report.bestPerformer.pnlPerHeldDayUsd))} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.bestPerformer.annualizedReturnPercent)}
                       </p>
                     ) : null}
@@ -581,13 +583,13 @@ export default function ReportsPage() {
                       {report.worstPerformer
                         ? `${report.worstPerformer.symbol} ${getSignedPercent(
                             report.worstPerformer.returnPercent
-                          )} (${getSignedCurrency(report.worstPerformer.pnlUsd)})`
+                          )} (${mask(getSignedCurrency(report.worstPerformer.pnlUsd))})`
                         : t("reports.notAvailable")}
                     </p>
                     {report.worstPerformer ? (
                       <p className="text-caption text-text-muted">
                         {t("reports.held")}: {report.worstPerformer.heldDays}d · {t("reports.pnlPerDay")}:{" "}
-                        {getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd)} · {t("reports.annualized")}:{" "}
+                        {mask(getSignedCurrency(report.worstPerformer.pnlPerHeldDayUsd))} · {t("reports.annualized")}:{" "}
                         {getSignedPercent(report.worstPerformer.annualizedReturnPercent)}
                       </p>
                     ) : null}
@@ -644,7 +646,7 @@ export default function ReportsPage() {
                         </div>
                         <div className="text-right">
                           <p className="font-mono text-num-md tabular text-text-primary">
-                            {formatUsd(holding.valueUsd)}
+                            {mask(formatUsd(holding.valueUsd))}
                           </p>
                           <p className="font-mono text-num-sm tabular text-text-muted">
                             {holding.percent.toFixed(2)}%
@@ -664,7 +666,7 @@ export default function ReportsPage() {
                                 : "text-status-negative"
                             )}
                           >
-                            {getSignedCurrency(holding.unrealizedPLUsd)}
+                            {mask(getSignedCurrency(holding.unrealizedPLUsd))}
                           </p>
                         </div>
                         <div>
@@ -692,7 +694,7 @@ export default function ReportsPage() {
                                 : "text-status-negative"
                             )}
                           >
-                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
+                            {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
                           </p>
                         </div>
                       </div>
@@ -721,7 +723,7 @@ export default function ReportsPage() {
                           className="border-b border-border-faint font-mono text-num-md tabular text-text-secondary"
                         >
                           <th scope="row" className="px-2 py-2 text-left font-sans text-body font-semibold text-text-primary">{holding.symbol}</th>
-                          <td className="px-2 py-2">{formatUsd(holding.valueUsd)}</td>
+                          <td className="px-2 py-2">{mask(formatUsd(holding.valueUsd))}</td>
                           <td className="px-2 py-2">{holding.percent.toFixed(2)}%</td>
                           <td className="px-2 py-2">{holding.heldDays > 0 ? `${holding.heldDays}d` : "-"}</td>
                           <td
@@ -732,7 +734,7 @@ export default function ReportsPage() {
                                 : "text-status-negative"
                             )}
                           >
-                            {getSignedCurrency(holding.unrealizedPLUsd)}
+                            {mask(getSignedCurrency(holding.unrealizedPLUsd))}
                           </td>
                           <td
                             className={cn(
@@ -742,7 +744,7 @@ export default function ReportsPage() {
                                 : "text-status-negative"
                             )}
                           >
-                            {getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd)}
+                            {mask(getSignedCurrency(holding.unrealizedPnlPerHeldDayUsd))}
                           </td>
                           <td
                             className={cn(

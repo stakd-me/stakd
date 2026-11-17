@@ -8,6 +8,7 @@ import { Plus, Trash2, Layers, Pencil, RefreshCw } from "lucide-react";
 import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import type { TokenGroup } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface TokenGroupsSectionProps {
   groups: TokenGroup[];
@@ -32,6 +33,7 @@ export function TokenGroupsSection({
   onConfirmDelete,
   deletePending,
 }: TokenGroupsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | number | null>(null);
@@ -200,7 +202,7 @@ export function TokenGroupsSection({
                     <span className="font-medium text-text-primary">{group.name}</span>
                     {group.totalValueUsd != null && (
                       <span className="ml-3 text-body text-text-muted">
-                        {formatUsd(group.totalValueUsd)}
+                        {mask(formatUsd(group.totalValueUsd))}
                       </span>
                     )}
                     {group.tracking && (
@@ -269,7 +271,7 @@ export function TokenGroupsSection({
                           {m.percentInGroup.toFixed(1)}%
                         </span>
                         <span className="text-text-muted">
-                          {formatUsd(m.valueUsd)}
+                          {mask(formatUsd(m.valueUsd))}
                         </span>
                         {m.trackingStatus && (
                           <span

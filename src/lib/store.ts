@@ -60,7 +60,10 @@ export const useVaultStore = create<VaultState>((set) => ({
 interface PreferencesState {
   locale: Locale;
   theme: string;
+  /** Mask balances, quantities and P&L amounts on screen (device-local). */
+  hideValues: boolean;
   setLocale: (locale: Locale) => void;
+  setHideValues: (hideValues: boolean) => void;
   setTheme: (theme: string) => void;
   setPreferences: (prefs: Partial<PreferencesState>) => void;
 }
@@ -70,7 +73,9 @@ export const usePreferencesStore = create<PreferencesState>()(
     (set) => ({
       locale: "en",
       theme: "dark",
+      hideValues: false,
       setLocale: (locale) => set({ locale }),
+      setHideValues: (hideValues) => set({ hideValues }),
       setTheme: (theme) => set({ theme }),
       setPreferences: (prefs) => set(prefs),
     }),

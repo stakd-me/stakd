@@ -13,6 +13,7 @@ import { formatUsd } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import type { RebalanceSession } from "./types";
 import { getActionBadge } from "./helpers";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface PastSessionsSectionProps {
   pastSessions: RebalanceSession[];
@@ -25,6 +26,7 @@ export function PastSessionsSection({
   onConfirmDelete,
   deletePending,
 }: PastSessionsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [showPastSessions, setShowPastSessions] = useState(false);
   const [expandedPastSession, setExpandedPastSession] = useState<string | number | null>(
@@ -87,7 +89,7 @@ export function PastSessionsSection({
                       {new Date(session.createdAt).toLocaleDateString()}
                     </span>
                     <span className="font-medium text-text-primary">
-                      {formatUsd(session.totalValueUsd)}
+                      {mask(formatUsd(session.totalValueUsd))}
                     </span>
                     <span
                       className={`inline-block rounded-full border px-2 py-0.5 text-caption font-semibold ${
@@ -138,7 +140,7 @@ export function PastSessionsSection({
                             </span>
                           </div>
                           <span className="text-text-muted">
-                            {formatUsd(trade.amountUsd)}
+                            {mask(formatUsd(trade.amountUsd))}
                           </span>
                         </div>
                       ))}

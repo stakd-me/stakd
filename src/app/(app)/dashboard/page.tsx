@@ -51,6 +51,7 @@ import {
   dispatchStrategy,
 } from "@/lib/services/rebalance-strategies";
 import type { RebalanceStrategy } from "@/components/rebalance/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 type TimeRange = "24h" | "7d" | "30d" | "90d" | "1y" | "all";
 type DashboardAlertSeverity = "low" | "medium" | "high";
@@ -85,6 +86,7 @@ function getTimeRangeMs(range: TimeRange): number | null {
 }
 
 export default function DashboardPage() {
+  const { mask } = usePrivacy();
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const { format: formatValue } = useCurrency();
   const { t } = useTranslation();
@@ -380,9 +382,9 @@ export default function DashboardPage() {
       count: filteredHistory.length,
       start: new Date(firstPoint.date).toLocaleDateString(),
       end: new Date(lastPoint.date).toLocaleDateString(),
-      latest: formatUsd(lastPoint.value),
+      latest: mask(formatUsd(lastPoint.value)),
     });
-  }, [filteredHistory, t]);
+  }, [filteredHistory, t, mask]);
   const allocationChartSummary = useMemo(() => {
     if (pieData.length === 0) return "";
     const largestHolding = topHoldings[0];
@@ -424,20 +426,20 @@ export default function DashboardPage() {
       <MetricBand>
         <Metric
           label={t("dashboard.totalValue")}
-          value={<PriceFlash value={totalValue}>{formatValue(totalValue)}</PriceFlash>}
+          value={<PriceFlash value={totalValue}>{mask(formatValue(totalValue))}</PriceFlash>}
           sub={
             lastPriceUpdate && isPriceStale
               ? t("dashboard.prices", {
                   time: formatTimeAgo(new Date(lastPriceUpdate)),
                 })
-              : `${t("dashboard.totalInvested")}: ${formatUsd(analytics.totalInvested)}`
+              : `${t("dashboard.totalInvested")}: ${mask(formatUsd(analytics.totalInvested))}`
           }
           subTone={isPriceStale ? "warning" : "muted"}
         />
         <Metric
           label={t("dashboard.totalPL")}
           value={
-            <PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${formatUsd(totalPL)}`}</PriceFlash>
+            <PriceFlash value={totalPL}>{`${totalPL >= 0 ? "+" : ""}${mask(formatUsd(totalPL))}`}</PriceFlash>
           }
           tone={totalPL >= 0 ? "positive" : "negative"}
           sub={`${analytics.totalReturnPercent >= 0 ? "+" : ""}${analytics.totalReturnPercent.toFixed(2)}% ${t("dashboard.simpleROI")}`}
@@ -449,7 +451,7 @@ export default function DashboardPage() {
             <PriceFlash value={totals.change24h}>{`${totals.change24h >= 0 ? "+" : ""}${totals.change24h.toFixed(2)}%`}</PriceFlash>
           }
           tone={totals.change24h >= 0 ? "positive" : "negative"}
-          sub={`${change24hUsdt >= 0 ? "+" : ""}${formatUsd(change24hUsdt)} USDT`}
+          sub={`${change24hUsdt >= 0 ? "+" : ""}${mask(formatUsd(change24hUsdt))} USDT`}
           subTone={change24hUsdt >= 0 ? "positive" : "negative"}
         />
         <Metric
@@ -457,7 +459,7 @@ export default function DashboardPage() {
           value={breakdown.length}
           sub={
             totals.totalFeesPaid > 0
-              ? `${t("dashboard.totalFees")}: ${formatUsd(totals.totalFeesPaid)}`
+              ? `${t("dashboard.totalFees")}: ${mask(formatUsd(totals.totalFeesPaid))}`
               : undefined
           }
         />
@@ -681,13 +683,13 @@ export default function DashboardPage() {
                           {item.symbol}
                         </p>
                         <p className="font-mono text-num-sm tabular text-text-muted">
-                          {formatCrypto(item.quantity)} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
+                          {mask(formatCrypto(item.quantity))} @ {formatUsdPrice(item.avgCost)} {t("dashboard.avg")}
                         </p>
                       </div>
                     </div>
                     <div className="font-mono tabular text-left sm:text-right">
                       <p className="text-num-md text-text-primary">
-                        {formatValue(item.value)}
+                        {mask(formatValue(item.value))}
                         {item.change24h !== null && (
                           <span
                             className={cn(
@@ -714,7 +716,7 @@ export default function DashboardPage() {
                         )}
                       >
                         {item.unrealizedPL >= 0 ? "+" : ""}
-                        {formatUsd(item.unrealizedPL)} (
+                        {mask(formatUsd(item.unrealizedPL))} (
                         {item.unrealizedPLPercent >= 0 ? "+" : ""}
                         {item.unrealizedPLPercent.toFixed(1)}%)
                       </p>
@@ -728,7 +730,7 @@ export default function DashboardPage() {
                           )}
                         >
                           {t("portfolio.realizedPL")}: {item.realizedPL >= 0 ? "+" : ""}
-                          {formatUsd(item.realizedPL)}
+                          {mask(formatUsd(item.realizedPL))}
                         </p>
                       )}
                     </div>

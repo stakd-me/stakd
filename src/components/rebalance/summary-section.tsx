@@ -7,6 +7,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import type { RebalanceSummary } from "@/components/rebalance/types";
 import { Activity, CheckCircle2, ShieldAlert } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface SummarySectionProps {
   summary: RebalanceSummary;
@@ -21,6 +22,7 @@ export function SummarySection({
   concentrationThresholdLabel,
   hasTargetedSuggestions,
 }: SummarySectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   if (summary.isWellBalanced) {
@@ -78,12 +80,12 @@ export function SummarySection({
           <Metric
             size="md"
             label={t("rebalance.totalVolume")}
-            value={formatUsd(summary.totalVolume)}
+            value={mask(formatUsd(summary.totalVolume))}
           />
           <Metric
             size="md"
             label={t("rebalance.estFees")}
-            value={formatUsd(summary.totalEstimatedFees)}
+            value={mask(formatUsd(summary.totalEstimatedFees))}
           />
           <Metric
             size="md"

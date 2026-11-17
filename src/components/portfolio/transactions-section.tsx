@@ -9,6 +9,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatCrypto, formatUsd, formatUsdPrice } from "@/lib/utils";
 import { Pencil, Plus, Trash2, Upload, X } from "lucide-react";
 import type { PortfolioTransaction } from "@/components/portfolio/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface TransactionRange {
   from: number;
@@ -57,6 +58,7 @@ export function TransactionsSection({
   onOpenImportModal,
   pageSizeOptions,
 }: TransactionsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -115,7 +117,7 @@ export function TransactionsSection({
                           {tx.type.toUpperCase()}
                         </span>
                         <p className="mt-2 font-semibold text-text-primary">
-                          {formatUsd(Number.parseFloat(tx.totalCost))}
+                          {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                         </p>
                       </div>
                     </div>
@@ -124,7 +126,7 @@ export function TransactionsSection({
                       <div>
                         <p className="text-caption text-text-muted">{t("portfolio.qty")}</p>
                         <p className="font-mono text-text-primary">
-                          {formatCrypto(tx.quantity)}
+                          {mask(formatCrypto(tx.quantity))}
                         </p>
                       </div>
                       <div>
@@ -151,9 +153,9 @@ export function TransactionsSection({
                                 tx.settlement.direction === "out"
                                   ? t("portfolio.transactionSettlementOut")
                                   : t("portfolio.transactionSettlementIn"),
-                              amount: formatUsd(
+                              amount: mask(formatUsd(
                                 Number.parseFloat(tx.settlement.totalCost)
-                              ),
+                              )),
                             })}
                           </p>
                         </div>
@@ -249,21 +251,21 @@ export function TransactionsSection({
                                     tx.settlement.direction === "out"
                                       ? t("portfolio.transactionSettlementOut")
                                       : t("portfolio.transactionSettlementIn"),
-                                  amount: formatUsd(
+                                  amount: mask(formatUsd(
                                     Number.parseFloat(tx.settlement.totalCost)
-                                  ),
+                                  )),
                                 })}
                               </p>
                             ) : null}
                           </th>
                           <td className="py-3 pr-4 text-right font-mono">
-                            {formatCrypto(tx.quantity)}
+                            {mask(formatCrypto(tx.quantity))}
                           </td>
                           <td className="py-3 pr-4 text-right">
                             {formatUsdPrice(Number.parseFloat(tx.pricePerUnit))}
                           </td>
                           <td className="py-3 pr-4 text-right">
-                            {formatUsd(Number.parseFloat(tx.totalCost))}
+                            {mask(formatUsd(Number.parseFloat(tx.totalCost)))}
                           </td>
                           <td className="py-3 text-right">
                             <div className="flex items-center justify-end gap-1">

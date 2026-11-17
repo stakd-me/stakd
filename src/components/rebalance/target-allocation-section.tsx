@@ -25,6 +25,7 @@ import type {
   TokenGroup,
 } from "./types";
 import { TEMPLATES } from "./types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface TargetAllocationSectionProps {
   targets: TargetRow[];
@@ -71,6 +72,7 @@ export function TargetAllocationSection({
   saveErrorMessage,
   onAutoGenerate,
 }: TargetAllocationSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [showAutoGenMenu, setShowAutoGenMenu] = useState(false);
   const [showTemplateMenu, setShowTemplateMenu] = useState(false);
@@ -466,7 +468,7 @@ export function TargetAllocationSection({
                                   </span>
                                 </div>
                                 <span className="text-caption text-text-muted">
-                                  {formatUsd(s.totalValueUsd)}
+                                  {mask(formatUsd(s.totalValueUsd))}
                                 </span>
                               </button>
                             ))}

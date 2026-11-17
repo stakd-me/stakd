@@ -9,6 +9,7 @@ import { formatCrypto } from "@/lib/utils";
 import { ChevronDown, ChevronUp, Package, Pencil, Plus, Trash2 } from "lucide-react";
 import type { ManualEntry, PortfolioCoinListItem } from "@/components/portfolio/types";
 import { cn } from "@/lib/utils";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface ManualEntriesSectionProps {
   isAllSectionsView: boolean;
@@ -87,6 +88,7 @@ export function ManualEntriesSection({
   onCancelEditEntry,
   onDeleteEntry,
 }: ManualEntriesSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -304,7 +306,7 @@ export function ManualEntriesSection({
                         </span>
                         <span className="text-body text-text-muted">{entry.tokenName}</span>
                         <span className="font-mono text-body text-text-secondary">
-                          {formatCrypto(entry.quantity)}
+                          {mask(formatCrypto(entry.quantity))}
                         </span>
                         {entry.note ? (
                           <span className="text-caption italic text-text-muted">

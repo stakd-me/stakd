@@ -818,6 +818,8 @@ const vi: Record<TranslationKeys, string> = {
   "theme.light": "Sáng",
   "theme.dark": "Tối",
   "language.toggle": "Chuyển đổi ngôn ngữ",
+  "privacy.hideValues": "Ẩn giá trị",
+  "privacy.showValues": "Hiện giá trị",
 
   // Chart tooltips
 

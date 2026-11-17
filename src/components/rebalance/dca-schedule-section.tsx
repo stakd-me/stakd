@@ -5,6 +5,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { Clock } from "lucide-react";
 import type { SuggestionsData } from "@/components/rebalance/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface DcaScheduleSectionProps {
   chunks: NonNullable<SuggestionsData["dcaChunks"]>;
@@ -17,6 +18,7 @@ export function DcaScheduleSection({
   totalChunks,
   intervalDays,
 }: DcaScheduleSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   if (chunks.length === 0) {
@@ -61,7 +63,7 @@ export function DcaScheduleSection({
                               : "bg-status-negative-soft text-status-negative"
                           }`}
                         >
-                          {trade.action.toUpperCase()} {trade.tokenSymbol} {formatUsd(trade.amount)}
+                          {trade.action.toUpperCase()} {trade.tokenSymbol} {mask(formatUsd(trade.amount))}
                         </span>
                       ))}
                     </div>

@@ -794,6 +794,8 @@ const es: Record<TranslationKeys, string> = {
   "theme.light": "Claro",
   "theme.dark": "Oscuro",
   "language.toggle": "Toggle idioma",
+  "privacy.hideValues": "Ocultar valores",
+  "privacy.showValues": "Mostrar valores",
   "appGuide.title": "App Guide",
   "appGuide.subtitle": "Operating handbook for portfolio tracking, reporting, and manual execution.",
   "appGuide.toc": "Table of contents",

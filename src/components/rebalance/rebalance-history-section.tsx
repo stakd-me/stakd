@@ -6,6 +6,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { ChevronDown, ChevronUp, Clock } from "lucide-react";
 import type { RebalanceLog } from "@/components/rebalance/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface RebalanceHistorySectionProps {
   logs: RebalanceLog[];
@@ -14,6 +15,7 @@ interface RebalanceHistorySectionProps {
 export function RebalanceHistorySection({
   logs,
 }: RebalanceHistorySectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
   const [historyExpanded, setHistoryExpanded] = useState(false);
 
@@ -57,7 +59,7 @@ export function RebalanceHistorySection({
                     {new Date(log.loggedAt).toLocaleString()}
                   </span>
                   <span className="font-medium text-text-primary">
-                    {formatUsd(log.totalValueUsd)}
+                    {mask(formatUsd(log.totalValueUsd))}
                   </span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
