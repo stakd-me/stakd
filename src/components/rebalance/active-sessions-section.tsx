@@ -10,6 +10,7 @@ import type {
   RecordedTradeDraft,
 } from "@/components/rebalance/types";
 import { CheckCircle2, Play, XCircle } from "lucide-react";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface SessionCompletionPayload {
   id: string | number;
@@ -49,6 +50,7 @@ export function ActiveSessionsSection({
   onSaveRecordedTrades,
   onCancelRecording,
 }: ActiveSessionsSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -123,7 +125,7 @@ export function ActiveSessionsSection({
                       </span>
                     </div>
                     <span className="text-body text-text-muted">
-                      {formatUsd(trade.amountUsd)}
+                      {mask(formatUsd(trade.amountUsd))}
                     </span>
                   </div>
                 ))}
@@ -192,7 +194,7 @@ export function ActiveSessionsSection({
                         {trade.tokenSymbol}
                       </span>
                       <span className="text-body text-text-muted">
-                        {formatUsd(trade.amountUsd)}
+                        {mask(formatUsd(trade.amountUsd))}
                       </span>
                       <Input
                         type="number"

@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Locale } from "@/i18n";
 import type { VaultData } from "@/lib/crypto/vault-types";
 import { createEmptyVault } from "@/lib/crypto/vault-types";
+import { setNumberLocale } from "@/lib/utils";
 
 // ── Auth Store ───────────────────────────────────────────────────────
 
@@ -81,6 +82,20 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     { name: "portfolio-preferences" }
   )
+);
+
+// Figures follow the UI locale. The subscription runs before React
+// re-renders, so components that re-render on a locale change (everything
+// using useTranslation) format with the new locale.
+const NUMBER_LOCALES: Record<Locale, string> = {
+  en: "en-US",
+  vi: "vi-VN",
+  es: "es-ES",
+  de: "de-DE",
+};
+setNumberLocale(NUMBER_LOCALES[usePreferencesStore.getState().locale] ?? "en-US");
+usePreferencesStore.subscribe((state) =>
+  setNumberLocale(NUMBER_LOCALES[state.locale] ?? "en-US")
 );
 
 // ── Backward Compat ──────────────────────────────────────────────────

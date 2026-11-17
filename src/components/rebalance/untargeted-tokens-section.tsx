@@ -6,6 +6,7 @@ import { useTranslation } from "@/hooks/use-translation";
 import { formatUsd } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import type { Suggestion } from "@/components/rebalance/types";
+import { usePrivacy } from "@/hooks/use-privacy";
 
 interface UntargetedTokensSectionProps {
   suggestions: Suggestion[];
@@ -18,6 +19,7 @@ export function UntargetedTokensSection({
   isTargeted,
   onAddTarget,
 }: UntargetedTokensSectionProps) {
+  const { mask } = usePrivacy();
   const { t } = useTranslation();
 
   return (
@@ -75,7 +77,7 @@ export function UntargetedTokensSection({
                       {t("rebalance.currentValue")}
                     </p>
                     <p className="text-text-primary">
-                      {formatUsd(suggestion.currentValue)}
+                      {mask(formatUsd(suggestion.currentValue))}
                     </p>
                   </div>
                 </div>
@@ -117,7 +119,7 @@ export function UntargetedTokensSection({
                     {suggestion.currentPercent.toFixed(1)}%
                   </td>
                   <td className="py-3 pr-4 text-right text-text-muted">
-                    {formatUsd(suggestion.currentValue)}
+                    {mask(formatUsd(suggestion.currentValue))}
                   </td>
                   <td className="py-3 text-right">
                     <Button

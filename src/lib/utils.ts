@@ -34,12 +34,28 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * One number locale for every figure. Display formatters used to hard-code
+ * "en-US" while useCurrency() followed the UI locale, so a de/vi band showed
+ * "1.234,56 US$" next to "$1,234.56". The preferences store pushes the
+ * locale here (see store.ts); tests and server code keep the en-US default.
+ */
+let numberLocale = "en-US";
+
+export function setNumberLocale(locale: string): void {
+  numberLocale = locale;
+}
+
+export function getNumberLocale(): string {
+  return numberLocale;
+}
+
 function formatUsdWithPrecision(
   value: number,
   minimumFractionDigits: number,
   maximumFractionDigits: number
 ): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat(numberLocale, {
     style: "currency",
     currency: "USD",
     minimumFractionDigits,
@@ -82,7 +98,7 @@ export function formatCrypto(value: number | string, decimals = 6): string {
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (num === 0) return "0";
   if (num < 0.000001) return "<0.000001";
-  return num.toLocaleString("en-US", {
+  return num.toLocaleString(numberLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   });
