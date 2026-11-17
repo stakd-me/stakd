@@ -25,7 +25,12 @@ services:
     restart: unless-stopped
 
   app:
-    build: .
+    # Published by .github/workflows/ci.yml (amd64 + arm64). Pin APP_TAG to a
+    # release (e.g. 1.2.3) or a commit (sha-abc1234) for reproducible
+    # deploys; `latest` follows main. To run local source instead, add
+    # docker-compose.build.yml (see that file).
+    image: ${APP_IMAGE:-ghcr.io/stakd-me/stakd}:${APP_TAG:-latest}
+    pull_policy: always
     ports:
       - "127.0.0.1:${APP_PORT:-33000}:3000"
     environment:
